@@ -124,9 +124,9 @@ def test_one_run_rewrites_readme_tab_pages_and_landing_and_nothing_else(repo):
     assert f"<{live}>" in readme
     assert 'src="demo/demo/tour/review.jpg"' in readme
     # A tab with a page links to it and carries its summary; one without is still shown.
-    assert "[**API**](docs/tabs/api.md)" in readme
+    assert "### [API](docs/tabs/api.md)" in readme
     assert "Every operation the branch moved." in readme
-    assert "**Review**" in readme
+    assert "### Review" in readme
     assert f"{live}#api" in readme
     assert "intro prose" in readme and "## Install" in readme
 

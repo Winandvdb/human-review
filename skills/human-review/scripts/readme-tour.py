@@ -11,7 +11,7 @@ made so that it cannot go stale: every time the featured snapshot is published,
      — `demo/<slug>/tour/<panel>.jpg`, beside the snapshot it shows, so a republish that
      wipes the snapshot wipes its pictures with it;
   2. rewrites the README's two managed regions — the "try it" paragraph with the hero shot,
-     and the tour table (one thumbnail, one line and one page per tab);
+     and the tour (one full-width picture, one caption and one page per tab);
   3. rewrites the screenshot at the top of each tab's page under `docs/tabs/`;
   4. rewrites the featured block at the top of `demo/index.html`, the Pages landing page,
      so the site's root leads straight into the demo.
@@ -47,7 +47,6 @@ HERE = Path(__file__).resolve().parent
 
 VIEWPORT = {"width": 1440, "height": 900}
 JPEG_QUALITY = 82
-THUMB_WIDTH = 260
 
 FEATURED_BEGIN = re.compile(r"<!-- featured-demo:begin(?: slug=([A-Za-z0-9_-]+))? -->")
 FEATURED_END = "<!-- featured-demo:end -->"
@@ -115,10 +114,6 @@ def read_tab_page(path: Path) -> dict | None:
     }
 
 
-def md_cell(text: str) -> str:
-    return text.replace("|", "\\|")
-
-
 def render_featured(slug: str, base: str, title: str, hero: str | None) -> str:
     live = f"{base}/{slug}/review.html"
     lines = [
@@ -136,23 +131,30 @@ def render_featured(slug: str, base: str, title: str, hero: str | None) -> str:
 
 def render_tour(slug: str, base: str, shots: list[dict], pages: dict[str, dict]) -> str:
     live = f"{base}/{slug}/review.html"
-    rows = ["| | tab | what it answers |", "| --- | --- | --- |"]
+    blocks = []
     for shot in shots:
         page = pages.get(shot["panel"])
         img = f"demo/{slug}/tour/{shot['file']}"
         name = page["title"] if page else shot["title"]
         target = f"docs/tabs/{page['file']}" if page else img
-        thumb = (f'<a href="{target}"><img src="{img}" alt="{html.escape(name)} tab" '
-                 f'width="{THUMB_WIDTH}"></a>')
-        label = f"[**{md_cell(name)}**]({target})" if page else f"**{md_cell(name)}**"
-        label += f"<br><sub>[open it live]({live}#{shot['panel']})</sub>"
-        rows.append(f"| {thumb} | {label} | {md_cell(page['summary']) if page else ''} |")
+        heading = f"### [{name}]({target})" if page else f"### {name}"
+        caption = f"[open it live]({live}#{shot['panel']})"
+        if page and page["summary"]:
+            caption += f" — {page['summary']}"
+        blocks += [
+            heading,
+            "",
+            f'<a href="{target}"><img src="{img}" alt="{html.escape(name)} tab" width="100%"></a>',
+            "",
+            f"<sub>{caption}</sub>",
+            "",
+        ]
     return "\n".join([
         f"<!-- {GENERATED} -->",
         "Every tab of the demo page, as it looks right now. Click a picture for that tab's own",
         "page — what it shows, what it needs, and where the machinery behind it is described.",
         "",
-        *rows,
+        *blocks[:-1],
     ])
 
 

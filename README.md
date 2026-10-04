@@ -33,21 +33,83 @@ Every page the skill builds carries the same link in its footer.
 Every tab of the demo page, as it looks right now. Click a picture for that tab's own
 page — what it shows, what it needs, and where the machinery behind it is described.
 
-| | tab | what it answers |
-| --- | --- | --- |
-| <a href="docs/tabs/review.md"><img src="demo/demo/tour/review.jpg" alt="Review tab" width="260"></a> | [**Review**](docs/tabs/review.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#review)</sub> | One list, read off the branch's own `review-points.md`: what the agent declined and why, what it fixed (with the diff), and what it assumed where the ticket was ambiguous — each stamped with the reviewer that raised it, under a band saying what changed since. |
-| <a href="docs/tabs/demo.md"><img src="demo/demo/tour/behaviour.jpg" alt="Demo tab" width="260"></a> | [**Demo**](docs/tabs/demo.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#behaviour)</sub> | A Playwright recording of the feature working, narrated, with every caption a timestamp you can jump to. |
-| <a href="docs/tabs/api.md"><img src="demo/demo/tour/api.jpg" alt="API tab" width="260"></a> | [**API**](docs/tabs/api.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#api)</sub> | Every REST operation and schema the branch moved, each classified breaking / additive / changed / cosmetic — and a verdict from an independent differ on top. |
-| <a href="docs/tabs/data.md"><img src="demo/demo/tour/data.jpg" alt="Data tab" width="260"></a> | [**Data**](docs/tabs/data.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#data)</sub> | The database and domain-model deltas — added in green, removed in red and struck — trimmed to what changed. |
-| <a href="docs/tabs/tests.md"><img src="demo/demo/tour/requirements.jpg" alt="Tests tab" width="260"></a> | [**Tests**](docs/tabs/tests.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#requirements)</sub> | What the change set was supposed to do, the tests that pin each sentence of it, and what the branch did to the test run — including the tests it stopped running without deleting. |
-| <a href="docs/tabs/sequence.md"><img src="demo/demo/tour/sequence.jpg" alt="Sequence tab" width="260"></a> | [**Sequence**](docs/tabs/sequence.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#sequence)</sub> | Sequence diagrams recorded from real traces of real test runs, each beside the test that produced it — and the tests tagged for tracing that came back without one. |
-| <a href="docs/tabs/structure.md"><img src="demo/demo/tour/packages.jpg" alt="Structure tab" width="260"></a> | [**Structure**](docs/tabs/structure.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#packages)</sub> | The package and container delta — or, when nothing moved, the current diagrams as context, marked unchanged. |
-| <a href="docs/tabs/code-city.md"><img src="demo/demo/tour/city.jpg" alt="Code City tab" width="260"></a> | [**Code City**](docs/tabs/code-city.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#city)</sub> | The change lit up in a 3D Code City: every class a building, sized by lines of code, raised by complexity, coloured by churn. |
-| <a href="docs/tabs/ux.md"><img src="demo/demo/tour/dsaudit.jpg" alt="UX tab" width="260"></a> | [**UX**](docs/tabs/ux.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#dsaudit)</sub> | Native controls sitting where a design-system component belongs — a finding made of an *absence*, which a passing Playwright suite cannot produce. |
-| <a href="docs/tabs/complexity.md"><img src="demo/demo/tour/complexity.jpg" alt="Complexity tab" width="260"></a> | [**Complexity**](docs/tabs/complexity.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#complexity)</sub> | The before → after of every entry point: cognitive complexity of the whole flow behind each REST endpoint, and what this branch added to it. |
-| <a href="docs/tabs/logging.md"><img src="demo/demo/tour/logging.jpg" alt="Logging tab" width="260"></a> | [**Logging**](docs/tabs/logging.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#logging)</sub> | What the change set will say for itself in production — every logging statement it adds or changes, found by syntax, not by grep, and whether a value it logs is personal data. |
-| <a href="docs/tabs/codeowners.md"><img src="demo/demo/tour/owners.jpg" alt="CODEOWNERS tab" width="260"></a> | [**CODEOWNERS**](docs/tabs/codeowners.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#owners)</sub> | Who has to approve this, and whether the merge is blocked — asked of your `CODEOWNERS` file at review time, not at merge time. |
-| <a href="docs/tabs/cost.md"><img src="demo/demo/tour/cost.jpg" alt="Cost tab" width="260"></a> | [**Cost**](docs/tabs/cost.md)<br><sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#cost)</sub> | What this change cost to write and to review, at list price — every turn priced from the transcripts that recorded it, per phase and per tab. The tab is named after the total. |
+### [Review](docs/tabs/review.md)
+
+<a href="docs/tabs/review.md"><img src="demo/demo/tour/review.jpg" alt="Review tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#review) — One list, read off the branch's own `review-points.md`: what the agent declined and why, what it fixed (with the diff), and what it assumed where the ticket was ambiguous — each stamped with the reviewer that raised it, under a band saying what changed since.</sub>
+
+### [Demo](docs/tabs/demo.md)
+
+<a href="docs/tabs/demo.md"><img src="demo/demo/tour/behaviour.jpg" alt="Demo tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#behaviour) — A Playwright recording of the feature working, narrated, with every caption a timestamp you can jump to.</sub>
+
+### [API](docs/tabs/api.md)
+
+<a href="docs/tabs/api.md"><img src="demo/demo/tour/api.jpg" alt="API tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#api) — Every REST operation and schema the branch moved, each classified breaking / additive / changed / cosmetic — and a verdict from an independent differ on top.</sub>
+
+### [Data](docs/tabs/data.md)
+
+<a href="docs/tabs/data.md"><img src="demo/demo/tour/data.jpg" alt="Data tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#data) — The database and domain-model deltas — added in green, removed in red and struck — trimmed to what changed.</sub>
+
+### [Tests](docs/tabs/tests.md)
+
+<a href="docs/tabs/tests.md"><img src="demo/demo/tour/requirements.jpg" alt="Tests tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#requirements) — What the change set was supposed to do, the tests that pin each sentence of it, and what the branch did to the test run — including the tests it stopped running without deleting.</sub>
+
+### [Sequence](docs/tabs/sequence.md)
+
+<a href="docs/tabs/sequence.md"><img src="demo/demo/tour/sequence.jpg" alt="Sequence tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#sequence) — Sequence diagrams recorded from real traces of real test runs, each beside the test that produced it — and the tests tagged for tracing that came back without one.</sub>
+
+### [Structure](docs/tabs/structure.md)
+
+<a href="docs/tabs/structure.md"><img src="demo/demo/tour/packages.jpg" alt="Structure tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#packages) — The package and container delta — or, when nothing moved, the current diagrams as context, marked unchanged.</sub>
+
+### [Code City](docs/tabs/code-city.md)
+
+<a href="docs/tabs/code-city.md"><img src="demo/demo/tour/city.jpg" alt="Code City tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#city) — The change lit up in a 3D Code City: every class a building, sized by lines of code, raised by complexity, coloured by churn.</sub>
+
+### [UX](docs/tabs/ux.md)
+
+<a href="docs/tabs/ux.md"><img src="demo/demo/tour/dsaudit.jpg" alt="UX tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#dsaudit) — Native controls sitting where a design-system component belongs — a finding made of an *absence*, which a passing Playwright suite cannot produce.</sub>
+
+### [Complexity](docs/tabs/complexity.md)
+
+<a href="docs/tabs/complexity.md"><img src="demo/demo/tour/complexity.jpg" alt="Complexity tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#complexity) — The before → after of every entry point: cognitive complexity of the whole flow behind each REST endpoint, and what this branch added to it.</sub>
+
+### [Logging](docs/tabs/logging.md)
+
+<a href="docs/tabs/logging.md"><img src="demo/demo/tour/logging.jpg" alt="Logging tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#logging) — What the change set will say for itself in production — every logging statement it adds or changes, found by syntax, not by grep, and whether a value it logs is personal data.</sub>
+
+### [CODEOWNERS](docs/tabs/codeowners.md)
+
+<a href="docs/tabs/codeowners.md"><img src="demo/demo/tour/owners.jpg" alt="CODEOWNERS tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#owners) — Who has to approve this, and whether the merge is blocked — asked of your `CODEOWNERS` file at review time, not at merge time.</sub>
+
+### [Cost](docs/tabs/cost.md)
+
+<a href="docs/tabs/cost.md"><img src="demo/demo/tour/cost.jpg" alt="Cost tab" width="100%"></a>
+
+<sub>[open it live](https://victorrentea.github.io/human-review/demo/review.html#cost) — What this change cost to write and to review, at list price — every turn priced from the transcripts that recorded it, per phase and per tab. The tab is named after the total.</sub>
 <!-- tour:end -->
 
 ## Install

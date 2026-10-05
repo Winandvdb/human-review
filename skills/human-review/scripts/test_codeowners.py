@@ -154,16 +154,16 @@ def test_the_tab_opens_on_the_codeowners_file_it_was_read_from(tmp_path):
     data = {"state": "no_owners_touched", "severity": None, "codeowners": ".github/CODEOWNERS",
             "shadowed": [], "owned": [], "problems": []}
     frag = co.render(tmp_path, data)
-    # The tab's own title, then the file as its subtitle, both above the box.
-    assert frag.startswith('<h2 class="tabtitle cow-title">No code owner must approve this PR'
-                           '</h2><p class="tabsub cow-src">as required by <a ')
-    title = frag[frag.index('<p class="tabsub cow-src">'):]
-    assert title.index("</p>") < title.index("cow-verdict"), "the file is named above both sections"
+    # One title above the box, the file inside it, no subtitle.
+    assert frag.startswith('<h2 class="tabtitle cow-title">No approval needed by <a ')
+    assert "cow-src" not in frag and "as required by" not in frag
+    title = frag[:frag.index("</h2>") + 5]
+    assert frag.index("</h2>") < frag.index("cow-verdict"), "the file is named above both sections"
     # Not a GitHub checkout: the editor link is the only one there is.
     assert f'href="vscode://file/{(tmp_path / ".github/CODEOWNERS").resolve()}:1:1"' in title
-    assert ">.github/CODEOWNERS</a></p>" in title
+    assert ">.github/CODEOWNERS</a></h2>" in title
     required = co.render(tmp_path, dict(data, state="approval_required"))
-    assert '<h2 class="tabtitle cow-title">This PR must be approved by</h2>' in required
+    assert '<h2 class="tabtitle cow-title">Needs approval by <a ' in required
     none = dict(data, state="no_codeowners", codeowners=None)
     assert "cow-title" not in co.render(tmp_path, none)
 
@@ -180,7 +180,7 @@ def test_the_codeowners_heading_links_to_the_file_on_github(tmp_path):
     git("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "c")
     data = {"state": "no_owners_touched", "severity": None, "codeowners": ".github/CODEOWNERS",
             "shadowed": [], "owned": [], "problems": []}
-    title = co.render(tmp_path, data).split('<p class="tabsub cow-src">')[1].split("</p>")[0]
+    title = co.render(tmp_path, data).split('<h2 class="tabtitle cow-title">')[1].split("</h2>")[0]
     # Never pushed: the branch, which is what the PR shows once it is.
     assert 'href="https://github.com/acme/shop/blob/feature/.github/CODEOWNERS"' in title
     assert "vscode://" not in title and 'data-tip="Open on GitHub: .github/CODEOWNERS"' in title
@@ -188,7 +188,7 @@ def test_the_codeowners_heading_links_to_the_file_on_github(tmp_path):
     sha = subprocess.run(["git", "-C", str(tmp_path), "rev-parse", "HEAD"],
                          capture_output=True, text=True).stdout.strip()
     git("update-ref", "refs/remotes/origin/feature", sha)
-    title = co.render(tmp_path, data).split('<p class="tabsub cow-src">')[1].split("</p>")[0]
+    title = co.render(tmp_path, data).split('<h2 class="tabtitle cow-title">')[1].split("</h2>")[0]
     assert f'href="https://github.com/acme/shop/blob/{sha}/.github/CODEOWNERS"' in title
 
 

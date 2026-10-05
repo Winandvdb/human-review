@@ -366,10 +366,10 @@ def render(root: Path, data: dict) -> str:
         else:
             link = (f'<a data-tip="Open in VS Code: {rel}"'
                     f' href="vscode://file/{(root / data["codeowners"]).resolve()}:1:1">{rel}</a>')
-        title = ("This PR must be approved by" if state == APPROVAL_REQUIRED
-                 else "No code owner must approve this PR")
-        parts.append(f'<h2 class="tabtitle cow-title">{title}</h2>'
-                     f'<p class="tabsub cow-src">as required by {link}</p>')
+        # One title, the file inside it (Victor, 5 Oct 2026): a title plus an "as required
+        # by" subtitle said the same thing in two lines.
+        title = ("Needs approval by" if state == APPROVAL_REQUIRED else "No approval needed by")
+        parts.append(f'<h2 class="tabtitle cow-title">{title} {link}</h2>')
     parts.append(f'<div class="cow cow-{state}{sev_class}">')
     # The "APPROVAL REQUIRED" verdict used to be a banner of its own, above every row,
     # saying the same word for every owner even when their severities differ. Now each
@@ -444,8 +444,8 @@ CSS = """
        --cow-mark-a:rgba(19,120,58,.85); --cow-mark-m:rgba(190,105,0,.9);
        --cow-mark-d:rgba(168,22,22,.9);
        margin:.4rem 0 1rem; }
-.cow-src a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
-.cow-src a:hover { color:var(--link); }
+.cow-title a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.cow-title a:hover { color:var(--link); }
 .cow-verdict { display:flex; align-items:center; gap:.9rem; border:1px solid var(--line);
                border-left:4px solid var(--cow-flat); border-radius:10px; padding:.8rem 1rem;
                background:var(--card); }

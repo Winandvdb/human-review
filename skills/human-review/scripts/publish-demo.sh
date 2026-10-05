@@ -119,7 +119,12 @@ dest="$repo/demo/$slug"
 NOT_PUBLISHED=(coverage)
 
 # A large asset silently blows past what GitHub Pages will serve; catch it before the push.
-too_big=$(find "$src" -type f -size +50M $(printf -- "-not -path */%s/* " "${NOT_PUBLISHED[@]}"))
+# Built as an array, never word-split: an unquoted `*/coverage/*` is a shell glob first,
+# and run from a project root that has e.g. petclinic-frontend/coverage/ it expanded into
+# file names that find(1) then rejected as operators.
+excl=()
+for d in "${NOT_PUBLISHED[@]}"; do excl+=(-not -path "*/$d/*"); done
+too_big=$(find "$src" -type f -size +50M "${excl[@]}")
 if [ -n "$too_big" ]; then
   echo "publish-demo: refusing — these files exceed 50 MB:" >&2
   echo "$too_big" >&2

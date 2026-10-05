@@ -124,11 +124,16 @@ button.tab .sev { width:6px; height:6px; border-radius:50%; background:var(--acc
 footer .footrow { text-align:center; }
 footer .footrow > span { display:inline; }
 footer .allbar { display:flex; justify-content:center; align-items:center; gap:.6rem;
-                 margin-top:.9rem; }
+                 margin-top:.3rem; }
 button.allbtn { border:1px solid var(--line); background:var(--card); color:var(--muted);
                 border-radius:999px; cursor:pointer; font:600 .74rem/1.9 inherit; padding:0 .7rem; }
 button.allbtn:hover { color:var(--fg); border-color:var(--link); }
 button.allbtn[aria-pressed="true"] { background:var(--link); border-color:var(--link); color:var(--on-fill); }
+button.diskpath { border:0; background:none; color:var(--muted); cursor:pointer;
+                  font:.72rem/1.9 ui-monospace, SFMono-Regular, Menlo, monospace; padding:0;
+                  overflow-wrap:anywhere; }
+button.diskpath:hover { color:var(--fg); }
+footer .diskline { text-align:center; margin-top:.9rem; }
 .panel[hidden] { display:none; }
 /* The moment before the strip runs. Every panel is in the document and *visible* while
    the earlier scripts measure it -- TABS_JS says why: getBBox() inside a display:none

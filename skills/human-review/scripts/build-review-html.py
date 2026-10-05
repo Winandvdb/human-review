@@ -1277,6 +1277,17 @@ def _main(argv=None) -> int:
         rerun_fail_html = (rerun_progress_html(step_expectations(out_dir))
                        + RERUN_DONE + RERUN_FAIL + RERUN_AI_CONFIRM)
         allbtn_html = (
+            # Where this page sits on disk, on its own centred line above the one control
+            # at the foot. The URL bar says 127.0.0.1:7655 when it is served, which names a
+            # port and not a checkout — and with three petclinic checkouts each building
+            # its own review.html, "which file am I looking at?" has no other answer on
+            # screen. A copy button, so the path goes straight into a terminal or an
+            # editor; absolute, like the Serve command, because it is a fact about the
+            # machine that built the page.
+            '<div class="diskline"><button type="button" class="diskpath copycmd" '
+            f'data-copy="{html.escape(str(out_path), quote=True)}" '
+            'data-tip="Copy the path of this file on disk">'
+            f"{CMD_COPY} {html.escape(str(out_path))}</button></div>"
             '<div class="allbar">'
             '<button type="button" class="allbtn" aria-pressed="false" '
             'data-label-off="show single page" data-label-on="back to one tab at a time" '

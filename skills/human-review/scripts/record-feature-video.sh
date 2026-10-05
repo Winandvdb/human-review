@@ -30,7 +30,8 @@
 # per voice (<out>.voice-<key>.webm). The Demo tab offers them as radio buttons under the
 # player, and only the voices that made it into a film. Every shot lasts as long as the
 # LONGEST of the sentences, so all the films fit one take. NARRATION_FISH=off skips them all.
-# NARRATION_FISH_VOICES is a JSON list of {"key", "label", "id"}, `id` a Fish Audio model.
+# NARRATION_FISH_VOICES is a JSON list of {"key", "label", "id", "tip"?}, `id` a Fish Audio
+# model, `tip` the speaker's name the Demo tab shows on hover — left off the 🐘 on purpose.
 #
 # The film OPENS ON A TITLE CARD — "Demo" over the name of the change being reviewed — and it
 # is filmed, not spliced on afterwards. Splicing was the obvious build: render a card, concat
@@ -152,7 +153,8 @@ fi
 VOICES_META="${OUT%.webm}.voices.json"
 FISH_VOICES='[
   {"key": "trump", "label": "🐘", "id": "e58b0d7efca34eb38d5c4985e378abcb"},
-  {"key": "discovery", "label": "Discovery", "id": "c39a76f685cf4f8fb41cd5d3d66b497d"}]'
+  {"key": "discovery", "label": "Discovery", "tip": "David Attenborough",
+   "id": "c39a76f685cf4f8fb41cd5d3d66b497d"}]'
 export HR_FISH_VOICES="${NARRATION_FISH_VOICES:-$FISH_VOICES}"
 rm -rf "$VOICEDIR/fish"
 mkdir -p "$(dirname "$OUT")" "$VOICEDIR/fish"
@@ -535,13 +537,16 @@ PY
     python3 "$SCRIPT_DIR/annotate-feature-video.py" "$TMP/raw.$KEY.mkv" "$TMP/$KEY.cut.json" \
         "$FILM" --lead "${LEAD:-0}"
     python3 - "$VOICES_META" "$KEY" "$LABEL" "$(basename "$FILM")" "$TMP/$KEY.cut.json" <<'PY'
-import json, sys
+import json, os, sys
 meta, key, label, video, cues = sys.argv[1:]
 films = json.load(open(meta))
+tip = next((v.get("tip") for v in json.loads(os.environ["HR_FISH_VOICES"])
+            if v.get("key") == key), None)
 # Each voice has its own cut, so its own cue times: the page maps the reader's moment
 # from one film to the other cue by cue.
 films.append({"key": key, "label": label, "video": video,
-              "t": [round(c["t"], 2) for c in json.load(open(cues))]})
+              "t": [round(c["t"], 2) for c in json.load(open(cues))]}
+             | ({"tip": tip} if tip else {}))
 json.dump(films, open(meta, "w"), ensure_ascii=False)
 PY
     echo "[video] $LABEL voice -> $FILM" >&2

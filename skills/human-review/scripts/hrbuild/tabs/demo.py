@@ -120,8 +120,14 @@ def video_verdict_html(rel: str, out_dir: Path) -> str:
     return '<div class="vidverdict" role="alert">' + "".join(parts) + "</div>"
 
 
-def voice_films(rel: str, out_dir: Path) -> list[tuple[str, str, str, list]]:
-    """(key, src, label, cue times) of the same film in each cloned voice the recorder cut.
+# Who a worded voice is, for a film recorded before `voices.json` carried a `tip` — the
+# default Fish models in record-feature-video.sh. The 🐘 has none on purpose: guessing who
+# it is is the joke, and a hover that says the name spoils it.
+VOICE_TIPS = {"discovery": "David Attenborough"}
+
+
+def voice_films(rel: str, out_dir: Path) -> list[tuple[str, str, str, list, str]]:
+    """(key, src, label, cue times, tip) of the same film in each cloned voice the recorder cut.
 
     Each voice is its own cut of the take (a slow voice holds a shot longer), so each lists
     its own cue times; empty for a film recorded before that, on the shared clock.
@@ -148,38 +154,40 @@ def voice_films(rel: str, out_dir: Path) -> list[tuple[str, str, str, list]]:
         src = str(Path(rel).parent / str(f.get("video") or ""))
         if f.get("video") and f.get("key") and (out_dir / src).is_file():
             times = f.get("t") if isinstance(f.get("t"), list) else []
-            out.append((str(f["key"]), src, str(f.get("label") or f["key"]), times))
+            tip = f.get("tip") if "tip" in f else VOICE_TIPS.get(str(f["key"]), "")
+            out.append((str(f["key"]), src, str(f.get("label") or f["key"]), times,
+                        str(tip or "")))
     return out
 
 
-def voice_switch(rel: str, voices: list[tuple[str, str, str, list]],
+def voice_switch(rel: str, voices: list[tuple[str, str, str, list, str]],
                  times: list | None = None) -> str:
     """The radio buttons under the player: the offline voice first, then each cloned one.
     `data-ts` is that film's cue times, which caption.js maps the reader's moment through."""
     if not voices:
         return ""
     name = "voice-" + re.sub(r"[^A-Za-z0-9]+", "-", rel)
-    opts = [("", rel, "standard", times or [])] + list(voices)
+    opts = [("", rel, "standard", times or [], "")] + list(voices)
 
     def ts(t) -> str:
         return (f' data-ts="{",".join(f"{float(x):.2f}" for x in t)}"' if t else "")
 
-    def named(key: str, label: str) -> tuple[str, str]:
-        # A label that is a bare emoji (`🐘`) gives a screen reader nothing to say and a
-        # sighted reader nothing to go on until they press it. The face stays as designed;
-        # the radio gets a spoken name and the label a hover, both naming the voice.
-        if not key or re.search(r"\w", label):
-            return "", ""
-        spoken = html.escape(f"cloned voice: {key}", quote=True)
-        return f' aria-label="{spoken}"', f' data-tip="{spoken}"'
+    def named(key: str, label: str, tip: str) -> tuple[str, str]:
+        # A label that is a bare emoji (`🐘`) gives a screen reader nothing to say, so the
+        # radio is named — as a cloned voice, never as whose: who it is stays the surprise.
+        # A hover names the speaker only where the voice declares one (Discovery → David
+        # Attenborough), because that is the one a reviewer would otherwise wonder about.
+        spoken = (' aria-label="cloned voice"'
+                  if key and not re.search(r"\w", label) else "")
+        return spoken, (f' data-tip="{html.escape(tip, quote=True)}"' if tip else "")
 
     return ('<div class="voice-switch" role="radiogroup" aria-label="Narration voice">'
-            + "".join(f'<label{named(key, label)[1]}><input type="radio" '
+            + "".join(f'<label{named(key, label, tip)[1]}><input type="radio" '
                       f'name="{html.escape(name)}" '
                       f'value="{html.escape(key)}" data-src="{html.escape(src)}"{ts(t)}'
-                      f'{named(key, label)[0]}'
+                      f'{named(key, label, tip)[0]}'
                       f'{" checked" if not key else ""}> {html.escape(label)}</label>'
-                      for key, src, label, t in opts)
+                      for key, src, label, t, tip in opts)
             + "</div>")
 
 
@@ -297,7 +305,15 @@ def video_html(s, out_dir: Path) -> str:
     rel = s["video"]
     cues_path = out_dir / rel.replace(".webm", ".cues.json")
     cues = json.loads(cues_path.read_text(encoding="utf-8")) if cues_path.is_file() else []
-    rt = s.get("runtime") or derived_runtime(out_dir)
+    # The shell commands come from `steps.video.app` whenever it has them, over anything the
+    # content file typed: those are pinned to this checkout's real path and commit, while a
+    # model's hand-written `cd ~/workspace/petclinic-pr && …` went stale the day the folder
+    # was renamed (3 Oct 2026) and every Start said "start failed". The content file keeps
+    # what the config cannot know — `base`, `drive`, its own `reset`.
+    rt = dict(s.get("runtime") or {})
+    for key, value in derived_runtime(out_dir).items():
+        if value and (key in ("command", "stop", "urlCommand") or not rt.get(key)):
+            rt[key] = value
     links = s["appLinks"] if "appLinks" in s else derived_app_links(out_dir, cues)
     items, unplaced = _link_captions(cues, links, bool(rt.get("drive")))
     voices = voice_films(rel, out_dir) if (out_dir / rel).is_file() else []

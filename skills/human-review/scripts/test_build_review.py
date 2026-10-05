@@ -323,11 +323,25 @@ def test_each_voice_the_recorder_cut_is_a_radio_button_under_the_player(tmp_path
         "a voice whose film is not on disk is never offered"
     assert out.index("<video") < out.index('class="voice-switch"') < out.index("transcript")
     assert re.search(r'value=""[^>]* checked>', out), "the standard voice is the one playing"
-    # The 🐘 face is Victor's design and stays; a bare emoji gets a spoken name and a hover
-    # (eval run 6: "a reviewer cannot tell what it does"). A worded label needs neither.
-    assert 'value="trump" data-src="assets/f.voice-trump.webm" aria-label="cloned voice: trump"' in out
-    assert '<label data-tip="cloned voice: trump"><input' in out
+    # The 🐘 face is Victor's design and stays; a bare emoji gets a spoken name, but never
+    # whose voice it is — not to a screen reader, not on hover: guessing is the point.
+    assert 'value="trump" data-src="assets/f.voice-trump.webm" aria-label="cloned voice"' in out
+    assert re.search(r'<label><input[^>]*value="trump"', out), "no hover on the 🐘"
+    assert "Trump" not in out
     assert out.count("aria-label=\"cloned voice") == 1, "Discovery and standard say themselves"
+    # Discovery names its narrator on hover — from VOICE_TIPS here, since this voices.json
+    # predates the `tip` field; a `tip` in the file wins.
+    assert '<label data-tip="David Attenborough"><input type="radio"' in out
+    assert out.count("data-tip=") == 1
+
+
+def test_a_voice_declares_its_own_hover_name(tmp_path):
+    s = _video_dir(tmp_path, filmed=True)
+    (tmp_path / "assets" / "f.voice-discovery.webm").write_bytes(b"\x1aE\xdf\xa3")
+    (tmp_path / "assets" / "f.voices.json").write_text(json.dumps([
+        {"key": "discovery", "label": "Discovery", "tip": "Morgan Freeman",
+         "video": "f.voice-discovery.webm"}]), encoding="utf-8")
+    assert '<label data-tip="Morgan Freeman">' in build.video_html(s, tmp_path)
 
 
 def test_a_film_with_no_cloned_voice_has_no_voice_switch(tmp_path):

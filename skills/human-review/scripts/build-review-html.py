@@ -213,7 +213,7 @@ from hrbuild.tabs.tests import (
     _API_MARKERS, _cov_cat, coverage_tests, coverage_gaps, _load_test_changes, suite_chips
 )
 from hrbuild.tabs.demo import (
-    voice_films, voice_switch, embed_html, VERDICT_FACE, video_html, VIDEO_VERDICT,
+    VOICE_TIPS, voice_films, voice_switch, embed_html, VERDICT_FACE, video_html, VIDEO_VERDICT,
     video_verdict_html,
     _link_captions, derived_app_links, derived_runtime, _project_root, _screen_changed
 )

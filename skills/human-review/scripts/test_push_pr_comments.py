@@ -98,21 +98,24 @@ def test_an_anchor_that_moved_follows_its_text():
     assert (r.comment["start_line"], r.comment["line"]) == (11, 12)
 
 
-def test_an_anchor_that_vanished_downgrades_to_a_file_comment():
-    r = ppc.resolve(c(anchor="return owner;"), diff())
-    assert r.mode == "file" and r.comment["subject_type"] == "file"
-    assert "line" not in r.comment
+def test_an_anchor_that_vanished_is_quoted_in_the_summary_at_its_written_lines():
+    r = ppc.resolve(c(anchor="return owner;"), diff(), "a" * 40, REPO)
+    assert r.mode == "body" and "line" not in r.comment
+    assert r.permalink == f"https://github.com/{REPO}/blob/{'a' * 40}/src/A.java#L12"
 
 
-def test_a_line_outside_every_hunk_downgrades_to_a_file_comment():
-    r = ppc.resolve(c(line=30), diff())
-    assert r.mode == "file" and "outside" in r.note
+def test_a_line_outside_every_hunk_is_quoted_in_the_summary_with_a_permalink():
+    """GitHub refuses a review comment on a line the diff does not show; a file comment
+    loses the line. The summary keeps both: the words and the exact lines."""
+    r = ppc.resolve(c(line=30, start_line=28), diff(), None, REPO)
+    assert r.mode == "body" and "outside" in r.note
+    assert r.permalink == f"https://github.com/{REPO}/blob/{'h' * 40}/src/A.java#L28-L30"
 
 
 def test_a_file_not_in_the_diff_is_folded_into_the_review_body():
     for path in ("src/Other.java", "gone.txt"):
-        r = ppc.resolve(c(path=path), diff())
-        assert r.mode == "body"
+        r = ppc.resolve(c(path=path), diff(), None, REPO)
+        assert r.mode == "body" and r.permalink.endswith(f"/{path}#L12")
 
 
 def test_a_range_across_two_hunks_is_narrowed_to_its_last_line():
@@ -153,21 +156,27 @@ class FakeGh:
             self.reviews.append({"id": rid, "body": p["body"], "html_url": f"u/review/{rid}"})
             for k in p["comments"]:
                 cid = self._next()
-                self.comments.append({**k, "id": cid, "html_url": f"u/c/{cid}"})
+                self.comments.append({**k, "id": cid, "commit_id": p["commit_id"],
+                                      "html_url": f"u/pull/7#discussion_r{cid}"})
         elif call.method == "POST":
             cid = self._next()
-            self.comments.append({**p, "id": cid, "html_url": f"u/c/{cid}"})
+            self.comments.append({**p, "id": cid, "html_url": f"u/pull/7#discussion_r{cid}"})
         elif call.method == "PATCH":
             cid = int(call.path.rsplit("/", 1)[1])
             next(x for x in self.comments if x["id"] == cid)["body"] = p["body"]
         elif call.method == "PUT":
             rid = int(call.path.rsplit("/", 1)[1])
             next(x for x in self.reviews if x["id"] == rid)["body"] = p["body"]
+        elif call.method == "DELETE":
+            cid = int(call.path.rsplit("/", 1)[1])
+            self.comments = [x for x in self.comments if x["id"] != cid]
         return {}
 
 
-def push(gh: FakeGh, payload: dict, tmp: Path) -> tuple[ppc.Plan, dict]:
-    p = ppc.plan(payload, diff(), REPO, PR, gh.list("x/comments"), gh.list("x/reviews"))
+def push(gh: FakeGh, payload: dict, tmp: Path, d: ppc.Diff | None = None,
+         owned: set[int] | None = None) -> tuple[ppc.Plan, dict]:
+    p = ppc.plan(payload, d or diff(), REPO, PR, gh.list("x/comments"), gh.list("x/reviews"),
+                 owned)
     rec = ppc.execute(p, gh, REPO, PR, tmp / "pr-comments.posted.json", {"pr": PR})
     return p, rec
 
@@ -179,16 +188,20 @@ PAYLOAD = {"event": "COMMENT", "body": "Review record.", "comments": [
 ]}
 
 
-def test_first_push_posts_one_review_and_one_file_comment(tmp_path):
+def test_first_push_posts_one_review_with_the_rest_quoted_in_its_body(tmp_path):
     gh = FakeGh()
     p, rec = push(gh, PAYLOAD, tmp_path)
     kinds = [(x.method, x.path.split("/")[-1]) for x in gh.sent]
-    assert kinds == [("POST", "comments"), ("POST", "reviews")]
+    assert kinds == [("POST", "reviews")]
     review = gh.sent[-1].payload
     assert review["commit_id"] == "h" * 40 and len(review["comments"]) == 1
     assert "docs/manual.md" in review["body"] and ppc.REVIEW_MARKER in review["body"]
-    assert rec["comments"]["I:keep-the-vet"]["html_url"].startswith("u/c/")
-    assert rec["comments"]["I:manual-is-stale"]["html_url"] == rec["review_url"]
+    # Each one outside the diff, with a permalink alone on its line (GitHub embeds it).
+    assert f"\nhttps://github.com/{REPO}/blob/{'h' * 40}/src/A.java#L30" in review["body"]
+    assert "discussion_r" in rec["comments"]["I:keep-the-vet"]["html_url"]
+    for cid in ("I:manual-is-stale", "I:constructor-too-long"):
+        assert rec["comments"][cid]["html_url"] == rec["review_url"]
+    assert rec["comments"]["I:constructor-too-long"]["permalink"].endswith("#L30")
     assert json.loads((tmp_path / "pr-comments.posted.json").read_text()) == rec
 
 
@@ -198,7 +211,7 @@ def test_second_push_of_the_same_payload_sends_nothing(tmp_path):
     gh.sent.clear()
     p, _ = push(gh, PAYLOAD, tmp_path)
     assert gh.sent == []
-    assert len(gh.comments) == 2 and len(gh.reviews) == 1
+    assert len(gh.comments) == 1 and len(gh.reviews) == 1
 
 
 def test_an_edited_body_is_patched_and_a_new_item_gets_its_own_review(tmp_path):
@@ -347,3 +360,152 @@ def test_a_payload_pinned_to_another_branch_is_rebuilt_or_refused(tmp_path, caps
     (root / "review-points.md").unlink()
     assert ppc.main(["--root", str(root), "--drop-stale"]) == 0
     assert not file.exists() and "dropped" in capsys.readouterr().out
+
+
+# ── visit-has-vet: comments two lines off the page, one never on the PR ─────────────
+#
+# The payload was written against `ce56d912`, an earlier round's review commit (still an
+# ancestor after the revert), so its lines and anchor texts were that round's; the push
+# then chased those texts on the PR head. `R__seed.sql:142-145` went up as 144-147,
+# `VisitRestController.java:85` as 83, and `combo.component.ts:57` — a file the PR never
+# touched — into the body of a three-week-old review of another round.
+
+def test_lines_are_carried_from_the_payloads_commit_to_the_pr_head():
+    """A retouch after the review commit adds two lines above the ref: the comment goes on
+    the lines the ref names *now*, and `commit_id` is the head those lines are lines of."""
+    def carrier(path, line, frm):
+        assert frm == "r" * 40
+        return line + 2, True
+    d = ppc.Diff(head="h" * 40, base="b" * 40, files={"src/A.java": [(1, 20)]},
+                 reader=lambda p: A_LINES, carrier=carrier)
+    r = ppc.resolve(c(line=10, start_line=8, anchor="return vet;"), d, "r" * 40, REPO)
+    assert r.mode == "line" and (r.comment["start_line"], r.comment["line"]) == (10, 12)
+    assert "carried src/A.java:8-10 from rrrrrrrr to 10-12" in r.note
+    p = ppc.plan({"commit_id": "r" * 40, "comments": [c(line=10, anchor="return vet;")]},
+                 d, REPO, PR, [], [])
+    assert p.calls[-1].payload["commit_id"] == "h" * 40
+    assert p.calls[-1].payload["comments"][0]["line"] == 12
+
+
+def test_the_diff_wins_over_an_anchor_text_that_sits_elsewhere():
+    """The anchor text is a cross-check. Where the diff placed the line, a copy of the old
+    text two lines away is not a reason to move it there."""
+    d = ppc.Diff(head="h" * 40, base="b" * 40, files={"src/A.java": [(1, 20)]},
+                 reader=lambda p: A_LINES, carrier=lambda p, n, f: (n, True))
+    r = ppc.resolve(c(line=10, anchor="return vet;"), d, "r" * 40, REPO)
+    assert r.comment["line"] == 10 and "rewritten" in r.note
+
+
+def test_a_line_the_diff_removed_is_quoted_at_the_commit_it_was_written_against():
+    d = ppc.Diff(head="h" * 40, base="b" * 40, files={"src/A.java": [(1, 20)]},
+                 reader=lambda p: A_LINES, carrier=lambda p, n, f: (None, True))
+    r = ppc.resolve(c(line=10, anchor="gone();"), d, "r" * 40, REPO)
+    assert r.mode == "body"
+    assert r.permalink == f"https://github.com/{REPO}/blob/{'r' * 40}/src/A.java#L10"
+
+
+def _owned_push(gh, tmp):
+    p, rec = push(gh, PAYLOAD, tmp)
+    return p, rec, ppc.owned_ids(rec)
+
+
+def test_a_comment_this_pipeline_put_on_the_wrong_lines_is_deleted_and_posted_again(tmp_path):
+    gh = FakeGh()
+    _, _, owned = _owned_push(gh, tmp_path)
+    wrong = next(x for x in gh.comments if "hr:I:keep-the-vet" in x["body"])
+    wrong["line"] = 9                                   # where the old push put it
+    gh.sent.clear()
+    p, rec = push(gh, PAYLOAD, tmp_path, owned=owned)
+    kinds = [(x.method, x.path.split("/")[-1]) for x in gh.sent]
+    # The replacement first, the delete last: nothing is lost if GitHub refuses the post.
+    assert kinds == [("POST", "reviews"), ("DELETE", str(wrong["id"]))]
+    assert [k["line"] for k in gh.sent[0].payload["comments"]] == [12]
+    assert [x["line"] for x in gh.comments if "hr:I:keep-the-vet" in x["body"]] == [12]
+    assert rec["comments"]["I:keep-the-vet"]["line"] == 12
+    assert rec["comments"]["I:keep-the-vet"]["commit_id"] == "h" * 40
+
+
+def test_a_comment_the_record_does_not_vouch_for_is_never_deleted(tmp_path):
+    gh = FakeGh()
+    gh.comments.append({"id": 5, "path": "src/A.java", "line": 9, "html_url": "u/x",
+                        "body": "someone else's\n\n<!-- hr:I:keep-the-vet -->"})
+    p, _ = push(gh, PAYLOAD, tmp_path, owned=set())
+    assert not [x for x in gh.sent if x.method == "DELETE"]
+    assert any("left where it is" in n for n in p.notes)
+
+
+def test_a_line_comment_now_outside_the_diff_moves_into_the_summary(tmp_path):
+    gh = FakeGh()
+    gh.comments.append({"id": 5, "path": "src/A.java", "subject_type": "file", "line": 1,
+                        "html_url": "u/pull/7#discussion_r5",
+                        "body": "x\n\n<!-- hr:I:constructor-too-long -->"})
+    p, rec = push(gh, PAYLOAD, tmp_path, owned={5})
+    assert ("DELETE", "5") in [(x.method, x.path.split("/")[-1]) for x in gh.sent]
+    assert rec["comments"]["I:constructor-too-long"]["html_url"] == rec["review_url"]
+
+
+def test_an_earlier_rounds_summary_is_left_alone_and_this_round_gets_its_own(tmp_path):
+    """The old push found `<!-- hr:review -->` on a review of the previous round and
+    rewrote its body; the page linked an item of this round to that old review."""
+    gh = FakeGh()
+    gh.reviews.append({"id": 1, "body": "round 1\n\n<!-- hr:review -->", "html_url": "u/r/1"})
+    payload = {**PAYLOAD, "commit_id": "c" * 40}
+    p, rec = push(gh, payload, tmp_path)
+    assert not [x for x in gh.sent if x.method == "PUT"]
+    assert gh.reviews[0]["body"] == "round 1\n\n<!-- hr:review -->"
+    assert "<!-- hr:review:cccccccccccc -->" in gh.sent[-1].payload["body"]
+    assert rec["review_url"] != "u/r/1"
+    assert rec["comments"]["I:manual-is-stale"]["html_url"] == rec["review_url"]
+    gh.sent.clear()
+    push(gh, payload, tmp_path)
+    assert gh.sent == [], "the second push of a round finds its own summary"
+
+
+def test_a_payload_older_than_the_record_is_stale_and_rebuilt_at_the_records_commit(
+        tmp_path, capsys):
+    """visit-has-vet: `pr-comments.json` at `ce56d912` (round 1's review commit),
+    `review-points.md` re-recorded at `be762955`, then `5f84b2cd` moved only its `base:`.
+    The payload is refused and rebuilt at be762955 — not at 5f84b2cd, whose lines would
+    be the same numbers read against a tree two commits later."""
+    root = tmp_path
+    _git(root, "init", "-q", "-b", "main")
+    _git(root, "config", "user.email", "t@t"), _git(root, "config", "user.name", "t")
+    (root / "src").mkdir()
+    (root / "src/A.java").write_text("class A {\n  Old old;\n}\n")
+    (root / "review-points.md").write_text(POINTS.replace("src/A.java:3", "src/A.java:2"))
+    _git(root, "add", "."), _git(root, "commit", "-qm", "round 1")
+    old = _git(root, "rev-parse", "HEAD").strip()
+    (root / "src/A.java").write_text("class A {\n  Vet vet;\n  Vet vet() { return vet; }\n}\n")
+    (root / "review-points.md").write_text(POINTS)
+    _git(root, "commit", "-qam", "round 2")
+    rec = _git(root, "rev-parse", "HEAD").strip()
+    (root / "review-points.md").write_text(POINTS.replace("reviewers:", "base: abc\nreviewers:"))
+    _git(root, "commit", "-qam", "review-points: base moves")
+    file = root / ppc.DEFAULT_FILE
+    file.parent.mkdir(parents=True)
+    file.write_text(json.dumps({**ppc.from_review_points(root, "review-points.md", old)}))
+    assert ppc.anchor_commit(root, "review-points.md") == rec
+    assert "older than" in ppc.stale_reason(root, json.loads(file.read_text()))
+    assert ppc.main(["--root", str(root), "--check"]) == 2
+    capsys.readouterr()
+    assert ppc.main(["--root", str(root), "--drop-stale"]) == 0
+    fresh = json.loads(file.read_text())
+    assert fresh["commit_id"] == rec
+    by = {x["hr_id"]: x for x in fresh["comments"]}
+    assert by["F:return-the-vet"]["anchor"] == "Vet vet() { return vet; }"
+    assert by["F:return-the-vet"]["body"].startswith(f"🛠 **Auto-fixed** in {rec[:8]}")
+
+
+def test_a_round_without_its_own_summary_gathers_its_comments_into_one_review(tmp_path):
+    """visit-has-vet's first push left its line comments in a review whose body said only
+    "8 more from the same review record" and its summary on another round's review. The
+    push that gives the round its summary posts them again under it, then deletes them."""
+    gh = FakeGh()
+    gh.comments.append({"id": 5, "path": "src/A.java", "line": 12, "side": "RIGHT",
+                        "html_url": "u/pull/7#discussion_r5",
+                        "body": PAYLOAD["comments"][0]["body"] + "\n\n<!-- hr:I:keep-the-vet -->"})
+    p, rec = push(gh, {**PAYLOAD, "commit_id": "c" * 40}, tmp_path, owned={5})
+    kinds = [(x.method, x.path.split("/")[-1]) for x in gh.sent]
+    assert kinds == [("POST", "reviews"), ("DELETE", "5")]
+    assert [k["line"] for k in gh.sent[0].payload["comments"]] == [12]
+    assert "discussion_r5" not in rec["comments"]["I:keep-the-vet"]["html_url"]

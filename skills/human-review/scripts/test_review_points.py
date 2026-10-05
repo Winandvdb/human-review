@@ -1173,3 +1173,46 @@ def test_an_anchor_spanning_more_than_a_dozen_lines_is_warned_about():
     said = [w for w in rp.parse(doc)["warnings"] if "spans" in w]
     assert len(said) == 1 and "`file: a.ts:270-284` spans 15 lines" in said[0], said
     assert f"opens {rp.ANCHOR_LINES} and folds the rest" in said[0]
+
+
+# ── visit-has-vet: the record re-recorded after the review, front-matter only ──────────
+
+def test_a_commit_that_only_moves_the_front_matter_is_not_where_the_refs_were_written(
+        tmp_path):
+    """`5f84b2cd review-points: base moves to 33977c2c after merging main` touched only
+    `base:`; taking it as the review commit read every ref against a tree seven commits
+    after the one they were written in."""
+    def git(*a):
+        return subprocess.run(["git", "-C", str(tmp_path), *a], check=True,
+                              capture_output=True, text=True).stdout.strip()
+    git("init", "-q")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    rec = "---\nbase: aaa\n---\n\n## Fixed\n\n### X\n- file: a.py:2\n"
+    (tmp_path / "review-points.md").write_text(rec)
+    (tmp_path / "a.py").write_text("x\ny\n")
+    git("add", ".")
+    git("commit", "-qm", "review")
+    review = git("rev-parse", "HEAD")
+    (tmp_path / "a.py").write_text("new\nx\ny\n")
+    git("commit", "-qam", "retouch")
+    (tmp_path / "review-points.md").write_text(rec.replace("base: aaa", "base: bbb"))
+    git("commit", "-qam", "review-points: base moves")
+    assert rp.recorded_in(tmp_path, "review-points.md") == review
+    (tmp_path / "review-points.md").write_text(rec.replace("a.py:2", "a.py:3"))
+    git("commit", "-qam", "review-points: re-anchor")
+    assert rp.recorded_in(tmp_path, "review-points.md") == git("rev-parse", "HEAD")
+
+
+def test_a_line_split_in_two_is_carried_to_the_half_most_like_it(tmp_path):
+    """`20e1df32` rewrote `visit.setVet(vetRepository.findByIdOrNull(…))` as
+    `Vet vet = vetRepository.findByIdOrNull(…)` + `visit.setVet(vet)`. The ref used to be
+    called deleted, and the page quoted whatever had line 192 by then: `@WithSpan`."""
+    hunks = [{"a": 3, "b": 1, "c": 3, "d": 2,
+              "old": ["visit.setVet(vetRepository.findByIdOrNull(dto.getVetId()));"],
+              "new": ["Vet vet = vetRepository.findByIdOrNull(dto.getVetId());",
+                      "visit.setVet(vet);"]}]
+    assert rp.map_line(hunks, 3) == 3
+    assert rp.map_line(hunks, 5) == 6
+    unlike = [{**hunks[0], "new": ["log.info(\"x\");", "return 1;"]}]
+    assert rp.map_line(unlike, 3) is None, "a line replaced by something else is gone"

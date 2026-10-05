@@ -72,10 +72,15 @@ Everything outside `comments[]` except `version` is GitHub's own field. Inside a
    lets the push follow the line when a later commit shifts it; without it a moved line is
    only caught by falling outside the diff.
 4. **Code outside the diff** — the finding is about a file the PR did not touch, or a line
-   of it far from any hunk: give `subject_type: "file"` and no `line` when the file *is* in
-   the diff; when it is not, keep its `path` anyway and the script folds the comment into
-   the review body under *Not on a line of this diff*. Never invent a nearby changed line
-   just to get it inline — a comment on the wrong line is worse than one on the file.
+   of it far from any hunk: keep its `path` and `line` anyway. GitHub refuses a review
+   comment on a line its diff does not show, so the script quotes the comment in the
+   review's summary under *Not on a line of this diff*, with a permalink to the exact
+   lines (GitHub renders it as the code), and the page's *on GitHub ↗* goes there. Never
+   invent a nearby changed line just to get it inline — a comment on the wrong line is
+   worse than one in the summary.
+   **`line` is a line of `commit_id`.** The push sends every comment against the PR's head
+   and carries `line` / `start_line` there through `git diff commit_id head`; `anchor` is
+   checked at `commit_id`, before anything is carried.
 5. **Bodies are short and start with their kind.** The PR thread is not the page: two or
    three sentences, the decision and its reason, GitHub markdown.
 

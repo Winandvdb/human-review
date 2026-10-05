@@ -7,25 +7,37 @@ The judgement is not made here. The agent that wrote `review-points.md` also wri
 line of the diff and worded for the PR's own reader. This script only checks that payload
 against the PR as it is *now* and sends it. No model, no rewording, no choosing.
 
-Why the anchors are re-checked at push time and not trusted: the payload was written at
-the review commit, and the PR head has usually moved since (a retouch, a merge from
-`main`). A comment on a line that is no longer in the diff is refused by GitHub with a 422
-that fails the whole review, so every comment is resolved again, in order of preference:
+Why the anchors are re-checked at push time and not trusted: the payload's lines are lines
+of its `commit_id` (the commit `review-points.md` was recorded in), and the PR head has
+usually moved since (a retouch, a merge from `main`). Every comment is sent with the PR
+head as its `commit_id`, so every `line` / `start_line` is **carried from the payload's
+commit to the head through the diff between the two** — the same hunks the page carries its
+refs through (`review-points.py:map_line`) — and the `anchor` text is only the cross-check.
+visit-has-vet posted `R__seed.sql:144-147` for a card quoting `142-145`, and
+`VisitRestController.java:83` for one quoting `85`: its payload had been written against
+`ce56d912`, a review commit of an earlier round, and the comments then chased that round's
+anchor text to wherever it now sat. A comment on a line that is not in the diff is refused
+by GitHub with a 422 that fails the whole review, so each one is resolved, in order:
 
-  1. `line` still holds the `anchor` text and is in the diff          → posted as written
-  2. the `anchor` text moved, and its new line is in the diff        → posted there ("moved")
-  3. the file is in the diff but the line is not                     → a file-level comment
-  4. the file is not in the diff at all (or was deleted)             → folded into the body
+  1. the carried line is in the diff                                 → posted there
+  2. the diff removed the line, but the `anchor` text is in the diff → posted there ("moved")
+  3. the file or the carried line is outside the diff, or the line is gone
+                                                    → quoted in the review's summary body,
+                                                      with a permalink to the exact lines
 
-Every downgrade is printed. Nothing is dropped silently: a finding GitHub cannot pin to a
-line still reaches the PR, one level up.
+Every move and fallback is printed. Nothing is dropped: a finding GitHub cannot pin to a
+line is in the review's summary, under *Not on a line of this diff*, with the permalink
+(which GitHub renders as the code itself), and the page's *on GitHub ↗* goes there.
 
 **Re-pushing updates, it never duplicates.** Each body ends with a hidden marker,
 `<!-- hr:A:vet-id-is-on-delete-set-null -->` — the pile letter and a slug of the item's
 `###` title — and before posting the script lists the PR's review comments and PATCHes the
 ones already carrying a marker instead of posting them again. The review's own body carries
-`<!-- hr:review -->` and is updated in place the same way. (GitHub cannot move a comment:
-one whose anchor moved keeps its first position, and the script says so.)
+`<!-- hr:review:<commit> -->`, the payload's commit, so a later round of review gets a
+summary of its own instead of overwriting an earlier round's. GitHub cannot move a comment:
+one that now belongs on other lines (or in the summary) is **deleted and re-posted** — but
+only when the previous push's record (`pr-comments.posted.json`) lists it as this
+pipeline's; any other comment is left where it is, and the script says so.
 
 After a push, `.human-review/pr-comments.posted.json` records each marker's `html_url`, so
 the page can put a link to its GitHub comment beside every item.
@@ -60,8 +72,16 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 DEFAULT_FILE = ".human-review/pr-comments.json"
 POSTED_SUFFIX = ".posted.json"
-REVIEW_MARKER = "<!-- hr:review -->"
+REVIEW_MARKER = "<!-- hr:review -->"         # a summary from before rounds were told apart
 MARKER = re.compile(r"<!--\s*hr:([A-Za-z]:[a-z0-9-]+)\s*-->")
+ROUND_LEN = 12
+DISCUSSION = re.compile(r"discussion_r(\d+)")
+
+
+def review_marker(round_id: str | None) -> str:
+    """The hidden line that says which review summary is this round's: the payload's commit,
+    so a second round on the same PR gets its own instead of rewriting the first's."""
+    return f"<!-- hr:review:{round_id[:ROUND_LEN]} -->" if round_id else REVIEW_MARKER
 PILES = {"fixed": "F", "ignored": "I", "assumption": "A"}
 PILE_OF_KEY = {"autofixes": "fixed", "findings": "ignored", "assumptions": "assumption"}
 SLUG_MAX = 48
@@ -134,15 +154,61 @@ def git(root: Path, *args: str) -> str:
                           capture_output=True, text=True).stdout
 
 
+_RP = None
+
+
+def _rp():
+    """`review-points.py`, loaded once: its hunk mapping is the page's, and one copy of it
+    is how the page and the PR stop disagreeing about which line a ref is."""
+    global _RP
+    if _RP is None:
+        _RP = _load_points_parser()
+    return _RP
+
+
 @dataclass
 class Diff:
     head: str
     base: str
     files: dict[str, list[tuple[int, int]]]
     reader: object = None          # (path) -> list[str] | None, the file at `head`
+    root: Path | None = None       # the clone `carry` asks git in
+    #: (path, line, frm) -> (line at head | None, carried?) — set by the tests; git otherwise
+    carrier: object = None
 
     def lines(self, path: str) -> list[str] | None:
         return self.reader(path) if self.reader else None
+
+    def lines_at(self, path: str, rev: str | None) -> list[str] | None:
+        """The file as it was at `rev` — where a comment's `anchor` was copied from."""
+        if not rev or self.root is None:
+            return None
+        r = subprocess.run(["git", "-C", str(self.root), "show", f"{rev}:{path}"],
+                           capture_output=True, text=True)
+        return r.stdout.splitlines() if r.returncode == 0 else None
+
+    def carry(self, path: str, line: int, frm: str | None) -> tuple[int | None, bool]:
+        """`line` of `path` as written at `frm`, as it reads at `head`: `(line, True)`
+        through the diff between the two, `(None, True)` when that diff removed it, and
+        `(line, False)` when there is nothing to carry it through — no `frm`, `frm` is the
+        head, or the file did not exist at `frm` (it cannot have been written there)."""
+        if self.carrier is not None:
+            return self.carrier(path, line, frm)
+        if not frm or self.root is None:
+            return line, False
+        try:
+            if git(self.root, "rev-parse", f"{frm}^{{commit}}").strip() == \
+                    git(self.root, "rev-parse", f"{self.head}^{{commit}}").strip():
+                return line, False
+        except subprocess.CalledProcessError:
+            return line, False
+        if subprocess.run(["git", "-C", str(self.root), "cat-file", "-e", f"{frm}:{path}"],
+                          capture_output=True).returncode != 0:
+            return line, False
+        hunks = _rp().file_hunks(self.root, path, frm, self.head)
+        if hunks is None:
+            return line, False
+        return _rp().map_line(hunks, line), True
 
 
 def load_diff(root: Path, base: str, head: str) -> Diff:
@@ -159,7 +225,8 @@ def load_diff(root: Path, base: str, head: str) -> Diff:
             except subprocess.CalledProcessError:
                 cache[path] = None
         return cache[path]
-    return Diff(head=head, base=mb, files=files, reader=read)
+    return Diff(head=git(root, "rev-parse", head).strip(), base=mb, files=files,
+                reader=read, root=root)
 
 
 # --------------------------------------------------------------------------- #
@@ -174,6 +241,10 @@ class Resolved:
     note: str = ""             # why it moved or was downgraded; empty when as written
     title: str = ""
     pile: str = ""
+    #: For a "body" item: the exact lines it is about, `(rev, start, end)` — `start` None
+    #: for a whole file — and the permalink to them the summary quotes.
+    lines: tuple | None = None
+    permalink: str | None = None
 
 
 def _find_anchor(lines: list[str], anchor: str, near: int) -> int | None:
@@ -184,57 +255,128 @@ def _find_anchor(lines: list[str], anchor: str, near: int) -> int | None:
     return min(hits, key=lambda n: abs(n - near)) if hits else None
 
 
-def resolve(c: dict, diff: Diff) -> Resolved:
+def permalink(repo: str | None, rev: str, path: str, start: int | None = None,
+              end: int | None = None) -> str | None:
+    """`https://github.com/o/r/blob/<sha>/<path>#L57-L59` — the exact lines at one commit.
+    GitHub renders such a link, alone on its line in a comment, as the code it points at."""
+    if not repo or not rev:
+        return None
+    url = f"https://github.com/{repo}/blob/{rev}/{path}"
+    if start:
+        url += f"#L{start}" + (f"-L{end}" if end and end > start else "")
+    return url
+
+
+def _sha(diff: Diff, rev: str | None) -> str | None:
+    if not rev or diff.root is None:
+        return rev
+    try:
+        return git(diff.root, "rev-parse", f"{rev}^{{commit}}").strip()
+    except subprocess.CalledProcessError:
+        return rev
+
+
+def resolve(c: dict, diff: Diff, at: str | None = None, repo: str | None = None) -> Resolved:
+    """Where comment `c` goes on the PR as it is at `diff.head`. `at` is the commit its
+    `line` was written against — the comment's own `at`, else the payload's `commit_id`."""
     cid = c.get("hr_id") or hr_id(c["pile"], c["title"])
     body = c["body"].rstrip()
     if not MARKER.search(body):
         body = f"{body}\n\n{marker(cid)}"
     path = c["path"]
+    frm = c.get("at") or at
     out = Resolved(cid=cid, mode="line", comment={}, title=c.get("title", ""),
                    pile=c.get("pile", ""))
-    ranges = diff.files.get(path)
-    if ranges is None:
-        out.mode, out.note = "body", f"{path} is not in the PR's diff — folded into the review body"
+
+    def summary(why: str, rev: str | None, a: int | None, b: int | None) -> Resolved:
+        """Not on a line of the diff: quoted in the review's summary, with the lines."""
+        rev = _sha(diff, rev) or diff.head
+        out.mode, out.note = "body", why
         out.comment = {"path": path, "body": body}
+        out.lines = (rev, a, b if a else None)
+        out.permalink = permalink(repo, rev, path, a, b)
         return out
+
+    ranges = diff.files.get(path)
     if c.get("subject_type") == "file" or not c.get("line"):
+        if ranges is None:
+            return summary(f"{path} is not in the PR's diff — quoted in the review's summary",
+                           diff.head if diff.lines(path) is not None else frm, None, None)
         out.mode = "file"
         out.comment = {"path": path, "body": body, "subject_type": "file"}
         return out
 
-    line, start = int(c["line"]), c.get("start_line")
-    start = int(start) if start else None
-    anchor = c.get("anchor")
+    line0, start0 = int(c["line"]), c.get("start_line")
+    start0 = int(start0) if start0 else None
+    anchor = (c.get("anchor") or "").strip()
+    notes = []
+    # The anchor is checked where it was copied from, before anything is carried: a payload
+    # whose `line` is one off its own `anchor` is fixed at its own commit, by its own text.
+    then = diff.lines_at(path, frm) if anchor else None
+    if then is not None and not (0 < line0 <= len(then) and then[line0 - 1].strip() == anchor):
+        found = _find_anchor(then, anchor, line0)
+        if found is not None:
+            notes.append(f"{path}:{line0} at {str(frm)[:8]} does not read the anchor; "
+                         f"{found} does")
+            start0 = start0 + found - line0 if start0 else None
+            line0 = found
+    line, carried = diff.carry(path, line0, frm)
+    start = None
+    if start0:
+        start, _ = diff.carry(path, start0, frm)
+    if carried and line is not None and line != line0:
+        notes.append(f"carried {path}:{start0 or line0}" + (f"-{line0}" if start0 else "")
+                     + f" from {str(frm)[:8]} to {start or line}"
+                     + (f"-{line}" if start else "") + f" at {diff.head[:8]}")
     lines = diff.lines(path)
-    if anchor is not None and lines is not None:
-        here = lines[line - 1].strip() if 0 < line <= len(lines) else None
-        if here != anchor.strip():
-            moved = _find_anchor(lines, anchor, line)
-            if moved is None:
-                out.mode = "file"
-                out.note = f"{path}:{line} no longer reads {anchor.strip()[:50]!r} — posted on the file"
-                out.comment = {"path": path, "body": body, "subject_type": "file"}
-                return out
-            out.note = f"moved {path}:{line} → {moved} (the anchor text moved)"
-            if start:
-                start += moved - line
-            line = moved
+    if anchor and lines is not None:
+        here = lines[line - 1].strip() if line and 0 < line <= len(lines) else None
+        if here != anchor:
+            moved = _find_anchor(lines, anchor, line or line0)
+            if line is None and moved is not None:
+                notes.append(f"the diff since {str(frm)[:8]} removed {path}:{line0}; its "
+                             f"text is at {moved} now")
+                line, start = moved, (moved - (line0 - start0) if start0 else None)
+            elif not carried and moved is not None:
+                notes.append(f"moved {path}:{line0} → {moved} (the anchor text moved)")
+                if start0:
+                    start = start0 + moved - line0
+                line = moved
+            elif not carried and line is not None:
+                return summary("; ".join(notes + [
+                    f"{path}:{line0} no longer reads {anchor[:50]!r} — quoted in the "
+                    "review's summary, at the lines it was written against"]),
+                    frm or diff.head, start0 or line0, line0)
+            elif line is not None:
+                # The diff placed it: the line was rewritten there, which is the finding's
+                # line still. The text is a cross-check, not a vote against the diff.
+                notes.append(f"{path}:{line} was rewritten since {str(frm)[:8]} "
+                             f"(it read {anchor[:40]!r})")
+    if line is None:
+        return summary("; ".join(notes + [f"the diff since {str(frm)[:8]} removed "
+                                          f"{path}:{line0} — quoted in the review's summary,"
+                                          " at the lines it was written against"]),
+                       frm, start0 or line0, line0)
+    if start is not None and start > line:
+        start = None
+    if ranges is None:
+        return summary("; ".join(notes + [f"{path} is not in the PR's diff — quoted in the "
+                                          "review's summary"]),
+                       diff.head, start or line, line)
     h = hunk_of(ranges, line)
     if h is None:
-        out.mode = "file"
-        out.note = (f"{path}:{line} is outside the diff's hunks — posted on the file"
-                    + (f" ({out.note})" if out.note else ""))
-        out.comment = {"path": path, "body": body, "subject_type": "file"}
-        return out
+        return summary("; ".join(notes + [f"{path}:{line} is outside the diff's hunks — "
+                                          "quoted in the review's summary"]),
+                       diff.head, start or line, line)
     comment = {"path": path, "line": line, "side": "RIGHT", "body": body}
     if start and start < line:
         if hunk_of(ranges, start) == h:
             comment = {"path": path, "start_line": start, "start_side": "RIGHT",
                        "line": line, "side": "RIGHT", "body": body}
         else:
-            out.note = (out.note + "; " if out.note else "") + \
-                f"start_line {start} is in another hunk — narrowed to line {line}"
+            notes.append(f"start_line {start} is in another hunk — narrowed to line {line}")
     out.comment = comment
+    out.note = "; ".join(notes)
     return out
 
 
@@ -311,51 +453,110 @@ class Plan:
     calls: list[Call] = field(default_factory=list)
     resolved: list[Resolved] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    marker: str = REVIEW_MARKER        # the hidden line that names this round's summary
+
+
+def _face(r: Resolved) -> str:
+    rev, a, b = r.lines or (None, None, None)
+    return r.comment["path"] + (f":{a}" + (f"-{b}" if b and b != a else "") if a else "")
 
 
 def review_body(payload: dict, folded: list[Resolved]) -> str:
+    """The review's own body: the payload's line, then every item GitHub could not take on a
+    line of the diff, each with a permalink to its exact lines on a line of its own — which
+    GitHub renders as the code. Ends with this round's marker."""
     body = (payload.get("body") or "").rstrip()
     if folded:
-        body += "\n\n**Not on a line of this diff:**\n\n" + "\n\n---\n\n".join(
-            f"`{r.comment['path']}` — {MARKER.sub('', r.comment['body']).strip()}"
-            for r in folded)
-    return f"{body}\n\n{REVIEW_MARKER}".lstrip()
+        body += ("\n\n**Not on a line of this diff** — GitHub takes a review comment only on "
+                 "a line the PR changed or shows around a change, so these are quoted here, "
+                 "each with the exact lines:\n\n" + "\n\n---\n\n".join(
+                     f"**`{_face(r)}`** — {MARKER.sub('', r.comment['body']).strip()}"
+                     + (f"\n\n{r.permalink}" if r.permalink else "")
+                     for r in folded))
+    return f"{body}\n\n{review_marker(payload.get('commit_id'))}".lstrip()
+
+
+def _place(c: dict) -> tuple:
+    """Where a comment sits, comparably for one GitHub lists and one about to be sent. A
+    comment GitHub has outdated has no `line` any more, so it never matches a live place."""
+    if c.get("subject_type") == "file":
+        return (c.get("path"), "file")
+    return (c.get("path"), "line", c.get("start_line") or None, c.get("line"))
+
+
+def _where(c: dict) -> str:
+    if c.get("subject_type") == "file":
+        return f"{c.get('path')} (the file)"
+    s, e = c.get("start_line"), c.get("line")
+    return f"{c.get('path')}:{s}-{e}" if s else f"{c.get('path')}:{e}"
+
+
+def owned_ids(record: dict | None) -> set[int]:
+    """The comment ids the previous push's record says this pipeline posted — the only ones
+    a push may delete to post again on other lines."""
+    out = set()
+    for c in ((record or {}).get("comments") or {}).values():
+        m = DISCUSSION.search(str((c or {}).get("html_url") or ""))
+        if m:
+            out.add(int(m.group(1)))
+    return out
 
 
 def plan(payload: dict, diff: Diff, repo: str, pr: int,
-         existing: list[dict], reviews: list[dict]) -> Plan:
+         existing: list[dict], reviews: list[dict], owned: set[int] | None = None) -> Plan:
     """Pure: the calls a push would make. `existing` is the PR's review comments and
-    `reviews` its reviews, as GitHub lists them."""
+    `reviews` its reviews, as GitHub lists them; `owned` the comment ids the previous push
+    recorded (`owned_ids`), which are the only ones it may delete and post again."""
+    owned = owned or set()
     p = Plan()
-    p.resolved = [resolve(c, diff) for c in payload["comments"]]
+    p.resolved = [resolve(c, diff, payload.get("commit_id"), repo) for c in payload["comments"]]
     by_marker: dict[str, dict] = {}
     for e in existing:
         m = MARKER.search(e.get("body") or "")
-        if m and m.group(1) not in by_marker:
+        if not m:
+            continue
+        had = by_marker.get(m.group(1))
+        # This pipeline's own comment over a stranger's with the same title; the newest of
+        # two equals.
+        if had is None or ((e["id"] in owned, e["id"]) > (had["id"] in owned, had["id"])):
             by_marker[m.group(1)] = e
-    ours = next((r for r in reviews if REVIEW_MARKER in (r.get("body") or "")), None)
+    mark = p.marker = review_marker(payload.get("commit_id"))
+    ours = next((r for r in reviews if mark in (r.get("body") or "")), None)
 
-    new_lines, folded = [], []
+    new_lines, folded, deletes = [], [], []
     for r in p.resolved:
         if r.note:
             p.notes.append(f"{r.cid}: {r.note}")
-        if r.mode == "body":
-            folded.append(r)
-            continue
         old = by_marker.get(r.cid)
+        if old is not None:
+            moved = r.mode == "body" or _place(old) != _place(r.comment)
+            # This round has no summary yet, so whatever an earlier push of it posted sits
+            # under no summary (or under another round's): gathered into the new review,
+            # so one review holds the round — its summary and every line of it.
+            gather = not moved and ours is None and old["id"] in owned
+            if (moved or gather) and old["id"] in owned:
+                there = ("in the review's summary" if r.mode == "body"
+                         else f"at {_where(r.comment)}"
+                         + (", in this round's review" if gather else ""))
+                deletes.append(Call("DELETE", f"repos/{repo}/pulls/comments/{old['id']}", {},
+                                    f"delete {r.cid}: at {_where(old)}, it belongs {there}"))
+                p.notes.append(f"{r.cid}: posted at {_where(old)}; deleted and posted again "
+                               + there)
+                old = None
+            elif moved:
+                p.notes.append(f"{r.cid}: posted earlier at {_where(old)}, which is not in "
+                               "this pipeline's record of its own comments — left where it "
+                               "is (GitHub cannot move a comment)")
         if old is not None:
             if (old.get("body") or "").strip() != r.comment["body"].strip():
                 p.calls.append(Call("PATCH", f"repos/{repo}/pulls/comments/{old['id']}",
                                     {"body": r.comment["body"]}, f"update {r.cid}"))
             else:
                 p.notes.append(f"{r.cid}: already posted, unchanged")
-            where_now = (r.comment.get("line"), r.comment["path"])
-            where_then = (old.get("line"), old.get("path"))
-            if old.get("line") is not None and where_now != where_then:
-                p.notes.append(f"{r.cid}: posted earlier at {old.get('path')}:{old.get('line')};"
-                               " GitHub cannot move a comment, so it stays there")
             continue
-        if r.mode == "file":
+        if r.mode == "body":
+            folded.append(r)
+        elif r.mode == "file":
             p.calls.append(Call("POST", f"repos/{repo}/pulls/{pr}/comments",
                                 {**r.comment, "commit_id": diff.head}, f"file comment {r.cid}"))
         else:
@@ -374,6 +575,8 @@ def plan(payload: dict, diff: Diff, repo: str, pr: int,
             f"{len(new_lines)} more from the same review record.\n\n<!-- hr:review-more -->",
             "comments": [r.comment for r in new_lines],
         }, f"create a review with {len(new_lines)} line comment(s)"))
+    # Last: a comment is deleted only once its replacement has been accepted.
+    p.calls.extend(deletes)
     return p
 
 
@@ -422,23 +625,33 @@ def execute(p: Plan, gh, repo: str, pr: int, posted_path: Path, meta: dict) -> d
     after = gh.list(f"repos/{repo}/pulls/{pr}/comments")
     reviews = gh.list(f"repos/{repo}/pulls/{pr}/reviews")
     by_marker = {}
-    for e in after:
+    for e in sorted(after, key=lambda e: e.get("id") or 0):
         m = MARKER.search(e.get("body") or "")
         if m:
-            by_marker.setdefault(m.group(1), e)
-    review = next((r for r in reviews if REVIEW_MARKER in (r.get("body") or "")), None)
+            by_marker[m.group(1)] = e          # the newest: what this push just posted
+    review = next((r for r in reviews if p.marker in (r.get("body") or "")), None)
     record = {
         **meta,
         "pushed_at": _dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "review_url": (review or {}).get("html_url"),
+        "review_marker": p.marker,
         "comments": {},
     }
     for r in p.resolved:
-        e = by_marker.get(r.cid)
+        e = None if r.mode == "body" else by_marker.get(r.cid)
+        e = e or {}
+        rev, a, b = r.lines or (None, None, None)
+        start = e.get("start_line") or r.comment.get("start_line") or (a if b and a != b else None)
+        # `line` and `commit_id` together: the lines are lines of that commit, whether the
+        # comment sits on them or the summary quotes them.
         record["comments"][r.cid] = {
             "pile": r.pile, "title": r.title, "mode": r.mode,
-            "html_url": (e or {}).get("html_url") or (record["review_url"] if r.mode == "body" else None),
-            "path": r.comment.get("path"), "line": (e or {}).get("line") or r.comment.get("line"),
+            "html_url": e.get("html_url") or (record["review_url"] if r.mode == "body" else None),
+            "path": r.comment.get("path"),
+            "line": e.get("line") or r.comment.get("line") or b,
+            **({"start_line": start} if start else {}),
+            "commit_id": e.get("commit_id") or rev or meta.get("head"),
+            **({"permalink": r.permalink} if r.permalink else {}),
         }
     posted_path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return record
@@ -496,11 +709,35 @@ def comment_body(pile: str, item: dict, fixed_sha: str | None, page: str | None)
     return "\n\n".join(p for p in parts if p)
 
 
-def from_review_points(root: Path, points_file: str, at: str) -> dict:
+def anchor_commit(root: Path, points_file: str) -> str:
+    """The commit `review-points.md`'s `file:line`s are lines of: the commit that recorded
+    its items (`review-points.py:recorded_in`, which skips a commit that only moved the
+    front-matter), or the one the front-matter names, else HEAD.
+
+    Not `review-commits.json`'s `review`: visit-has-vet's payload was written while the
+    review commit was being made, when that file still named `ce56d912` — the previous
+    round's review commit, still an ancestor after the revert — and every comment was then
+    anchored on that round's code."""
+    rp = _rp()
+    try:
+        front = rp.parse((root / points_file).read_text(encoding="utf-8"))["front"]
+    except (OSError, ValueError, KeyError):
+        return "HEAD"
+    rev = rp.provenance(front, root, points_file).get("reviewCommit")
+    if rev and subprocess.run(["git", "-C", str(root), "rev-parse", "--verify", "--quiet",
+                               f"{rev}^{{commit}}"], capture_output=True).returncode == 0:
+        return rev
+    return "HEAD"
+
+
+def from_review_points(root: Path, points_file: str, at: str | None = None) -> dict:
+    """The payload, out of the record. Every `line` is a line of `at` (default: the commit
+    the record's items were written in, `anchor_commit`), which becomes `commit_id`."""
     rp = _load_points_parser()
     text = (root / points_file).read_text(encoding="utf-8")
     doc = rp.parse(text)
     front = doc["front"]
+    at = at or anchor_commit(root, points_file)
     try:
         at_sha = git(root, "rev-parse", "--short=8", at).strip()
     except subprocess.CalledProcessError:
@@ -535,7 +772,8 @@ def from_review_points(root: Path, points_file: str, at: str) -> dict:
     summary = (f"**Review record** from `{points_file}`"
                + (f" ({front['reviewers']})" if front.get("reviewers") else "")
                + f": {counts['fixed']} auto-fixed · {counts['ignored']} declined and still open"
-               f" · {counts['assumption']} assumptions. Each is pinned on the line it is about.")
+               f" · {counts['assumption']} assumptions. Each is on the line it is about, or "
+               "quoted below with its lines when that line is not in the diff.")
     return {"version": 1, "commit_id": git(root, "rev-parse", at).strip(), "event": "COMMENT",
             "body": summary, "comments": comments,
             "generated_by": "push-pr-comments.py --from-review-points"}
@@ -545,23 +783,39 @@ def from_review_points(root: Path, points_file: str, at: str) -> dict:
 # main
 # --------------------------------------------------------------------------- #
 
-def stale_reason(root: Path, payload) -> str | None:
-    """Why the payload belongs to another branch, or None when its commit is on this one.
+def stale_reason(root: Path, payload, points: str = "review-points.md") -> str | None:
+    """Why the payload is not this record's, or None when it is.
 
     Run 6 carried a `pr-comments.json` pinned to `0746abc5`, a commit of the previous run's
     branch: its anchors and quoted lines were written for code this branch never had, and
-    a push would have pinned them onto this PR. The commit has to be an ancestor of HEAD."""
+    a push would have pinned them onto this PR. The commit has to be an ancestor of HEAD.
+
+    And not older than the record: visit-has-vet's was pinned to `ce56d912`, the previous
+    round's review commit — on this branch, so it passed — while `review-points.md` had been
+    re-recorded at `be762955`. Its lines were the old round's lines of the old round's code."""
     cid = str((payload or {}).get("commit_id") or "").strip() if isinstance(payload, dict) \
         else ""
     if not cid:
         return None
     r = subprocess.run(["git", "-C", str(root), "merge-base", "--is-ancestor", cid, "HEAD"],
                        capture_output=True, text=True)
-    if r.returncode == 0:
-        return None
     if r.returncode == 1:
         return f"its commit {cid[:8]} is not on this branch (not an ancestor of HEAD)"
-    return f"its commit {cid[:8]} is not in this clone"
+    if r.returncode != 0:
+        return f"its commit {cid[:8]} is not in this clone"
+    if not (root / points).is_file():
+        return None
+    rec = anchor_commit(root, points)
+    if rec == "HEAD":
+        return None
+    same = subprocess.run(["git", "-C", str(root), "rev-parse", cid, rec],
+                          capture_output=True, text=True).stdout.split()
+    if len(same) == 2 and same[0] != same[1] and subprocess.run(
+            ["git", "-C", str(root), "merge-base", "--is-ancestor", cid, rec],
+            capture_output=True).returncode == 0:
+        return (f"its commit {cid[:8]} is older than {rec[:8]}, where {points} was recorded "
+                "— its lines are an earlier round's")
+    return None
 
 
 def drop_stale(root: Path, file: Path, points: str, at: str | None) -> str | None:
@@ -574,12 +828,12 @@ def drop_stale(root: Path, file: Path, points: str, at: str | None) -> str | Non
         payload = json.loads(file.read_text(encoding="utf-8"))
     except ValueError:
         payload = {"commit_id": "not-json"}
-    why = stale_reason(root, payload)
+    why = stale_reason(root, payload, points)
     if not why:
         return None
     if (root / points).is_file():
-        rev = at or _review_commit(root)
-        if stale_reason(root, {"commit_id": rev}):
+        rev = at or anchor_commit(root, points)
+        if stale_reason(root, {"commit_id": rev}, points):
             rev = "HEAD"
         fresh = from_review_points(root, points, rev)
         file.write_text(json.dumps(fresh, indent=2, ensure_ascii=False) + "\n",
@@ -587,16 +841,6 @@ def drop_stale(root: Path, file: Path, points: str, at: str | None) -> str | Non
         return f"{file.name}: {why} — rebuilt from {points} at {fresh['commit_id'][:8]}"
     file.unlink()
     return f"{file.name}: {why} — dropped, there is no {points} to rebuild it from"
-
-
-def _review_commit(root: Path) -> str:
-    try:
-        rc = json.loads((root / ".human-review/review-commits.json").read_text())
-        if rc.get("review"):
-            return rc["review"]
-    except (OSError, ValueError):
-        pass
-    return "HEAD"
 
 
 def summarize(p: Plan, out=None) -> None:
@@ -625,7 +869,7 @@ def main(argv=None) -> int:
                     help="write the payload out of review-points.md first")
     ap.add_argument("--points", default="review-points.md")
     ap.add_argument("--at", help="rev the refs in review-points.md were written at "
-                                 "(default: the review commit, else HEAD)")
+                                 "(default: the commit that recorded its items, else HEAD)")
     ap.add_argument("--drop-stale", action="store_true",
                     help="when the payload's commit is not on this branch, rebuild it from "
                          "review-points.md (or delete it when there is none); nothing else")
@@ -639,7 +883,7 @@ def main(argv=None) -> int:
         return 0
 
     if a.from_review_points:
-        payload = from_review_points(root, a.points, a.at or _review_commit(root))
+        payload = from_review_points(root, a.points, a.at)
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"wrote {file.relative_to(root)}: {len(payload['comments'])} comments")
@@ -655,7 +899,7 @@ def main(argv=None) -> int:
     except (BadPayload, ValueError) as e:
         print(f"{a.file} is not a pushable payload:\n{e}", file=sys.stderr)
         return 2
-    why = stale_reason(root, payload)
+    why = stale_reason(root, payload, a.points)
     if why:
         print(f"{a.file} is not this branch's: {why}. Its lines were written for other code; "
               "rebuild it with `push-pr-comments.py --drop-stale` (or --from-review-points)",
@@ -696,7 +940,15 @@ def main(argv=None) -> int:
             return 4
         print(f"note: could not list existing comments ({e}); assuming none", file=sys.stderr)
         existing, reviews = [], []
-    p = plan(payload, diff, repo, pr, existing, reviews)
+    posted_path = file.with_name(file.stem + POSTED_SUFFIX)
+    try:
+        before = json.loads(posted_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        before = {}
+    # Only what the last push recorded as its own may be deleted and posted again; and only
+    # on the PR that record is about.
+    owned = owned_ids(before) if before.get("pr") in (None, pr) else set()
+    p = plan(payload, diff, repo, pr, existing, reviews, owned)
     print(f"{info['url']} @ {head[:8]} (merge-base {diff.base[:8]})")
     summarize(p)
     if a.dry_run:
@@ -705,7 +957,7 @@ def main(argv=None) -> int:
             print(f"# {c.why}\n{c.shell()}\n")
         return 0
     try:
-        record = execute(p, gh, repo, pr, file.with_name(file.stem + POSTED_SUFFIX),
+        record = execute(p, gh, repo, pr, posted_path,
                          {"repo": repo, "pr": pr, "url": info["url"], "head": head})
     except RuntimeError as e:
         print(f"GitHub refused: {e}", file=sys.stderr)

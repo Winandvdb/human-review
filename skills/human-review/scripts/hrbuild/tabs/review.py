@@ -3395,11 +3395,13 @@ def prepare_pr_push(spec: dict, out_dir: Path, root: Path, skill_dir: Path) -> d
         posted = {}
     urls = {cid: (c or {}).get("html_url")
             for cid, c in (posted.get("comments") or {}).items()}
+    modes = {cid: (c or {}).get("mode") for cid, c in (posted.get("comments") or {}).items()}
     for key, letter in PR_PILE_LETTER.items():
         for item in spec.get(key) or []:
-            url = urls.get(f"{letter}:{pr_comment_slug(item.get('title', ''))}")
-            if url:
-                item["_ghUrl"] = url
+            cid = f"{letter}:{pr_comment_slug(item.get('title', ''))}"
+            if urls.get(cid):
+                item["_ghUrl"] = urls[cid]
+                item["_ghInSummary"] = modes.get(cid) == "body"
     counts = {p: sum(1 for c in comments if c.get("pile") == p)
               for p in ("fixed", "ignored", "assumption")}
     spec["_prPush"] = {"count": len(comments), "counts": counts,
@@ -3426,8 +3428,12 @@ def gh_comment_link(f) -> str:
     url = f.get("_ghUrl")
     if not url:
         return ""
+    # A line the PR's diff does not show cannot carry a review comment; the push quotes it
+    # in the review's summary instead, with a permalink to the lines, and the link says so.
+    tip = ("In the review's summary on GitHub — this line is not in the PR's diff"
+           if f.get("_ghInSummary") else "PR comment")
     return (f' <a class="f-gh" href="{html.escape(url, quote=True)}" target="_blank" '
-            'rel="noopener" data-tip="PR comment">on GitHub ↗</a>')
+            f'rel="noopener" data-tip="{html.escape(tip, quote=True)}">on GitHub ↗</a>')
 
 
 # Run on DOMContentLoaded, not inline: this sits in the Review tab, far above the page's

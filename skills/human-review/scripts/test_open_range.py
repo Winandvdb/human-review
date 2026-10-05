@@ -174,3 +174,91 @@ def test_both_open_routes_send_the_end():
     js = build.EDITOR_JS
     assert "'&line=' + ref2.line\n            + endQuery(link, ref2.line)" in js
     assert "'&line=' + aimed.line + endQuery(link, aimed.line)" in js
+
+
+# ── visit-has-vet: the card, its click, and the lines VS Code selects ────────────────────
+
+def _git(root: Path):
+    def git(*a):
+        return subprocess.run(["git", "-C", str(root), *a], check=True,
+                              capture_output=True, text=True).stdout.strip()
+    git("init", "-q")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    return git
+
+
+def _review_points():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "hr_review_points_open", Path(__file__).resolve().parent / "review-points.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _rows(card: str) -> list[tuple[int, str]]:
+    """`(line number, text)` of every row the card draws."""
+    import html as _html
+    import re as _re
+    out = []
+    for chunk in card.split('class="ln-row')[1:]:
+        m = _re.search(r'<span class="ln">(\d+)</span>(.*?)(?=\n|$)', chunk, _re.S)
+        out.append((int(m[1]), _html.unescape(_re.sub(r"<[^>]+>", "", m[2]))))
+    return out
+
+
+def test_a_card_opens_vs_code_on_exactly_the_lines_it_quotes(server, tmp_path, monkeypatch):
+    """The record was written at the review commit; a retouch then added two lines above
+    the ref and split its line in two, and a last commit moved only the record's `base:`.
+    The card quotes the code the ref is about at HEAD, and the click asks the editor for
+    exactly those lines — not the review commit's numbers read against HEAD's file."""
+    import re as _re
+    git = _git(tmp_path)
+    src = tmp_path / "B.java"
+    body = [f"    int f{i}() {{ return {i}; }}" for i in range(1, 9)]
+    body[4] = "        visit.setVet(vetRepository.findByIdOrNull(dto.getVetId()));"
+    src.write_text("class B {\n" + "\n".join(body) + "\n}\n")
+    rec = "---\nbase: aaa\nanchors: review-commit\n---\n\n## Ignored\n\n### Any vet\n" \
+          "- file: B.java:6\n- severity: info\n- why: the feature\n"
+    (tmp_path / "review-points.md").write_text(rec)
+    git("add", ".")
+    git("commit", "-qm", "review")
+    review = git("rev-parse", "HEAD")
+    after = body[:1] + ["    // logged", "    // twice"] + body[1:4] \
+        + ["        Vet vet = vetRepository.findByIdOrNull(dto.getVetId());",
+           "        visit.setVet(vet);"] + body[5:]
+    src.write_text("class B {\n" + "\n".join(after) + "\n}\n")
+    git("commit", "-qam", "retouch")
+    (tmp_path / "review-points.md").write_text(rec.replace("base: aaa", "base: bbb"))
+    git("commit", "-qam", "review-points: base moves")
+
+    rp = _review_points()
+    prov = rp.provenance(rp.parse(rec)["front"], tmp_path, "review-points.md")
+    assert prov["reviewCommit"] == review
+    item = {"title": "Any vet", "refs": ["B.java:6"], "snippets": [{"ref": "B.java:6"}]}
+    spec = {"findings": [item], "_reviewPoints": {
+        "source": "review-points.md", "frontmatter": {"anchors": "review-commit"},
+        "provenance": prov}}
+    build.reanchor_refs(spec, tmp_path, root=tmp_path)
+    assert item["refs"] == ["B.java:8"]
+    card = build.snippet_card(item["refs"][0], None, tmp_path)
+
+    # What the page sends: editor.js's `parse` of the href, and `endOf` of the face.
+    href = _re.search(r'class="srcref[^"]*" href="([^"]+)"', card)[1]
+    face = _re.search(r'class="srcref[^"]*" href="[^"]+"[^>]*>([^<]+)</a>', card)[1]
+    m = _re.match(r"^vscode://file/*(/[^:]*?)(?::(\d+))?(?::\d+)?$", href)
+    path, line = m[1], m[2] or "1"
+    end = _end_of(face, line)
+    opened, _ = _record(monkeypatch)
+    srv.ROOT = tmp_path
+    status, _ = _call(server, "GET", f"{srv.OPEN}?path={path}&line={line}"
+                      + (f"&endLine={end}" if end else ""))
+    assert status == 204
+    (target, first), span = opened[0]
+    last = span.get("end_line") or first
+    lines = Path(target).read_text().splitlines()
+    rows = _rows(card)
+    assert [n for n, _ in rows] == list(range(first, last + 1))
+    assert [t.strip() for _, t in rows] == [lines[n - 1].strip() for n in range(first, last + 1)]
+    assert "findByIdOrNull" in lines[first - 1]

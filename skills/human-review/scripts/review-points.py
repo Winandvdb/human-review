@@ -647,18 +647,45 @@ def top_fixed_in(front: dict, piles: dict[str, list[dict]]) -> str | None:
     return values.pop() if len(values) == 1 else None
 
 
-def recorded_in(root: Path, rel: str) -> str | None:
-    """The commit that recorded the file as it is on disk, or None.
+def _body_of(text: str) -> str:
+    """The file without its front-matter: the part whose `file:line`s are anchors."""
+    lines = text.splitlines()
+    _, start = parse_front(lines, [])
+    return "\n".join(lines[start:]).strip()
 
-    The last commit that touched it — but only when the working copy matches it, because
-    at `record-review.py finish` time the file is about to be committed and the last
-    commit that touched it is the *previous* review's."""
+
+#: How far back `recorded_in` looks for the commit that last wrote the items.
+RECORDED_SCAN = 200
+
+
+def recorded_in(root: Path, rel: str) -> str | None:
+    """The commit that recorded the items as they are on disk, or None.
+
+    The last commit that changed the file's *items* — but only when the working copy
+    matches it, because at `record-review.py finish` time the file is about to be committed
+    and the last commit that touched it is the *previous* review's.
+
+    A commit that only rewrote the front-matter is skipped: its `file:line`s were written
+    at the commit before it. visit-has-vet's `5f84b2cd` moved `base:` after merging main,
+    and taking it as the review commit carried every ref from the wrong tree — the page
+    quoted `@WithSpan` for a finding about `visit.setVet(…)`, and called the seven retouch
+    commits between the review and that one "fix commits"."""
     def git(*args: str) -> str:
         r = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
         return r.stdout.strip() if r.returncode == 0 else ""
+
+    def show(rev: str) -> str | None:
+        r = subprocess.run(["git", "-C", str(root), "show", f"{rev}:{rel}"],
+                           capture_output=True, text=True)
+        return r.stdout if r.returncode == 0 else None
     if git("status", "--porcelain", "--", rel):
         return None
-    return git("log", "-1", "--format=%H", "--", rel) or None
+    shas = git("log", f"-{RECORDED_SCAN}", "--format=%H", "--", rel).split()
+    for sha in shas:
+        now, before = show(sha), show(f"{sha}^")
+        if now is None or before is None or _body_of(now) != _body_of(before):
+            return sha
+    return shas[0] if shas else None
 
 
 def provenance(front: dict, root: Path | None, rel: str) -> dict:
@@ -722,10 +749,32 @@ def file_hunks(root: Path, rel: str, frm: str, to: str | None = None) -> list[di
     return hunks
 
 
+#: How alike a rewritten line must be to its old self to be called the same line.
+REWRITE_LIKE = 0.6
+
+
+def _rewritten(old: str, new: list[str]) -> int | None:
+    """The index of the line in `new` that `old` was most plausibly rewritten into."""
+    key = old.strip()
+    if not key:
+        return None
+    hits = [i for i, t in enumerate(new) if t.strip() == key]
+    if hits:
+        return hits[0]
+    from difflib import SequenceMatcher
+    scored = [(SequenceMatcher(None, key, t.strip()).ratio(), -i, i)
+              for i, t in enumerate(new) if t.strip()]
+    best = max(scored, default=None)
+    return best[2] if best and best[0] >= REWRITE_LIKE else None
+
+
 def map_line(hunks: list[dict], n: int) -> int | None:
     """Line `n` of the old side, on the new side — None when the hunk that covers it
     removed it. A rewritten line inside a hunk of equal size keeps its place; inside an
-    uneven one it is found again by its text, or it is gone."""
+    uneven one it is found again by its text — the same text nearest its old place, else
+    the most similar line the hunk wrote (visit-has-vet's `20e1df32` split
+    `visit.setVet(vetRepository.findByIdOrNull(…))` into `Vet vet = vetRepository…` and
+    `visit.setVet(vet)`: the finding about it is about the first) — or it is gone."""
     off = 0
     for h in hunks:
         a, b, c, d = h["a"], h["b"], h["c"], h["d"]
@@ -741,7 +790,10 @@ def map_line(hunks: list[dict], n: int) -> int | None:
                 return c + (n - a)
             key = (h["old"][n - a] if n - a < len(h["old"]) else "").strip()
             hits = [i for i, t in enumerate(h["new"]) if key and t.strip() == key]
-            return c + min(hits, key=lambda i: abs(i - (n - a))) if hits else None
+            if hits:
+                return c + min(hits, key=lambda i: abs(i - (n - a)))
+            near = _rewritten(key, h["new"])
+            return c + near if near is not None else None
         off += d - b
     return n + off
 

@@ -3,10 +3,19 @@
 ## Infrastructure changes are made on `main` first, then pulled into the PR branch
 
 Anything that feeds the machinery collecting code-quality data and metadata around a
-review — a guardrail test, a script under `skills/human-review/scripts/`, `human-review.json`,
-a git hook, CI, CODEOWNERS, the diagram/genseq pipeline — is changed **on `main` first**,
-pushed, and only then brought over to the demo PR branch. Never the other way round, and
-never on the PR branch alone.
+review — a guardrail test, a living diagram or its generator, a script under
+`skills/human-review/scripts/`, `human-review.json`, a git hook, CI, CODEOWNERS, the
+diagram/genseq pipeline — is changed **on `main` first**, pushed, and only then **merged
+back** into the PR branch being worked on (`test-pr`, `hr-claude-N`, any of them). Never the
+other way round, and never on the PR branch alone — including when the need shows up while
+improving this page against one PR.
+
+**Merged back, not only cherry-picked:** a cherry-pick lands *after* the review's base, so
+the page reports the infra change as the PR's own (a guardrail test once showed up as
+"APPROVAL REQUIRED @victorrentea/elders" on CODEOWNERS). What has to move is the base: merge
+`origin/main` into the PR branch, then move the review's recorded base to the new merge base
+— `review-points.md` (`base:`, `audited-base:`) and `.human-review/{review-points.json,
+review-commits.json,review/state.json}` — and re-run the steps the change feeds.
 
 The PR branch is an exhibit: it must differ from `main` by the feature it demonstrates and
 by nothing else. A guardrail or a script that exists only on `test-pr` makes every review
@@ -20,9 +29,10 @@ cd ~/workspace/petclinic-main        # always checked out on main
 # …make the change, commit…
 git push                             # that checkout is on main, a bare push is right
 
-cd ~/workspace/petclinic-pr          # on test-pr, which TRACKS origin/main
-git fetch origin && git cherry-pick <sha>   # linear history is what the course PR wants
-git push origin HEAD:test-pr         # NEVER a bare `git push` here: it would go to main
+cd ~/workspace/petclinic-pr-visit-has-vet   # or petclinic-pr-owner-grid-paginated (hr-claude-N)
+git fetch origin && git merge origin/main   # the base moves past the change
+# …move the review's recorded base to `git merge-base HEAD origin/main`, re-run the steps…
+git push origin HEAD:test-pr         # NEVER a bare `git push`: test-pr may track main
 ```
 
 `~/workspace/petclinic` is a third checkout on whatever branch it happens to be on — ask

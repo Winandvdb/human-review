@@ -471,6 +471,26 @@ def test_a_breaking_badge_keeps_its_change_count():
     assert "info.state === 'modified' && n ? many" in ovd.TEMPLATE
 
 
+def test_expand_impacted_opens_a_folded_controller_and_folds_back_only_what_it_opened():
+    """5 Oct 2026: with the controller folded, ticking the toggle opened nothing — a folded
+    tag renders no operations for the loop to find. Touched tags open first, off the tag
+    map, and unticking folds back the ones the toggle itself opened."""
+    t = ovd.TEMPLATE
+    assert "DATA.tags[tag] !== 'touched'" in t and "openedTags.add(tag)" in t
+    assert "openedTags.clear()" in t
+
+
+def test_the_framed_diff_scrolls_itself_and_its_roads_do_not_ratchet():
+    """The API tab is one window tall and the frame its only scrollbar: no height posted to
+    the host, no stick offset taken from it. The roads layer is measured with itself taken
+    out, inside the scrollbar — sized to the old `scrollWidth`, it outgrew the page by the
+    scrollbar's 15px and drew a horizontal scrollbar under the frame."""
+    t = ovd.TEMPLATE
+    assert "dv-height" not in t and "dv-stick" not in t
+    assert "setAttribute('width', root.clientWidth)" in t
+    assert "setAttribute('width', document.documentElement.scrollWidth)" not in t
+
+
 def test_the_skill_copy_and_the_public_repo_copy_have_not_drifted():
     """`openapi-visual-diff.py` lives twice: here, and as its own public repo. A fix in
     one and not the other is a trap for whoever reads the other one."""

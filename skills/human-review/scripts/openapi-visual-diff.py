@@ -712,20 +712,19 @@ TEMPLATE = r"""<!doctype html>
   }
   body { margin: 0; background: var(--dv-bg); color: var(--dv-fg);
          color-scheme: light dark; }
+  /* Framed, a wheel that reaches our last endpoint stops here rather than scrolling the
+     review around us: the frame is the one scrollbar on that tab. */
+  html { overscroll-behavior-y: contain; }
 
   /* ---------- toolbar ---------- */
   .dv-bar {
-    /* `sticky` is for this page opened on its own. Framed -- which is how it is nearly
-       always read -- the host grows the frame to our full height so that the outer page
-       keeps the only scrollbar, and a frame with no scrollport of its own has nothing
-       for `sticky` to stick to (nor for `fixed`, which pins to the same full-height
-       box). So the host, which is the thing that actually scrolls, tells us how far its
-       masthead has run past our top and we ride the bar down by exactly that much. The
-       filters and the counts are wanted at the fortieth endpoint, not just the first. */
+    /* Pinned at the top of whatever scrolls us: the window standalone, our own scrollport
+       framed -- the review sizes the frame to its window and lets it scroll itself. The
+       filters and the counts are wanted at the fortieth endpoint, not just the first.
+       Slim (Victor, 5 Oct 2026): every pixel of it is taken from the diff under it. */
     position: sticky; top: 0; z-index: 50;
-    transform: translateY(var(--dv-stick, 0px));
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-    padding: 10px 20px;
+    padding: 5px 20px;
     background: #1b1b1f; color: #eaeaea;
     font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     box-shadow: 0 2px 10px rgba(0,0,0,.25);
@@ -733,7 +732,7 @@ TEMPLATE = r"""<!doctype html>
   .dv-bar h1 { font-size: 14px; margin: 0 8px 0 0; font-weight: 600; letter-spacing: .01em; }
   .dv-chip {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 3px 10px; border-radius: 999px;
+    padding: 1px 10px; border-radius: 999px;
     background: rgba(255,255,255,.08); cursor: pointer; user-select: none;
     border: 1px solid transparent;
   }
@@ -750,7 +749,7 @@ TEMPLATE = r"""<!doctype html>
   .dv-spacer { flex: 1; }
   .dv-toggle {
     display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
-    padding: 3px 10px; border-radius: 6px; background: rgba(255,255,255,.08);
+    padding: 1px 10px; border-radius: 6px; background: rgba(255,255,255,.08);
   }
   .dv-toggle input { accent-color: #7aa2f7; margin: 0; }
 
@@ -1800,8 +1799,16 @@ function drawRoads() {
       roadLayer.setAttribute('aria-hidden', 'true');
       document.body.appendChild(roadLayer);
     }
-    roadLayer.setAttribute('width', document.documentElement.scrollWidth);
-    roadLayer.setAttribute('height', document.documentElement.scrollHeight);
+    // Sized to the content with the layer itself taken out of the measurement. Sized to
+    // `scrollWidth`/`scrollHeight` as it stood, it was a ratchet: a vertical scrollbar
+    // narrowed the page by 15px under a layer still as wide as before, which drew the
+    // horizontal scrollbar under the frame, and a collapse left the page as tall as it had
+    // ever been. `clientWidth` is the width inside a scrollbar; the roads never pass it.
+    const root = document.documentElement;
+    roadLayer.setAttribute('width', 0);
+    roadLayer.setAttribute('height', 0);
+    roadLayer.setAttribute('width', root.clientWidth);
+    roadLayer.setAttribute('height', root.scrollHeight);
     for (const road of ROADS) {
       const d = roadPath(road);
       if (!road.g) {
@@ -1912,16 +1919,44 @@ function reportMissed(op, missed) {
 // "expand impacted" now means what the reader always assumed it meant: not "open the
 // operations that changed" but "show me what changed". Stopping at the operation left
 // the fields four levels down inside a collapsed schema, which is where this started.
-document.getElementById('dv-expand').onchange = e => {
-  revealRun++;                                   // cancel anything still walking
+// A folded controller renders no operations at all, so with it folded the toggle used to
+// open nothing (Victor, 5 Oct 2026). Every tag holding a changed operation opens first —
+// read off the tag map, since a folded section has no operations to inspect — and
+// unticking folds back the ones the toggle opened, and only those.
+const openedTags = new Set();
+function tagHead(tag) {
+  return document.querySelector(`.opblock-tag[data-tag="${CSS.escape(tag)}"]`);
+}
+document.getElementById('dv-expand').onchange = async e => {
+  const run = ++revealRun;                       // cancel anything still walking
+  const on = e.target.checked;
   clearRoads();
+  if (on) {
+    document.querySelectorAll('.opblock-tag').forEach(h3 => {
+      const tag = h3.dataset.tag;
+      if (DATA.tags[tag] !== 'touched' || h3.dataset.isOpen === 'true') return;
+      openedTags.add(tag);
+      h3.click();
+    });
+    // Until each opened section has rendered its operations and decorate() has marked
+    // them: the loop below picks the changed ones out by that mark.
+    await waitFor(() => [...openedTags].every(tag =>
+      tagHead(tag)?.closest('.opblock-tag-section')?.querySelector('.opblock[data-dv-state]')),
+      STEP_WAIT);
+    if (run !== revealRun) return;
+  }
   document.querySelectorAll('.swagger-ui .opblock').forEach(op => {
     const s = op.dataset.dvState;
     if (!s || s === 'untouched') return;
     const open = op.classList.contains('is-open');
-    if (open !== e.target.checked) op.querySelector('.opblock-summary-control')?.click();
+    if (open !== on) op.querySelector('.opblock-summary-control')?.click();
   });
-  if (e.target.checked) revealImpacted();
+  if (on) { revealImpacted(); return; }
+  openedTags.forEach(tag => {
+    const h3 = tagHead(tag);
+    if (h3 && h3.dataset.isOpen === 'true') h3.click();
+  });
+  openedTags.clear();
 };
 
 window.ui = SwaggerUIBundle({
@@ -1940,55 +1975,10 @@ new MutationObserver(() => {
   window.__dvT = setTimeout(decorate, 50);
 }).observe(document.getElementById('swagger-ui'), { childList: true, subtree: true });
 
-// Embedded in a page, this document should not grow a scrollbar of its own: a frame
-// that scrolls internally traps the wheel and hides how much is left. Report our real
-// height instead and let the host size the frame — the outer page keeps the only
-// scrollbar. Cross-origin over file://, so it goes by postMessage, not by reading us.
-//
-// The height of the *content*, never of the viewport. `documentElement.scrollHeight` is
-// at least the viewport, and the viewport of a frame is whatever the host last set it
-// to from the number we posted, plus the few pixels it adds for the border: post that
-// and the host grows the frame, `resize` fires, we measure the taller viewport, post
-// again, and the frame creeps down the page four pixels at a time for as long as the
-// tab is open. The body's own box (margin 0, height auto) is the content and nothing
-// else, and does not move when the frame around it does.
-function postHeight() {
-  if (window.parent === window) return;
-  // Never a scrollbar of our own, in either direction: with classic (always-shown)
-  // scrollbars a vertical one ate 15px of width and drew a horizontal one under the
-  // frame (Victor, 4 Oct 2026). The host sizes us to the content, so nothing is lost.
-  document.documentElement.style.overflow = 'hidden';
-  // The body's box, or what overflows it (a child's margin or border poking past the
-  // bottom) -- `body.scrollHeight` does not grow with the viewport the way the root's does.
-  const h = Math.ceil(Math.max(document.body.getBoundingClientRect().height,
-                               document.body.scrollHeight));
-  if (h !== window.__dvH) {
-    window.__dvH = h;
-    window.parent.postMessage({ type: 'dv-height', height: h }, '*');
-  }
-}
-new MutationObserver(() => {
-  clearTimeout(window.__dvHT);
-  window.__dvHT = setTimeout(postHeight, 80);
-}).observe(document.body, { childList: true, subtree: true, attributes: true });
-window.addEventListener('load', postHeight);
-window.addEventListener('resize', postHeight);
-
-// The other half of that bargain. Having given up our scrollport we cannot pin our own
-// toolbar, so the host posts how far down this frame its pinned masthead now sits and we
-// slide the bar by that much -- clamped to the frame, so it stops at the bottom of the
-// diff rather than riding on into whatever follows. The offset is set on <html>, which
-// the observer above does not watch: on `.dv-bar` it would re-arm postHeight on every
-// scrolled frame.
-window.addEventListener('message', (e) => {
-  const d = e.data;
-  if (!d || d.type !== 'dv-stick') return;
-  const bar = document.querySelector('.dv-bar');
-  if (!bar) return;
-  const room = document.documentElement.scrollHeight - bar.offsetTop - bar.offsetHeight;
-  const y = Math.max(0, Math.min(d.top || 0, room));
-  document.documentElement.style.setProperty('--dv-stick', y + 'px');
-});
+// Framed, this document scrolls itself. It used to post its height so the review could
+// grow the frame and keep the only scrollbar, and the review posted back how far to slide
+// the toolbar down; the API tab is one window tall now (Victor, 5 Oct 2026), the frame
+// fills what the verdict band leaves, and `sticky` pins the toolbar with no help.
 </script>
 </body>
 </html>

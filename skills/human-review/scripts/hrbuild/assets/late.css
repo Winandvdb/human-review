@@ -59,5 +59,20 @@ button.tab { flex:1 1 auto; justify-content:center; }
    application the way pb33f's is: it follows the system theme, exactly as this
    page does. So the frame gets the page's own card colour rather than pb33f's
    near-black, and the two documents agree at the seam in both themes. */
-.oaviframe { display:block; width:100%; height:820px; margin:1rem 0 1.4rem;
+.oaviframe { display:block; width:100%; height:820px; margin:0;
              border:1px solid var(--line); border-radius:8px; background:var(--card); }
+/* The API tab is exactly one window tall, from the masthead's bottom edge down (Victor,
+   5 Oct 2026, the Tests tab's rule): the verdict band, then the frame taking every pixel
+   left, and the frame scrolls itself — its toolbar pinned at its top, the only vertical
+   scrollbar on screen. The page has nothing left to scroll but the footer under the fold.
+   It used to be the other way round, the frame grown to its content so the page kept the
+   scrollbar, and the toolbar had to be slid down by messages from this side to stay in
+   view. `--strip-h` is the masthead's measured height (tabs.js); `100vh` is said first for
+   a browser without `dvh`. Margins do not collapse in a flex column, so the band's own
+   bottom margin is the whole gap and the frame carries none. */
+@media screen {
+  .panel:not([hidden]):has(> iframe.oaviframe) { display:flex; flex-direction:column;
+    box-sizing:border-box; height:calc(100vh - var(--strip-h, 7rem));
+    height:calc(100dvh - var(--strip-h, 7rem)); }
+  .panel > iframe.oaviframe { flex:1 1 0; min-height:20rem; height:auto; }
+}

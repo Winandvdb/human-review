@@ -343,7 +343,8 @@ def _data(page):
 def test_the_card_keeps_its_shape_and_is_retitled(tmp_path):
     page = _with_coverage(tmp_path)
     assert T.COVCARD_WHO in page and "📏" in page
-    assert "Covering tests" not in page and "as matched by AI" not in page
+    # The model's old title, not the semantic switch's tip, which says the same words.
+    assert "Covering tests" not in page and "— as matched by AI" not in page
     # One list, drawn by the model's own renderer: no second card, no per-row counts.
     assert "rm-aicard" not in page and "cov-card" not in page and "rm-list" in page
     assert "runs 3 of 5" not in page and "changed lines run" not in page
@@ -367,12 +368,22 @@ def test_every_test_that_runs_changed_code_joins_the_models_list(tmp_path):
     assert tests["w/a.spec.ts:7"]["parts"] == []              # no file, no excerpt
 
 
-def test_gaps_and_unmeasurable_changes_fold_under_the_card(tmp_path):
+def test_no_list_of_unrun_or_unmeasurable_lines_is_drawn_under_the_card(tmp_path):
+    """Victor, 5 Oct 2026: "Changed lines no test runs" and "Not measurable" flagged
+    declarations (an NgModule's `declarations: [ … ]`, a local variable) and took the
+    column's height — both went for good. The join still computes them; the page does not
+    draw them, not even as a zero."""
     page = _with_coverage(tmp_path)
-    assert "Changed lines no test runs <b>1</b>" in page
-    assert "Not measurable <b>2</b>" in page
-    # Under the card they are a footnote to.
-    assert page.index("rm-code") < page.index("cov-after")
+    assert T.coverage_join(_doc())["gaps"], "the fixture does have unrun lines"
+    for gone in ("no test runs", "Not measurable", "cov-gaps", "cov-unm", "cov-zero"):
+        assert gone not in page, gone
+    doc = _doc()
+    doc["suites"] = [s for s in doc["suites"] if s["status"] == "ran"]
+    assert "cov-after" not in _with_coverage(tmp_path, doc).split("</style>")[-1], \
+        "with every suite run nothing is left to say under the card"
+    css = (HERE / "hrbuild" / "assets" / "css" / "tests.css").read_text(encoding="utf-8")
+    for gone in (".cov-gaps", ".cov-unm", ".cov-zero", ".cov-why", ".cov-gapn"):
+        assert gone not in css, gone
 
 
 def test_a_suite_whose_coverage_is_stale_or_missing_is_named_on_the_tab(tmp_path):
@@ -385,7 +396,7 @@ def test_a_suite_whose_coverage_is_stale_or_missing_is_named_on_the_tab(tmp_path
             "E2E Playwright coverage: stale</span>")
     assert chip in page
     assert "Backend JUnit coverage" not in page and "Frontend Karma coverage" not in page
-    assert page.index("rm-code") < page.index("cov-suites") < page.index("cov-gaps")
+    assert page.index("rm-code") < page.index("cov-after") < page.index("cov-suites")
     doc = _doc()
     doc["suites"] = [s for s in doc["suites"] if s["status"] == "ran"]
     doc["suites"].append({"name": "E2E Cucumber", "status": "skipped", "note": "no run.json"})
@@ -395,23 +406,6 @@ def test_a_suite_whose_coverage_is_stale_or_missing_is_named_on_the_tab(tmp_path
     assert "cov-suite" not in _with_coverage(tmp_path, doc).split("</style>")[-1]
     css = (HERE / "hrbuild" / "assets" / "css" / "tests.css").read_text(encoding="utf-8")
     assert ".cov-suite {" in css and "cursor:help" in css
-
-
-def test_a_zero_is_said_rather_than_the_block_left_out(tmp_path):
-    """Eval run 10 ran every measurable changed line, and the "Changed lines no test runs"
-    block was simply absent: a reviewer cannot tell "none" from "not computed". Same for
-    "Not measurable"."""
-    doc = _doc()
-    doc["changed"]["F.java"] = [10, 11, 12]
-    doc["executable"]["F.java"] = [1, 10, 11, 12]
-    doc["unmeasurable"] = []
-    page = _with_coverage(tmp_path, doc)
-    assert ('<p class="cov-gaps cov-zero">Changed lines no test runs <b>0</b> — all 4 '
-            "measurable changed lines ran in at least one test</p>") in page
-    assert '<p class="cov-unm cov-zero">Not measurable <b>0</b> changed lines' in page
-    assert "<details" not in page[page.index("cov-after"):]
-    css = (HERE / "hrbuild" / "assets" / "css" / "tests.css").read_text(encoding="utf-8")
-    assert ".cov-zero { color:var(--muted); }" in css, "muted, not the gaps' red"
 
 
 def test_the_card_says_pr_only_over_a_pull_request(tmp_path):

@@ -3374,7 +3374,7 @@ def prepare_pr_push(spec: dict, out_dir: Path, root: Path, skill_dir: Path) -> d
         # No pull request, nothing to post to: `push-pr-comments.py` would exit 2 on
         # "no PR for this branch", after the reader had pressed a button the page offered.
         print("[review] no pull request named in content.json (`pr.number` / `pr.url`) — "
-              "the Review tab offers no 'Publish comment on GitHub PR'", file=sys.stderr)
+              "the Review tab offers no 'Publish on GitHub'", file=sys.stderr)
         return None
     try:
         rel = str(out_dir.resolve().relative_to(root.resolve()))
@@ -3462,7 +3462,7 @@ PR_PUSH_JS = """<script>document.addEventListener('DOMContentLoaded', function()
 
 
 def push_pr_button(spec) -> str:
-    """*Publish comment on GitHub PR*, at the end of the Review tab's sticky counts line.
+    """*Publish on GitHub*, at the end of the Review tab's sticky counts line.
 
     Hidden until the probe says this server can run it — off disk, in the zip and on
     GitHub Pages there is nothing to post with. A press runs `--dry-run` first and shows
@@ -3476,7 +3476,7 @@ def push_pr_button(spec) -> str:
     again = pp["posted"] > 0
     # One label whether or not it was pushed before — Victor's wording; the tooltip says
     # when it last went out and that a second press updates rather than duplicates.
-    face = "Publish comment on GitHub PR"
+    face = "Publish on GitHub"
     n = c['fixed'] + c['ignored'] + c['assumption']
     tip = (f"{n} inline PR comment{'' if n == 1 else 's'}. Preview first; re-push updates, "
            "never duplicates."

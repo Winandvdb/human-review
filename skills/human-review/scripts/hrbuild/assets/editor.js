@@ -70,8 +70,25 @@
       copy(prompt).then(function () { flash('Copied \u2014 paste it to an agent'); });
     });
     toast.appendChild(b);
+    // Sticky, so it needs its own way out: a × after the button, Esc, or a click anywhere
+    // else. Only an asking toast gets them — a plain flash still fades on its own.
+    var x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'ct-close';
+    x.setAttribute('aria-label', 'Close');
+    x.setAttribute('data-tip', 'Close');
+    x.textContent = '\u00d7';
+    x.addEventListener('click', dismissAsk);
+    toast.appendChild(x);
     toast.classList.add('asks');
   }
+  function dismissAsk() {
+    if (toast && toast.classList.contains('asks')) toast.classList.remove('shown', 'asks');
+  }
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') dismissAsk(); });
+  document.addEventListener('click', function (ev) {
+    if (toast && toast.classList.contains('asks') && !toast.contains(ev.target)) dismissAsk();
+  });
 
   // What the build stamped on <html>: the commit this guide quotes, the checkout it was built
   // in, and — when the editor extension was installed — the id that owns its URI handler.
@@ -394,7 +411,8 @@
       var x = document.createElement('button');
       x.type = 'button';
       x.className = 'vp-close';
-      x.setAttribute('aria-label', 'Dismiss');
+      x.setAttribute('aria-label', 'Close');
+      x.setAttribute('data-tip', 'Close');
       x.textContent = '\u00d7';
       x.addEventListener('click', closePop);
       row.appendChild(b);

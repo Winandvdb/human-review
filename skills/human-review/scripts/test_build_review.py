@@ -1902,13 +1902,14 @@ def test_a_test_edited_through_a_helper_is_filed_under_edited_and_names_the_help
            "status": "modified", "line": 76,
            "viaHelper": [{"name": "anOwnerWithAPet", "line": 105, "added": 13, "removed": 6}]}
     out, moved = build.render_test_ledger([row, LEDGER_ROWS[-1]], Path("/repo"))
-    assert moved == 1 and ">edited <b>1</b></h3>" in out
-    assert 'class="tnote tvia"' in out and f">{build.VIA_HELPER_LABEL}</span>" in out
-    assert "it calls anOwnerWithAPet() (line 105, +13/−6)" in out
+    assert moved == 1 and f'data-tip="1 test edited">{build.PENCIL}1</span>' in out
     assert "1 more test in the files this change set touched" in out
+    # Its row, wherever a list renders it, names the helper.
+    rows = build.render_tests([row], Path("/repo"))
+    assert 'class="tnote tvia"' in rows and f">{build.VIA_HELPER_LABEL}</span>" in rows
+    assert "it calls anOwnerWithAPet() (line 105, +13/−6)" in rows
     # A plain body edit carries no such note.
-    plain, _ = build.render_test_ledger([LEDGER_ROWS[2]], Path("/repo"))
-    assert "tvia" not in plain
+    assert "tvia" not in build.render_tests([LEDGER_ROWS[2]], Path("/repo"))
 
 
 def test_a_test_whose_file_is_gone_gets_no_link_rather_than_a_dead_one():
@@ -1978,26 +1979,26 @@ LEDGER_ROWS = [
 ]
 
 
-def test_the_ledger_lists_the_tests_no_requirement_happens_to_name():
-    """A deleted test is under no requirement by definition, and a test that pins nothing
-    anybody wrote down is under none either — so without this list they are counted in
-    the chip and named nowhere."""
+def test_the_tests_no_list_shows_are_named_on_their_counts_hover():
+    """A deleted test is under no requirement by definition and runs nothing, so no
+    covering list names it; a test that stopped running is in no covering list either.
+    Their names are on their count's hover. New and edited ones are only counted: the
+    covering card beside the line lists them."""
     out, moved = build.render_test_ledger(LEDGER_ROWS, Path("/repo"))
     assert moved == 5, "everything but the untouched one"
-    for name in ("create_withVet", "arrives_off", "update_ok", "parked", "obsolete"):
-        assert f">{name} <" in out
-    assert ">untouched <" not in out
+    gone = out[out.index('class="removed"'):]
+    assert 'data-tip="2 tests gone: VisitTest.java: parked, obsolete"' in gone
+    off = out[out.index('class="toff"'):]
+    assert 'data-tip="Still written; never runs: VisitTest.java: arrives_off"' in off
+    for name in ("create_withVet", "update_ok", "untouched"):
+        assert name not in out
 
 
-def test_a_test_that_never_runs_is_filed_under_that_and_not_under_new():
+def test_a_test_that_never_runs_is_counted_under_that_and_not_under_new():
     """`new` and `@Disabled` is not news about coverage, it is news about a test that has
-    never run — and filing it under "new" hides it among the twenty-one that do run."""
+    never run — and counting it under "new" hides it among the twenty-one that do run."""
     out, _ = build.render_test_ledger(LEDGER_ROWS, Path("/repo"))
-    body = out[out.index('<div class="tledger-body">'):]
-    off = body[body.index("stopped running"):body.index(">new <b>")]
-    assert "arrives_off" in off and "create_withVet" not in off
-    assert '<span class="tflag added">new</span>' in off, \
-        "the one group whose rows do not share a fate keeps the flag saying which it is"
+    assert ">1 stopped running</span>" in out and 'data-tip="1 new test">+1</span>' in out
 
 
 def test_the_untouched_rest_are_counted_rather_than_listed():
@@ -2007,30 +2008,24 @@ def test_the_untouched_rest_are_counted_rather_than_listed():
     assert "1 more test in the files this change set touched" in out
 
 
-def test_a_group_heading_spares_its_rows_from_repeating_the_same_word():
+def test_the_ledger_is_one_line_of_counts_and_nothing_to_unfold():
+    """Eval run 11 folded the ledger's four lists behind one line of counts; Victor
+    dropped the fold (5 Oct 2026): on the requirements map the card beside it already
+    lists the tests. One line of plain counts, the word each sign stands for on its hover."""
     out, _ = build.render_test_ledger(LEDGER_ROWS, Path("/repo"))
-    gone = out[out.index(">gone <b>"):]
-    assert "obsolete" in gone and '<span class="tflag' not in gone[:gone.index("</section>")]
-
-
-def test_the_ledger_is_one_line_of_counts_with_the_lists_folded_under_it():
-    """Eval run 11: the section — a heading, four groups, a paragraph under each — doubled
-    the Tests tab, and fifty-six of its names were the new tests the card already lists.
-    The reviewer is busy: one line of counts, the names a click away, and what a group
-    means on its heading's hover rather than in a paragraph under it."""
-    out, _ = build.render_test_ledger(LEDGER_ROWS, Path("/repo"))
-    assert out.startswith('<details class="tledger" id="test-ledger"><summary')
-    assert "<details class=\"tledger\" id=\"test-ledger\" open" not in out, "folded"
-    face = out[out.index("<summary"):out.index("</summary>")]
+    assert out.startswith('<p class="tledger" id="test-ledger"') and out.endswith("</p>")
+    for gone in ("<details", "<summary", "tledger-body", "tgroup", "<h3", "<li"):
+        assert gone not in out, gone
     # Signs and counts only (Victor, 5 Oct 2026); the word each stands for is its hover.
-    assert ('<span class="toff">1 stopped running</span> · '
+    assert ('>1 stopped running</span> · '
             '<span class="added" data-tip="1 new test">+1</span> '
-            '<span class="removed" data-tip="2 tests gone">\u22122</span> '
-            f'<span class="changed" data-tip="1 test edited">{build.PENCIL}1</span>') in face
+            '<span class="removed" data-tip="2 tests gone: VisitTest.java: parked, obsolete">'
+            '\u22122</span> '
+            f'<span class="changed" data-tip="1 test edited">{build.PENCIL}1</span></p>') in out
     # The untouched rest is a hover on the counts, not a sentence under them.
-    assert 'data-tip="1 more test in the files this change set touched' in face
-    assert '<p class="sub">' not in out and "<p" not in out
-    assert '<h3 data-tip="Written by this change set.">new <b>1</b></h3>' in out
+    assert 'data-tip="1 more test in the files this change set touched' in out
+    css = (HERE / "hrbuild" / "assets" / "css" / "tests.css").read_text(encoding="utf-8")
+    assert "tledger-body" not in css and "summary" not in css[css.index(".tledger"):][:400]
 
 
 def test_the_ledger_has_no_heading_of_its_own(tmp_path):
@@ -2048,7 +2043,7 @@ def test_the_ledger_has_no_heading_of_its_own(tmp_path):
         tabs=[{"id": "requirements", "label": "Tests",
                "blocks": [{"type": "section", "id": "requirements"}]}]))
     assert "What this change set did to the tests" not in page
-    assert '<details class="tledger" id="test-ledger">' in page
+    assert '<p class="tledger" id="test-ledger">' in page
 
 
 def test_a_page_with_a_manifest_and_no_tests_block_still_shows_the_ledger(tmp_path):
@@ -2071,7 +2066,8 @@ def test_a_page_with_a_manifest_and_no_tests_block_still_shows_the_ledger(tmp_pa
                "blocks": [{"type": "section", "id": "requirements"}]},
               {"id": "two", "label": "Two", "blocks": [{"type": "section", "id": "two"}]}]))
     panel = page[page.index('id="requirements"'):]
-    assert "create_withVet" in panel[:panel.index("</section>")]
+    assert 'id="test-ledger"' in panel[:panel.index("</section>")]
+    assert 'data-tip="1 new test">+1</span>' in panel[:panel.index("</section>")]
 
 
 # --------------------------------------------------------------------------- #
@@ -5854,7 +5850,7 @@ def test_the_pr_button_says_publish_whether_or_not_it_was_pushed_before():
         face = build.push_pr_button({"_prPush": {
             "count": 16, "posted": posted, "pushedAt": "2026-09-25T10:00:00",
             "counts": {"fixed": 3, "ignored": 6, "assumption": 7}}})
-        assert ">Publish comment on GitHub PR</button>" in face
+        assert ">Publish on GitHub</button>" in face
         assert "Push to GitHub PR" not in face and "Update GitHub PR" not in face
 
 

@@ -67,28 +67,14 @@ ul.req-tests li { list-style:none; }
 .tnote { color:var(--muted); font-size:.86rem; }
 /* Edited only through a same-file helper it calls: the hover names the helper. */
 .tnote.tvia { color:var(--drift); cursor:help; border-bottom:1px dotted currentColor; }
-/* The ledger: the same rows as the requirement lists, grouped by what happened instead
-   of by what they pin. One column, because the groups are wildly uneven — twenty-two new
-   beside one that stopped running — and a grid would give the one that matters most the
-   least room. The group that matters most is first and carries the amber edge the row
-   stamps already use, so it reads as a warning band rather than a fourth heading.
-   Folded behind its counts — `+56 new · −6 gone · ✍10 edited ▸` — one line until asked
-   (eval run 11: open, it doubled the tab). The marker trails the counts, so the line reads
-   as numbers first; what each group means is on its heading's hover. */
-.tledger { margin:.9rem 0 1rem; }
-.tledger > summary { cursor:pointer; list-style:none; display:inline-block;
-        font-variant-numeric:tabular-nums; }
-.tledger > summary::-webkit-details-marker { display:none; }
-.tledger > summary::after { content:" \25B8"; color:var(--muted); }
-.tledger[open] > summary::after { content:" \25BE"; }
+/* The ledger: what the change set did to the tests, one line of counts —
+   `+56 −6 ✍10` — each sign's meaning (and, for the tests gone or no longer running, their
+   names) on its hover. Plain text: it used to fold open into the list of every moved test,
+   which on the requirements map repeated the covering card's own rows. */
+.tledger { margin:.9rem 0 1rem; font-variant-numeric:tabular-nums; }
+.tledger[data-tip], .tledger [data-tip] { cursor:help; }
 .tledger .toff { color:#b26a00; }
-.tledger-body { display:grid; gap:1.4rem; margin-top:.8rem; }
-.tgroup h3[data-tip] { cursor:help; }
-.tgroup ul.req-tests { padding-left:0; }
-.tgroup-off { border-left:2px solid #b26a00; padding-left:.85rem; }
-.tgroup-off h3 { color:#b26a00; }
 @media (prefers-color-scheme: dark) {
-  .tgroup-off { border-left-color:#e0a458; } .tgroup-off h3 { color:#e0a458; }
   .tledger .toff { color:#e0a458; }
 }
 /* The traces: one row per recorded test, each opening on the Playwright trace viewer
@@ -99,27 +85,14 @@ ul.req-tests li { list-style:none; }
    the replay in a window of its own; off disk it copies the line that does. */
 .rm-tv { flex:0 0 auto; text-decoration:none; font-size:12px; line-height:1; }
 .rm-tv:hover { filter:brightness(1.2); }
-/* Coverage, once measured (tests.py, coverage_side / coverage_gaps): the model's card keeps
-   its own frame and rows, with a ruler for an avatar, and what no test reaches is folded
-   under it — the changed lines no run executed, then the changes no probe can see. */
+/* Coverage, once measured (tests.py, coverage_side / coverage_after): the model's card keeps
+   its own frame and rows, with a ruler for an avatar, and the suites it is short of are
+   noted under it. */
 .reqmap .cov-av { font-size:16px; line-height:1; cursor:help; }
 .cov-after { margin:.5rem 2px 0; font-size:.85rem; }
-.cov-gaps, .cov-unm { margin:.35rem 0 0; }
-.cov-gaps > summary, .cov-unm > summary { cursor:pointer; color:var(--muted); }
-.cov-gaps > summary b { color:#c62828; }
-.cov-gaps ul, .cov-unm ul { margin:.2rem 0 0; padding-left:1.05rem; display:grid; gap:.2rem;
-        font-size:.82rem; }
-.cov-gapn { color:#c62828; }
-/* A zero is still said (coverage_gaps): muted, not red, and nothing to unfold. */
-.cov-zero { color:var(--muted); }
-.cov-why { color:var(--muted); }
 .cov-none { margin:6px 12px; font-size:.82rem; color:var(--drift); }
 /* A suite whose coverage is missing or stale (suite_chips): a few words, muted, the reason
    on hover — every count beside it is short by that suite. */
 .cov-suites { margin:.35rem 0 0; display:flex; flex-wrap:wrap; gap:.3rem; }
 .cov-suite { padding:1px 7px; border:1px solid var(--line, #d0d0d0); border-radius:9px;
         color:var(--muted); font-size:.8rem; cursor:help; }
-.cov-more { color:var(--muted); cursor:help; border-bottom:1px dotted currentColor; }
-@media (prefers-color-scheme: dark) {
-  .cov-gapn, .cov-gaps > summary b { color:#f08a8a; }
-}

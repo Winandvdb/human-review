@@ -196,86 +196,67 @@ def render_tests(rows, root: Path, flags: bool = True) -> str:
     return '<ul class="req-tests">' + "\n".join(items) + "</ul>"
 
 
+def _names_by_file(rows) -> str:
+    """`a.spec.ts: x, y; B.java: z` — the names a count stands for, for its hover."""
+    by: dict[str, list[str]] = {}
+    for r in rows:
+        by.setdefault(Path(r.get("path") or "?").name, []).append(
+            (r.get("name") or "").strip() or f'line {r.get("line") or "?"}')
+    return "; ".join(f"{f}: {', '.join(ns)}" for f, ns in by.items())
+
+
 def render_test_ledger(rows, root: Path) -> tuple[str, int]:
-    """Every test the change set moved, as one list — `(html, how many it moved)`.
+    """What the change set did to the tests, as one line of counts — `(html, how many it
+    moved)`: `+54 −9 ✍7`, each sign's meaning on its hover, and the untouched rest counted
+    on the line's.
 
-    The requirement lists above answer "is *this* sentence pinned, and by what". They
-    cannot answer the question a reviewer asks next, which is the blunt one: *what did
-    this branch do to the tests?* A test that pins no requirement anybody wrote down —
-    and a deleted one, which by definition is no longer under any requirement — appears
-    in no list on the page otherwise. The chip at the top states the count; this is where
-    the count is spelled out into names you can click.
-
-    Each test appears exactly once, under the most consequential thing that happened to
-    it. Silenced comes first for that reason: a test that is *new* and `@Disabled` is not
-    news about coverage, it is news about a test that has never run, and filing it under
-    "new" would hide it among twenty-one that do run. The untouched rest are counted in a
-    sentence rather than listed — a reviewer scrolling past a hundred unchanged names to
-    find the two that went away is a reviewer who stops scrolling.
-
-    Folded behind one line, the counts (eval run 11): open, the four lists doubled the
-    tab's height, and fifty-six of their names were the new tests the card beside the
-    ticket already lists. The line is the answer most reviewers came for; the names are a
-    click away, and what each group means is on its heading's hover, not under it.
+    It used to fold open into the grouped list of every moved test. Victor dropped the
+    fold (5 Oct 2026): on the requirements map it sits on the covering card, whose rows
+    already list the tests, so the list was the same names a second time. The two groups
+    no list on the page shows — tests that stopped running and tests that are gone, which
+    run nothing and so cover nothing — keep their names, on their count's hover.
+    `root` is unused since the list went; the callers still pass it.
     """
-    groups = [
-        ("stopped running", "Still written, and no longer part of any run.", []),
-        ("new", "Written by this change set.", []),
-        ("gone", "Deleted, or commented out in place. A deleted one opens where it stood "
-                 "at the base commit.", []),
-        ("edited", "Body changed, or edited through a same-file helper it calls.", []),
-    ]
+    off, new, gone, edited = [], [], [], []
     untouched = 0
     for r in rows:
         if r.get("silenced") and r["status"] != "deleted":
-            groups[0][2].append(r)
+            off.append(r)
         elif r["status"] == "added":
-            groups[1][2].append(r)
+            new.append(r)
         elif r["status"] == "deleted":
-            groups[2][2].append(r)
+            gone.append(r)
         elif r["status"] == "modified":
-            groups[3][2].append(r)
+            edited.append(r)
         else:
             untouched += 1
 
-    moved = sum(len(g[2]) for g in groups)
+    moved = len(off) + len(new) + len(gone) + len(edited)
     if not moved and not untouched:
         return "", 0
-    blocks = []
-    for name, why, items in groups:
-        if not items:
-            continue
-        # The one group whose rows do not share a fate: a silenced test may be new,
-        # edited or untouched, and which it is changes what the reader does about it.
-        mixed = name == "stopped running"
-        blocks.append(
-            f'<section class="tgroup{" tgroup-off" if mixed else ""}">'
-            f'<h3 data-tip="{html.escape(why, quote=True)}">{html.escape(name)} '
-            f'<b>{len(items)}</b></h3>'
-            + render_tests(items, root, flags=mixed)
-            + "</section>"
-        )
-    off, new, gone, edited = (len(g[2]) for g in groups)
     # The three moves are their signs and their counts only, `+54 −9 ✍7` (Victor, 5 Oct
     # 2026): on the covering card's header strip the words and the dots made the line
     # longer than the title it sits beside. The word each sign stands for is on its hover.
-    def count(cls: str, face: str, n: int, what: str) -> str:
+    def count(cls: str, face: str, items: list, what: str, named: bool = False) -> str:
+        n = len(items)
         tip = f"{n} {what}" if n != 1 else f"1 {what.replace('tests', 'test')}"
+        if named:
+            tip += ": " + _names_by_file(items)
         return (f'<span class="{cls}" data-tip="{html.escape(tip, quote=True)}">'
                 f'{face}{n}</span>') if n else ""
     moves = " ".join(x for x in (count("added", "+", new, "new tests"),
-                                 count("removed", "−", gone, "tests gone"),
+                                 count("removed", "−", gone, "tests gone", named=True),
                                  count("changed", PENCIL, edited, "tests edited")) if x)
-    face = " · ".join(x for x in (
-        f'<span class="toff">{off} stopped running</span>' if off else "", moves,
-    ) if x) or "no test moved"
+    stopped = ""
+    if off:
+        why = f"Still written; never runs: {_names_by_file(off)}"
+        stopped = (f'<span class="toff" data-tip="{html.escape(why, quote=True)}">'
+                   f'{len(off)} stopped running</span>')
+    face = " · ".join(x for x in (stopped, moves) if x) or "no test moved"
     rest = (f'{untouched} more test{"s" if untouched != 1 else ""} in the files this '
             "change set touched, left exactly as they were") if untouched else ""
     tip = f' data-tip="{html.escape(rest, quote=True)}"' if rest else ""
-    return (f'<details class="tledger" id="test-ledger"><summary{tip}>{face}</summary>'
-            '<div class="tledger-body">' + "".join(blocks) + "</div></details>"), moved
-
-
+    return f'<p class="tledger" id="test-ledger"{tip}>{face}</p>', moved
 
 
 def _ms(value) -> str:
@@ -592,7 +573,7 @@ def ticket_ref(spec: dict, out_dir: Path) -> dict | None:
 SEMCOV_LABEL = "Semantic Test Coverage"
 #: Its hover (Victor, 5 Oct 2026): the colours it switches are a model's reading of which
 #: test proves which claim, and a checkbox named like a metric reads as a measured one.
-_SEMCOV_TIP = "Claim ↔ test matching as inferred by AI: a judgement, not a measurement"
+_SEMCOV_TIP = "Claim ↔ test, as matched by AI"
 
 
 def semcov_switch() -> str:
@@ -833,24 +814,6 @@ def _model_key(row: dict, model: dict) -> str | None:
     return None
 
 
-def _cov_files(hits: dict, root: Path, cap: int | None = None) -> str:
-    """`VisitDto.java, Visit.java` — each a link to its first line run, lines on hover;
-    the busiest first, and past `cap` the rest counted with their names on hover."""
-    parts = []
-    ordered = sorted(hits.items(), key=lambda kv: -len(kv[1]))
-    rest = ordered[cap:] if cap else []
-    for f, ls in ordered[:cap] if cap else ordered:
-        target = (root / f).resolve()
-        tip = f"{f}: line{'s' if len(ls) > 1 else ''} {_cov_ranges(ls)}"
-        parts.append(f'<a class="srcref" href="vscode://file/{target}:{ls[0]}:1" '
-                     f'data-tip="{html.escape(tip, quote=True)}">{html.escape(Path(f).name)}</a>')
-    if rest:
-        names = ", ".join(f"{Path(f).name} ({len(ls)})" for f, ls in rest)
-        parts.append(f'<span class="cov-more" data-tip="{html.escape(names, quote=True)}">'
-                     f"{len(rest)} more file{'s' if len(rest) != 1 else ''}</span>")
-    return ", ".join(parts)
-
-
 def _cov_ranges(lines) -> str:
     out, run = [], []
     for n in sorted(set(lines)):
@@ -1000,55 +963,24 @@ def suite_chips(doc: dict) -> str:
     return f'<p class="cov-suites">{"".join(chips)}</p>' if chips else ""
 
 
-def coverage_gaps(doc: dict, root: Path) -> str:
-    """What no test reaches, folded under the card: the changed lines no run executed, and
-    the changes no probe can see run at all — after a chip for each suite whose coverage is
-    missing or stale (`suite_chips`), since every count under it is short by that suite."""
-    j = coverage_join(doc)
-    blocks = [suite_chips(doc)] if suite_chips(doc) else []
-    if j["gaps"]:
-        n = sum(map(len, j["gaps"].values()))
-        items = "".join(
-            f'<li>{_cov_files({f: ls}, root)} <span class="tloc">{_cov_ranges(ls)}</span></li>'
-            for f, ls in sorted(j["gaps"].items()))
-        blocks.append(f'<details class="cov-gaps"><summary>Changed lines no test runs '
-                      f'<b>{n}</b></summary><ul>{items}</ul></details>')
-    else:
-        # Said, not omitted. Eval run 10 measured every changed line as run and the block
-        # simply was not there, so a reviewer could not tell "none" from "not computed".
-        total = j["total"]
-        blocks.append(f'<p class="cov-gaps cov-zero">Changed lines no test runs <b>0</b>'
-                      + (f" — all {total} measurable changed line{'s' if total != 1 else ''}"
-                         " ran in at least one test" if total else
-                         " — no changed line is measurable on this build")
-                      + "</p>")
-    if j["unmeasurable"]:
-        items = []
-        for u in j["unmeasurable"]:
-            # Copy pass (3 Oct 2026): the reason's first word (`declaration`, `SQL`,
-            # `annotation`, …) and, only when it matters, that nothing reaches it. The
-            # explanation after the dash and the "through File.java:12" proxy went.
-            via = (' — <span class="cov-gapn">reached by none</span>'
-                   if u.get("proxy") and not u["reached"] else "")
-            why = u["reason"].split(" — ")[0]
-            items.append(f'<li>{_cov_files({u["file"]: u["lines"]}, root)} '
-                         f'<span class="tloc">{_cov_ranges(u["lines"])}</span> '
-                         f'<span class="cov-why">{html.escape(why)}</span>{via}</li>')
-        n = sum(len(u["lines"]) for u in j["unmeasurable"])
-        blocks.append(f'<details class="cov-unm"><summary>Not measurable <b>{n}</b> changed '
-                      "lines</summary><ul>" + "".join(items)
-                      + "</ul></details>")
-    else:
-        blocks.append('<p class="cov-unm cov-zero">Not measurable <b>0</b> changed lines</p>')
-    return f'<div class="cov-after">{"".join(blocks)}</div>'
+def coverage_after(doc: dict) -> str:
+    """Under the card, a chip for each suite whose coverage is missing or stale
+    (`suite_chips`), since every row above it is short by that suite; nothing when all ran.
+    The lists of changed lines no test runs and of changes no probe can see used to fold
+    here too. Victor dropped both (5 Oct 2026): what they flagged was mostly declarations
+    (an NgModule's `declarations: [ … ]`, a local variable), and they cost the column
+    height. `coverage_join` still computes them."""
+    chips = suite_chips(doc)
+    return f'<div class="cov-after">{chips}</div>' if chips else ""
 
 
 def coverage_side(side: str, frag: str, spec: dict, out_dir: Path, root: Path,
                   generated: bool = False) -> str:
     """The right-hand column: the model's card, retitled for what it lists once coverage
     was measured (its rows are then every test that runs changed code — see
-    `coverage_tests`), with what no test reaches folded under it. With no measurement, the
-    model's card as it was, saying it is not one."""
+    `coverage_tests`), with the suites it is short of noted under it. With no measurement,
+    the model's card as it was, saying it is not one. `root` is unused since the gap lists
+    went; the callers still pass it."""
     doc = load_coverage(out_dir, spec)
     if doc is None:
         i = _find(side, "rm-code")
@@ -1061,11 +993,12 @@ def coverage_side(side: str, frag: str, spec: dict, out_dir: Path, root: Path,
     head = (f'<div class="rm-tkhead"><span class="rm-av cov-av" aria-hidden="true">📏</span>'
             f'<span class="rm-who">{covcard_who(spec, out_dir)}</span></div>')
     side = re.sub(r'<div class="rm-tkhead">.*?</div>', lambda _: head, side, count=1, flags=re.S)
-    # Last in the column, under the card: what no test reaches is a footnote to it.
+    # Last in the column, under the card: the suites missing from it are a footnote to it.
+    after = coverage_after(doc)
     close = side.rfind("</div>")
-    if close < 0:
+    if close < 0 or not after:
         return side
-    return side[:close] + coverage_gaps(doc, root) + side[close:]
+    return side[:close] + after + side[close:]
 
 
 #: The matrix's own program: the ticket, the per-test coverage and the pairing in,
@@ -1262,18 +1195,13 @@ REQMAP_CSS = """
   .reqmap .rm-legend{flex:none}
   .reqmap .rm-issue,.reqmap .rm-list{flex:1 1 auto;min-height:0;overflow-y:auto;
     overscroll-behavior:contain}
-  /* The blind-spot box under the ticket, the coverage notes under the card, and the
-     changed-tests summary opened on the card's strip are each one click from being long;
-     they scroll inside a cap rather than squeeze the list above them to nothing. */
+  /* The blind-spot box under the ticket and the suite chips under the card can each be
+     long; they scroll inside a cap rather than squeeze the list above them to nothing. */
   .reqmap .rm-gap,.reqmap .rm-side > .cov-after{flex:none;max-height:35vh;overflow-y:auto}
-  .reqmap .rm-code > .rm-tkhead:has(> .tledger[open]){max-height:50vh;overflow-y:auto}
 }
-/* The changed-tests summary (`+54 −9 ✍️7`) sits on the card's title
-   row, at its right end; opened, its body takes the card's full width under the row. */
+/* The changed-tests counts (`+54 −9 ✍️7`) sit on the card's title row, at its right end. */
 .reqmap .rm-code > .rm-tkhead{flex-wrap:wrap}
 .reqmap .rm-code > .rm-tkhead > .tledger{margin:0 0 0 auto;font-weight:400}
-.reqmap .rm-code > .rm-tkhead > .tledger[open]{flex:1 0 100%;margin:0}
-.reqmap .rm-code > .rm-tkhead > .tledger[open] > summary{float:right}
 /* Stacked, the grid is one column: title, ticket, card. The gutter the two columns shared
    becomes the gap between them, which `row-gap:0` above gave up for the title's sake. */
 @media (max-width:900px){

@@ -288,6 +288,10 @@ button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
 #copy-toast.asks { pointer-events:auto; display:flex; align-items:center; gap:.7rem; }
 #copy-toast.asks button { font:inherit; font-weight:600; cursor:pointer; border:0; border-radius:999px;
               padding:.15rem .7rem; background:var(--card); color:var(--fg); }
+/* Its × (editor.js, `offerPrompt`): a bare glyph after the button, in the toast's own colour. */
+#copy-toast.asks .ct-close { background:none; color:inherit; padding:0 .1rem; margin-left:-.2rem;
+              font-size:1.05rem; line-height:1; font-weight:400; opacity:.75; }
+#copy-toast.asks .ct-close:hover { opacity:1; }
 .titlerow .chip-vsc, .titlerow .chip-mode, .titlerow .chip-serve, .titlerow .chip-rerun, .titlerow .titlescore {
             flex:0 0 auto; align-self:center;
             padding:.15rem .7rem; border-radius:999px; border-width:1px;

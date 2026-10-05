@@ -203,7 +203,8 @@ from hrbuild.tabs.sequence import (
     _trace_shot_html
 )
 from hrbuild.tabs.tests import (
-    LEDGER_TAB, render_requirements, render_test_ledger, render_tests, render_traces,
+    LEDGER_TAB, render_requirements, render_test_ledger, _names_by_file, render_tests,
+    render_traces,
     REQMAP_CSS, REQMAP_CUT, REQMAP_SEMCOV_JS, REQMAP_TIP_JS, reqmap_layout, resolve_tests,
     REQMAP_CATS_JS, REQMAP_LEDGER_JS, cats_filter,
     SEMCOV_LABEL, _SEMCOV_TIP, semcov_switch, SILENCED_LABEL, VIA_HELPER_LABEL, via_helper_tip,
@@ -218,8 +219,8 @@ from hrbuild.tabs.tests import (
     COV_COMMON_MIN,
     COV_NOT_MEASURED, load_coverage, coverage_join, model_pairing, coverage_side, _model_key,
     TEMPLATE_UNSEEN, _rendered_templates,
-    _cov_files, _cov_ranges, _snippet_module, COV_PART_MAX, _GHERKIN_NEXT, _cov_part,
-    _API_MARKERS, _cov_cat, coverage_tests, coverage_gaps, _load_test_changes, suite_chips
+    _cov_ranges, _snippet_module, COV_PART_MAX, _GHERKIN_NEXT, _cov_part,
+    _API_MARKERS, _cov_cat, coverage_tests, coverage_after, _load_test_changes, suite_chips
 )
 from hrbuild.tabs.demo import (
     VOICE_TIPS, voice_films, voice_switch, embed_html, VERDICT_FACE, video_html, VIDEO_VERDICT,

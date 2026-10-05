@@ -356,8 +356,8 @@ def test_the_coverage_switch_sits_on_the_ticket_header_and_starts_checked(tmp_pa
     out = _laid_out(tmp_path)
     head = out[out.index('class="tabtitle rm-head"'):out.index('class="rm-text"')]
     assert "rm-semcov" not in head, "not on the title row any more"
-    assert ('opened on Jun 13, 2026</span><label class="rm-semcov" data-tip="Claim ↔ test '
-            'matching as inferred by AI: a judgement, not a measurement"><input '
+    assert ('opened on Jun 13, 2026</span><label class="rm-semcov" data-tip="Claim ↔ test, '
+            'as matched by AI"><input '
             'type="checkbox" checked> Semantic Test Coverage</label></div>') in out
     assert out.count('class="rm-semcov"') == 1, "only the ticket's header, not the tests'"
     css = out[out.rindex("<style>"):]

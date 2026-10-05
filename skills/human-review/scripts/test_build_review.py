@@ -4738,22 +4738,12 @@ def test_without_a_selection_the_tab_says_nothing_new(tmp_path):
         "a JUnit display name is matched by the method's name, whatever line it was found on"
 
 
-def test_a_struck_tab_says_why_it_is_struck(tmp_path):
-    """Eval run 6: Structure was struck over three UNCHANGED cards, and a strike reads as
-    'not produced' unless something says otherwise."""
+def test_a_struck_tab_carries_no_explanatory_line(tmp_path):
+    """The struck tab used to open on "Nothing on this tab changed on this branch. Shown for
+    context." Victor, 5 Oct 2026: useless text; the strike on the pill already says it."""
     page, _ = _build(tmp_path, PACKAGES_CONTEXT)
     assert '<button type="button" class="tab quiet" role="tab" id="tabbtn-packages"' in page
-    panel = page[page.index('<section class="panel" id="packages"'):]
-    panel = panel[:panel.index("</section>")]
-    assert 'class="quietline"' in panel and "Nothing on this tab changed" in panel
-    # A tab that did change is not told it did not.
-    other = page[page.index('<section class="panel" id="other"'):]
-    assert 'class="quietline"' not in other[:other.index("</section>")] or \
-        'class="tab quiet" role="tab" id="tabbtn-other"' in page
-    # It is the panel's first block, so it takes a first block's distance from the strip —
-    # at .2rem it sat jammed against the strip's bottom line (eval run 10).
-    top = re.search(r"\.quietline \{[^}]*margin:([\d.]+)rem", build.CSS)
-    assert top and float(top[1]) >= .8, "the struck note clears the tab strip"
+    assert "Nothing on this tab changed" not in page and 'class="quietline"' not in page
 
 
 # ── the three piles, read off the branch instead of out of the content file ─────────

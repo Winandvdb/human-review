@@ -137,7 +137,7 @@ from hrbuild.shared.footer import (
     ISSUES_URL, PAST_INVITATIONS, PROVENANCE, RUNNING_STACK, TAKEAWAY, _link_home
 )
 from hrbuild.shared.tabstrip import (
-    check_tab_enumeration, NUMBER_WORDS, QUIET_LINE, spelled, TAB_COUNT_TOKEN
+    check_tab_enumeration, NUMBER_WORDS, spelled, TAB_COUNT_TOKEN
 )
 from hrbuild.shared.postprocess import (
     ANCHOR, check_baked_excerpts, one_tooltip_only, open_links_in_new_tabs, TARGET_ATTR
@@ -1186,7 +1186,6 @@ def _main(argv=None) -> int:
                 f'<section class="panel" id="{tid}" role="tabpanel" '
                 f'aria-labelledby="tabbtn-{tid}">'
                 f'<p class="paneltag">{html.escape(tab["label"])}</p>'
-                + (QUIET_LINE if still else "")
                 + place_prompts(tab["id"], f'{tab.get("intro", "")}{body}') + '</section>'
             )
             emitted.append(tab)

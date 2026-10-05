@@ -4122,6 +4122,89 @@
   ]
  },
  {
+  "kind": "http",
+  "httpMethod": "GET",
+  "path": "/jev",
+  "handler": "JevTriageController.triage(String)",
+  "metric": "cognitive",
+  "flowCc": 3,
+  "methods": 5,
+  "flow": [
+   {
+    "method": "victor.training.petclinic.chatbot.jev.JevTriageController#triage",
+    "display": "JevTriageController.triage(String)",
+    "cognitive": 2,
+    "cyclomatic": 5,
+    "calls": [
+     "victor.training.petclinic.chatbot.jev.Jev#choose",
+     "victor.training.petclinic.chatbot.jev.Jev#probability"
+    ],
+    "hits": [
+     {
+      "file": "petclinic-chatbot/src/main/java/victor/training/petclinic/chatbot/jev/JevTriageController.java",
+      "line": 30,
+      "code": "String next = switch (specialty) {",
+      "inc": 1,
+      "why": "switch"
+     },
+     {
+      "file": "petclinic-chatbot/src/main/java/victor/training/petclinic/chatbot/jev/JevTriageController.java",
+      "line": 35,
+      "code": "if (emergency > 0.8) {",
+      "inc": 1,
+      "why": "if"
+     }
+    ]
+   },
+   {
+    "method": "victor.training.petclinic.chatbot.jev.Jev#choose",
+    "display": "Jev.choose(String, String, Class)",
+    "cognitive": 0,
+    "cyclomatic": 1,
+    "calls": [
+     "victor.training.petclinic.chatbot.jev.Jev#ask"
+    ],
+    "hits": []
+   },
+   {
+    "method": "victor.training.petclinic.chatbot.jev.Jev#probability",
+    "display": "Jev.probability(String, String)",
+    "cognitive": 0,
+    "cyclomatic": 1,
+    "calls": [
+     "victor.training.petclinic.chatbot.jev.Jev#ask"
+    ],
+    "hits": []
+   },
+   {
+    "method": "victor.training.petclinic.chatbot.jev.Jev#ask",
+    "display": "Jev.ask(String, Map)",
+    "cognitive": 0,
+    "cyclomatic": 1,
+    "calls": [
+     "victor.training.petclinic.chatbot.jev.Jev#answers"
+    ],
+    "hits": []
+   },
+   {
+    "method": "victor.training.petclinic.chatbot.jev.Jev#answers",
+    "display": "Jev.answers(JsonNode)",
+    "cognitive": 1,
+    "cyclomatic": 2,
+    "calls": [],
+    "hits": [
+     {
+      "file": "petclinic-chatbot/src/main/java/victor/training/petclinic/chatbot/jev/Jev.java",
+      "line": 57,
+      "code": "return response.has(\"answers\") ? response.get(\"answers\") : response;",
+      "inc": 1,
+      "why": "?:"
+     }
+    ]
+   }
+  ]
+ },
+ {
   "kind": "mcp",
   "httpMethod": "MCP",
   "path": "list_visits",
@@ -5162,53 +5245,6 @@
    {
     "method": "victor.training.petclinic.domain.Specialty#getName",
     "display": "Specialty.getName()",
-    "cognitive": 0,
-    "cyclomatic": 1,
-    "calls": [],
-    "hits": []
-   }
-  ]
- },
- {
-  "kind": "mcp",
-  "httpMethod": "MCP",
-  "path": "LocalTools.currentDateTime",
-  "handler": "LocalTools.currentDateTime()",
-  "metric": "cognitive",
-  "flowCc": 1,
-  "methods": 3,
-  "flow": [
-   {
-    "method": "victor.training.petclinic.chatbot.assistant.LocalTools#currentDateTime",
-    "display": "LocalTools.currentDateTime()",
-    "cognitive": 0,
-    "cyclomatic": 1,
-    "calls": [
-     "victor.training.petclinic.domain.Owner#toString"
-    ],
-    "hits": []
-   },
-   {
-    "method": "victor.training.petclinic.domain.Owner#toString",
-    "display": "Owner.toString()",
-    "cognitive": 1,
-    "cyclomatic": 1,
-    "calls": [
-     "victor.training.petclinic.chatbot.assistant.ChatHistory#append"
-    ],
-    "hits": [
-     {
-      "file": "petclinic-backend/src/main/java/victor/training/petclinic/domain/Owner.java",
-      "line": 89,
-      "code": ".toString();",
-      "inc": 1,
-      "why": "recursion"
-     }
-    ]
-   },
-   {
-    "method": "victor.training.petclinic.chatbot.assistant.ChatHistory#append",
-    "display": "ChatHistory.append(String, String, String)",
     "cognitive": 0,
     "cyclomatic": 1,
     "calls": [],
@@ -6398,6 +6434,45 @@
    {
     "method": "victor.training.petclinic.chatbot.triage.TriageController#triage",
     "display": "TriageController.triage(String)",
+    "cognitive": 0,
+    "cyclomatic": 1,
+    "calls": [],
+    "hits": []
+   }
+  ]
+ },
+ {
+  "kind": "mcp",
+  "httpMethod": "MCP",
+  "path": "LocalTools.currentDateTime",
+  "handler": "LocalTools.currentDateTime()",
+  "metric": "cognitive",
+  "flowCc": 0,
+  "methods": 3,
+  "flow": [
+   {
+    "method": "victor.training.petclinic.chatbot.assistant.LocalTools#currentDateTime",
+    "display": "LocalTools.currentDateTime()",
+    "cognitive": 0,
+    "cyclomatic": 1,
+    "calls": [
+     "victor.training.petclinic.domain.Owner#toString"
+    ],
+    "hits": []
+   },
+   {
+    "method": "victor.training.petclinic.domain.Owner#toString",
+    "display": "Owner.toString()",
+    "cognitive": 0,
+    "cyclomatic": 1,
+    "calls": [
+     "victor.training.petclinic.chatbot.assistant.ChatHistory#append"
+    ],
+    "hits": []
+   },
+   {
+    "method": "victor.training.petclinic.chatbot.assistant.ChatHistory#append",
+    "display": "ChatHistory.append(String, String, String)",
     "cognitive": 0,
     "cyclomatic": 1,
     "calls": [],

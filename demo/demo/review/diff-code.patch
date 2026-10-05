@@ -1,0 +1,519 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 90c32137..93bcf486 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -148,7 +148,7 @@ REST Contract:
+ ## Domain Model
+ Core entities and relationships:
+ - **Owner** 1→N **Pet** N→1 **PetType**
+-- **Pet** 1→N **Visit**
++- **Pet** 1→N **Visit** N→0..1 **Vet** (optional: unknown at booking time, null on visits older than V4)
+ - **Vet** N→N **Specialty** (via `vet_specialties` join table)
+ - **User** 1→N **Role**
+ 
+diff --git a/petclinic-backend/src/main/java/victor/training/petclinic/domain/Visit.java b/petclinic-backend/src/main/java/victor/training/petclinic/domain/Visit.java
+index 44eb327c..1905432c 100644
+--- a/petclinic-backend/src/main/java/victor/training/petclinic/domain/Visit.java
++++ b/petclinic-backend/src/main/java/victor/training/petclinic/domain/Visit.java
+@@ -27,6 +27,11 @@ public class Visit {
+     @JoinColumn(name = "pet_id")
+     private Pet pet;
+ 
++    /** The vet who attended; null until one is chosen, and on legacy rows created before V4. */
++    @ManyToOne
++    @JoinColumn(name = "vet_id")
++    private Vet vet;
++
+     public Integer getId() {
+         return id;
+     }
+@@ -66,4 +71,12 @@ public class Visit {
+     public void setPet(Pet pet) {
+         this.pet = pet;
+     }
++
++    public Vet getVet() {
++        return vet;
++    }
++
++    public void setVet(Vet vet) {
++        this.vet = vet;
++    }
+ }
+diff --git a/petclinic-backend/src/main/java/victor/training/petclinic/mapper/VisitMapper.java b/petclinic-backend/src/main/java/victor/training/petclinic/mapper/VisitMapper.java
+index 5a137c6b..346b7990 100644
+--- a/petclinic-backend/src/main/java/victor/training/petclinic/mapper/VisitMapper.java
++++ b/petclinic-backend/src/main/java/victor/training/petclinic/mapper/VisitMapper.java
+@@ -3,6 +3,7 @@ package victor.training.petclinic.mapper;
+ import org.springframework.stereotype.Component;
+ import victor.training.petclinic.domain.Owner;
+ import victor.training.petclinic.domain.Pet;
++import victor.training.petclinic.domain.Vet;
+ import victor.training.petclinic.domain.Visit;
+ import victor.training.petclinic.rest.dto.VisitDto;
+ import victor.training.petclinic.rest.dto.VisitFieldsDto;
+@@ -45,6 +46,12 @@ public class VisitMapper {
+                     .setOwnerFirstName(owner.getFirstName())
+                     .setOwnerLastName(owner.getLastName());
+         }
++        Vet vet = visit.getVet();
++        if (vet != null) {
++            visitDto.setVetId(vet.getId())
++                    .setVetFirstName(vet.getFirstName())
++                    .setVetLastName(vet.getLastName());
++        }
+         return visitDto;
+     }
+ 
+diff --git a/petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java b/petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java
+index efe6b8d6..60dd9c12 100644
+--- a/petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java
++++ b/petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java
+@@ -2,6 +2,7 @@ package victor.training.petclinic.repository;
+ 
+ import org.springframework.data.jpa.repository.Query;
+ import org.springframework.data.repository.Repository;
++import org.springframework.lang.Nullable;
+ import victor.training.petclinic.domain.Vet;
+ 
+ import java.util.List;
+@@ -14,6 +15,11 @@ public interface VetRepository extends Repository<Vet, Integer> {
+     @Query("SELECT v FROM Vet v LEFT JOIN FETCH v.specialties WHERE v.id = :id")
+     Optional<Vet> findById(int id);
+ 
++    /** For an optional vet reference: null when no id is given, NoSuchElementException for an unknown one. */
++    default @Nullable Vet findByIdOrNull(@Nullable Integer id) {
++        return id == null ? null : findById(id).orElseThrow();
++    }
++
+     void save(Vet vet);
+ 
+     void delete(Vet vet);
+diff --git a/petclinic-backend/src/main/java/victor/training/petclinic/repository/VisitRepository.java b/petclinic-backend/src/main/java/victor/training/petclinic/repository/VisitRepository.java
+index 6fd48c22..bd87cc8f 100644
+--- a/petclinic-backend/src/main/java/victor/training/petclinic/repository/VisitRepository.java
++++ b/petclinic-backend/src/main/java/victor/training/petclinic/repository/VisitRepository.java
+@@ -15,7 +15,7 @@ public interface VisitRepository extends Repository<Visit, Integer> {
+ 
+     List<Visit> findAll();
+ 
+-    @Query("SELECT v FROM Visit v JOIN FETCH v.pet p JOIN FETCH p.owner")
++    @Query("SELECT v FROM Visit v JOIN FETCH v.pet p JOIN FETCH p.owner LEFT JOIN FETCH v.vet")
+     List<Visit> findAllWithPetAndOwner();
+ 
+     void delete(Visit visit);
+diff --git a/petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java b/petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java
+index 5d901272..5b0c5521 100644
+--- a/petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java
++++ b/petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java
+@@ -14,6 +14,7 @@ import victor.training.petclinic.notification.NotificationSender;
+ import victor.training.petclinic.repository.OwnerRepository;
+ import victor.training.petclinic.repository.PetRepository;
+ import victor.training.petclinic.repository.PetTypeRepository;
++import victor.training.petclinic.repository.VetRepository;
+ import victor.training.petclinic.repository.VisitRepository;
+ import victor.training.petclinic.rest.dto.OwnerDto;
+ import victor.training.petclinic.rest.dto.OwnerFieldsDto;
+@@ -52,6 +53,7 @@ public class OwnerRestController {
+     private final PetRepository petRepository;
+     private final VisitRepository visitRepository;
+     private final PetTypeRepository petTypeRepository;
++    private final VetRepository vetRepository;
+ 
+     private final OwnerMapper ownerMapper;
+ 
+@@ -66,6 +68,7 @@ public class OwnerRestController {
+             PetRepository petRepository,
+             VisitRepository visitRepository,
+             PetTypeRepository petTypeRepository,
++            VetRepository vetRepository,
+             OwnerMapper ownerMapper,
+             PetMapper petMapper,
+             VisitMapper visitMapper,
+@@ -74,6 +77,7 @@ public class OwnerRestController {
+         this.petRepository = petRepository;
+         this.visitRepository = visitRepository;
+         this.petTypeRepository = petTypeRepository;
++        this.vetRepository = vetRepository;
+         this.ownerMapper = ownerMapper;
+         this.petMapper = petMapper;
+         this.visitMapper = visitMapper;
+@@ -185,6 +189,7 @@ public class OwnerRestController {
+         Pet pet = new Pet();
+         pet.setId(petId);
+         visit.setPet(pet);
++        visit.setVet(vetRepository.findByIdOrNull(visitFieldsDto.getVetId()));
+         visitRepository.save(visit);
+         notifyOwner(ownerId, petId, visit);
+         return visit.getId();
+diff --git a/petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java b/petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java
+index 83d93b20..53b968c2 100644
+--- a/petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java
++++ b/petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java
+@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
+ import org.springframework.http.ResponseEntity;
+ import victor.training.petclinic.mapper.VisitMapper;
+ import victor.training.petclinic.domain.Visit;
++import victor.training.petclinic.repository.VetRepository;
+ import victor.training.petclinic.repository.VisitRepository;
+ import victor.training.petclinic.rest.dto.VisitDto;
+ import victor.training.petclinic.rest.dto.VisitFieldsDto;
+@@ -30,10 +31,12 @@ public class VisitRestController {
+ 
+     private final VisitRepository visitRepository;
+     private final VisitMapper visitMapper;
++    private final VetRepository vetRepository;
+ 
+-    public VisitRestController(VisitRepository visitRepository, VisitMapper visitMapper) {
++    public VisitRestController(VisitRepository visitRepository, VisitMapper visitMapper, VetRepository vetRepository) {
+         this.visitRepository = visitRepository;
+         this.visitMapper = visitMapper;
++        this.vetRepository = vetRepository;
+     }
+ 
+     @GetMapping
+@@ -69,6 +72,7 @@ public class VisitRestController {
+     private int bookVisit(VisitDto visitDto) {
+         log.info("Booking visit for pet {}: {}", visitDto.getPetId(), visitDto.getDescription());
+         Visit visit = visitMapper.toVisit(visitDto);
++        visit.setVet(vetRepository.findByIdOrNull(visitDto.getVetId()));
+         visitRepository.save(visit);
+         return visit.getId();
+     }
+@@ -78,6 +82,7 @@ public class VisitRestController {
+         Visit currentVisit = visitRepository.findById(visitId).orElseThrow();
+         currentVisit.setDate(visitDto.getDate());
+         currentVisit.setDescription(visitDto.getDescription());
++        currentVisit.setVet(vetRepository.findByIdOrNull(visitDto.getVetId()));
+         visitRepository.save(currentVisit);
+     }
+ 
+diff --git a/petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/VisitDto.java b/petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/VisitDto.java
+index adc8bcf0..e8225f12 100644
+--- a/petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/VisitDto.java
++++ b/petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/VisitDto.java
+@@ -41,6 +41,16 @@ public class VisitDto {
+     @Schema(accessMode = Schema.AccessMode.READ_ONLY, description = "Last name of the owner (server-populated).")
+     private @Nullable String ownerLastName;
+ 
++    @Min(0)
++    @Schema(example = "1", description = "The ID of the vet who attends the visit; null for none.")
++    private @Nullable Integer vetId;
++
++    @Schema(accessMode = Schema.AccessMode.READ_ONLY, description = "First name of the vet (server-populated).")
++    private @Nullable String vetFirstName;
++
++    @Schema(accessMode = Schema.AccessMode.READ_ONLY, description = "Last name of the vet (server-populated).")
++    private @Nullable String vetLastName;
++
+     public LocalDate getDate() {
+         return date;
+     }
+@@ -112,4 +122,31 @@ public class VisitDto {
+         this.ownerLastName = ownerLastName;
+         return this;
+     }
++
++    public Integer getVetId() {
++        return vetId;
++    }
++
++    public VisitDto setVetId(Integer vetId) {
++        this.vetId = vetId;
++        return this;
++    }
++
++    public String getVetFirstName() {
++        return vetFirstName;
++    }
++
++    public VisitDto setVetFirstName(String vetFirstName) {
++        this.vetFirstName = vetFirstName;
++        return this;
++    }
++
++    public String getVetLastName() {
++        return vetLastName;
++    }
++
++    public VisitDto setVetLastName(String vetLastName) {
++        this.vetLastName = vetLastName;
++        return this;
++    }
+ }
+diff --git a/petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/VisitFieldsDto.java b/petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/VisitFieldsDto.java
+index 441657f1..7572029a 100644
+--- a/petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/VisitFieldsDto.java
++++ b/petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/VisitFieldsDto.java
+@@ -19,6 +19,10 @@ public class VisitFieldsDto {
+     @Schema(example = "rabies shot", description = "The description for the visit.")
+     private String description;
+ 
++    @Min(0)
++    @Schema(example = "1", description = "The ID of the vet who attends the visit; null for none.")
++    private @Nullable Integer vetId;
++
+     public LocalDate getDate() {
+         return date;
+     }
+@@ -36,4 +40,13 @@ public class VisitFieldsDto {
+         this.description = description;
+         return this;
+     }
++
++    public Integer getVetId() {
++        return vetId;
++    }
++
++    public VisitFieldsDto setVetId(Integer vetId) {
++        this.vetId = vetId;
++        return this;
++    }
+ }
+diff --git a/petclinic-backend/src/main/resources/db/migration/V4__visit_vet.sql b/petclinic-backend/src/main/resources/db/migration/V4__visit_vet.sql
+new file mode 100644
+index 00000000..01814ac3
+--- /dev/null
++++ b/petclinic-backend/src/main/resources/db/migration/V4__visit_vet.sql
+@@ -0,0 +1,5 @@
++-- The vet who attended the visit. Optional: a visit is often booked before anyone knows who
++-- takes it, and the rows that existed before this column stay NULL for good.
++-- Deleting a vet leaves their past visits standing, just with no vet.
++ALTER TABLE visits ADD COLUMN vet_id INT REFERENCES vets (id) ON DELETE SET NULL;
++CREATE INDEX ON visits (vet_id);
+diff --git a/petclinic-backend/src/main/resources/db/seed/R__seed.sql b/petclinic-backend/src/main/resources/db/seed/R__seed.sql
+index b23a3981..0f0dfc6e 100644
+--- a/petclinic-backend/src/main/resources/db/seed/R__seed.sql
++++ b/petclinic-backend/src/main/resources/db/seed/R__seed.sql
+@@ -137,6 +137,13 @@ INSERT INTO visits (pet_id, visit_date, description) VALUES
+   (3,  DATE '2025-06-12', 'patient arrived in sealed box; simultaneously alive and dead — diagnosis deferred until observation'),
+   (3,  DATE '2025-08-21', 'wave function collapsed during auscultation; patient definitively purring');
+ 
++-- The vet who attended, on a few visits only: the rest read as having none, like every visit
++-- booked before vets were tracked.
++UPDATE visits SET vet_id = 3  -- Linda Douglas: surgery, dentistry
++  WHERE description IN ('neutered', 'spayed', 'hind leg surgery', 'surgical suture removal', 'dental exam');
++UPDATE visits SET vet_id = 1  -- James Carter
++  WHERE pet_id = 3 AND visit_date IN (DATE '2026-05-03', DATE '2025-08-21');  -- Milton
++
+ INSERT INTO users (username, password, enabled) VALUES
+   ('admin', '$2a$10$ymaklWBnpBKlgdMgkjWVF.GMGyvH8aDuTK.glFOaKw712LHtRRymS', TRUE);
+ 
+diff --git a/petclinic-frontend/src/app/visits/visit-add/visit-add.component.html b/petclinic-frontend/src/app/visits/visit-add/visit-add.component.html
+index 9a5e808d..91af0af6 100644
+--- a/petclinic-frontend/src/app/visits/visit-add/visit-add.component.html
++++ b/petclinic-frontend/src/app/visits/visit-add/visit-add.component.html
+@@ -51,6 +51,13 @@
+           </div>
+         </div>
+ 
++        <div class="form-group">
++          <label for="vet" class="col-sm-2 control-label">Vet</label>
++          <div class="col-sm-10">
++            <app-combo inputId="vet" name="vetId" [(ngModel)]="visit.vetId" [options]="vetOptions" valueKey="id"
++              [placeholder]="noVet"></app-combo>
++          </div>
++        </div>
+       </div>
+       <div class="form-group">
+         <div class="col-sm-offset-2 col-sm-10">
+diff --git a/petclinic-frontend/src/app/visits/visit-add/visit-add.component.ts b/petclinic-frontend/src/app/visits/visit-add/visit-add.component.ts
+index f45710d6..d9e283a1 100644
+--- a/petclinic-frontend/src/app/visits/visit-add/visit-add.component.ts
++++ b/petclinic-frontend/src/app/visits/visit-add/visit-add.component.ts
+@@ -9,6 +9,8 @@ import {Owner} from '../../owners/owner';
+ 
+ import * as moment from 'moment';
+ import {OwnerService} from '../../owners/owner.service';
++import {VetService} from '../../vets/vet.service';
++import {NO_VET, toVetOptions, VetOption} from '../visit-vet.pipe';
+ 
+ @Component({
+   selector: 'app-visit-add',
+@@ -23,13 +25,16 @@ export class VisitAddComponent implements OnInit {
+   currentPetType: PetType;
+   addedSuccess = false;
+   errorMessage: string;
++  vetOptions: VetOption[] = [];
++  readonly noVet = NO_VET;
+ 
+   constructor(private visitService: VisitService,
+               private petService: PetService,
+               private ownerService: OwnerService,
++              private vetService: VetService,
+               private router: Router,
+               private route: ActivatedRoute) {
+-    this.visit = {} as Visit;
++    this.visit = {vetId: null} as Visit;
+     this.currentPet = {} as Pet;
+     this.currentOwner = {} as Owner;
+     this.currentPetType = {} as PetType;
+@@ -38,6 +43,7 @@ export class VisitAddComponent implements OnInit {
+ 
+   ngOnInit() {
+     console.log(this.route.parent);
++    this.vetService.getVets().subscribe(vets => this.vetOptions = toVetOptions(vets));
+     const petId = this.route.snapshot.params.id;
+     this.petService.getPetById(petId).subscribe(
+       pet => {
+diff --git a/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.html b/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.html
+index c8b5bb2c..1729f266 100644
+--- a/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.html
++++ b/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.html
+@@ -48,6 +48,13 @@
+         </div>
+         </div>
+ 
++        <div class="form-group">
++          <label for="vet" class="col-sm-2 control-label">Vet</label>
++          <div class="col-sm-10">
++            <app-combo inputId="vet" name="vetId" [(ngModel)]="visit.vetId" [options]="vetOptions" valueKey="id"
++              [placeholder]="noVet"></app-combo>
++          </div>
++        </div>
+       </div>
+       <div class="form-group">
+         <div class="col-sm-offset-2 col-sm-10">
+diff --git a/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.ts b/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.ts
+index c7001b86..f5f6a33f 100644
+--- a/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.ts
++++ b/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.ts
+@@ -8,6 +8,8 @@ import {ActivatedRoute, Router} from '@angular/router';
+ 
+ import * as moment from 'moment';
+ import {OwnerService} from '../../owners/owner.service';
++import {VetService} from '../../vets/vet.service';
++import {NO_VET, toVetOptions, VetOption} from '../visit-vet.pipe';
+ import {PetService} from '../../pets/pet.service';
+ 
+ @Component({
+@@ -22,10 +24,13 @@ export class VisitEditComponent implements OnInit {
+   currentPetType: PetType;
+   updateSuccess = false;
+   errorMessage: string;
++  vetOptions: VetOption[] = [];
++  readonly noVet = NO_VET;
+ 
+   constructor(private visitService: VisitService,
+               private petService: PetService,
+               private ownerService: OwnerService,
++              private vetService: VetService,
+               private route: ActivatedRoute,
+               private router: Router) {
+     this.visit = {} as Visit;
+@@ -35,6 +40,7 @@ export class VisitEditComponent implements OnInit {
+   }
+ 
+   ngOnInit() {
++    this.vetService.getVets().subscribe(vets => this.vetOptions = toVetOptions(vets));
+     const visitId = this.route.snapshot.params.id;
+     this.visitService.getVisitById(visitId).subscribe(
+       visit => {
+diff --git a/petclinic-frontend/src/app/visits/visit-list/visit-list.component.html b/petclinic-frontend/src/app/visits/visit-list/visit-list.component.html
+index 98e875cc..aac80e3c 100644
+--- a/petclinic-frontend/src/app/visits/visit-list/visit-list.component.html
++++ b/petclinic-frontend/src/app/visits/visit-list/visit-list.component.html
+@@ -3,12 +3,14 @@
+   <tr>
+     <th>Visit Date</th>
+     <th>Description</th>
++    <th>Vet</th>
+     <th>Actions</th>
+   </tr>
+   </thead>
+   <tr *ngFor="let visit of visits">
+     <td>{{ visit.date }}</td>
+     <td>{{ visit.description }}</td>
++    <td class="visit-vet">{{ visit | visitVet }}</td>
+     <td>
+       <button class="btn btn-default" (click)="editVisit(visit)">Edit Visit</button>
+       <button class="btn btn-default" (click)="deleteVisit(visit)">Delete Visit</button>
+diff --git a/petclinic-frontend/src/app/visits/visit-vet.pipe.ts b/petclinic-frontend/src/app/visits/visit-vet.pipe.ts
+new file mode 100644
+index 00000000..60cb9b65
+--- /dev/null
++++ b/petclinic-frontend/src/app/visits/visit-vet.pipe.ts
+@@ -0,0 +1,23 @@
++import {Pipe, PipeTransform} from '@angular/core';
++import {Visit} from './visit';
++import {Vet} from '../vets/vet';
++
++export const NO_VET = 'No vet';
++
++export interface VetOption {
++  id: number;
++  name: string;
++}
++
++/** The vets as the visit forms' combo offers them: one label per vet, bound by id. */
++export function toVetOptions(vets: Vet[]): VetOption[] {
++  return vets.map(vet => ({id: vet.id, name: `${vet.firstName} ${vet.lastName}`}));
++}
++
++/** The vet who attended a visit, or {@link NO_VET} for a visit that has none. */
++@Pipe({name: 'visitVet'})
++export class VisitVetPipe implements PipeTransform {
++  transform(visit: Visit): string {
++    return visit.vetId == null ? NO_VET : `${visit.vetFirstName} ${visit.vetLastName}`;
++  }
++}
+diff --git a/petclinic-frontend/src/app/visits/visits-page/visits-page.component.html b/petclinic-frontend/src/app/visits/visits-page/visits-page.component.html
+index 3a55e4a4..6bb8fbb2 100644
+--- a/petclinic-frontend/src/app/visits/visits-page/visits-page.component.html
++++ b/petclinic-frontend/src/app/visits/visits-page/visits-page.component.html
+@@ -12,6 +12,7 @@
+         <tr>
+           <th>Date</th>
+           <th>Description</th>
++          <th>Vet</th>
+           <th>Pet</th>
+           <th>Owner</th>
+         </tr>
+@@ -20,6 +21,7 @@
+         <tr *ngFor="let visit of visits">
+           <td class="visit-date">{{ visit.date }}</td>
+           <td class="visit-description">{{ visit.description }}</td>
++          <td class="visit-vet">{{ visit | visitVet }}</td>
+           <td class="visit-pet">{{ visit.petName }}</td>
+           <td class="visit-owner">
+             <a class="owner-link" [routerLink]="'/owners/' + visit.ownerId">
+diff --git a/petclinic-frontend/src/app/visits/visits.module.ts b/petclinic-frontend/src/app/visits/visits.module.ts
+index 61fae728..837c9c06 100644
+--- a/petclinic-frontend/src/app/visits/visits.module.ts
++++ b/petclinic-frontend/src/app/visits/visits.module.ts
+@@ -11,6 +11,9 @@ import {PetsRoutingModule} from '../pets/pets-routing.module';
+ import {MatMomentDateModule, MomentDateAdapter} from '@angular/material-moment-adapter';
+ import { MatDatepickerModule } from '@angular/material/datepicker';
+ import {DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE} from '@angular/material/core';
++import {DesignSystemModule} from '../design-system/design-system.module';
++import {VetService} from '../vets/vet.service';
++import {VisitVetPipe} from './visit-vet.pipe';
+ 
+ export const MY_DATE_FORMATS = {
+   parse: {
+@@ -30,6 +33,7 @@ export const MY_DATE_FORMATS = {
+     FormsModule,
+     MatDatepickerModule,
+     MatMomentDateModule,
++    DesignSystemModule,
+     VisitsRoutingModule,
+     PetsRoutingModule
+   ],
+@@ -37,7 +41,8 @@ export const MY_DATE_FORMATS = {
+     VisitListComponent,
+     VisitEditComponent,
+     VisitAddComponent,
+-    VisitsPageComponent
++    VisitsPageComponent,
++    VisitVetPipe
+   ],
+   exports: [
+     VisitListComponent,
+@@ -47,6 +52,7 @@ export const MY_DATE_FORMATS = {
+   ],
+   providers: [
+     VisitService,
++    VetService,
+     {provide: DateAdapter, useClass: MomentDateAdapter, deps: [MAT_DATE_LOCALE]},
+     {provide: MAT_DATE_FORMATS, useValue: MY_DATE_FORMATS}
+   ]

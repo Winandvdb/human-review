@@ -30,7 +30,7 @@ class Visit [[src://petclinic-backend/src/main/java/victor/training/petclinic/do
 }
 
 Pet "pet" <--> "~* visits" Visit
-Vet --> "~* specialties" Specialty
+Vet "~*" --> "~* specialties" Specialty
 Visit "~*" -[#2E7D32,thickness=2]-> "vet" Vet
 
 @enduml

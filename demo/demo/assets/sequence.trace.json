@@ -1,13 +1,12 @@
 {
- "diagram": "petclinic-test/generated/AddVisitApiTest.java.adds-a-visit-to-an-existing-pet.genseq.puml",
- "test": "AddVisitApiTest.java",
- "trace": "16c40874461f9c968be693b289e6ebf7",
+ "diagram": "petclinic-test/generated/VisitTest.java.create-withoutvet.genseq.puml",
+ "test": "VisitTest.java",
+ "trace": "20394246f295ad1b2a62a6d8f60af195",
  "traces": 1,
- "spans": 99,
+ "spans": 25,
  "services": [
-  "petclinic-backend",
-  "notification-service"
+  "petclinic-backend"
  ],
- "root": "test: adds a visit to an existing pet",
- "at": "2026-10-04T07:58:43+00:00"
+ "root": "test: create_withoutVet()",
+ "at": "2026-10-05T17:31:17+00:00"
 }

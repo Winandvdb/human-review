@@ -1,69 +1,201 @@
 {
  "schema": "report-cost/1",
+ "started": "2026-10-05T17:27:38+00:00",
+ "recordedAt": "2026-10-05T17:35:43+00:00",
+ "harness": "claude-code",
+ "guide": {
+  "key": "guide",
+  "label": "this guide",
+  "measured": true,
+  "reason": null,
+  "source": "recorded",
+  "window": [
+   "2026-10-05T17:27:38+00:00",
+   "2026-10-05T17:35:43+00:00"
+  ],
+  "harnesses": [
+   "claude-code"
+  ],
+  "entries": [
+   {
+    "harness": "claude-code",
+    "session": "20f87074-5678-40e1-ad0c-ec377fafec7d",
+    "what": "the /human-review run",
+    "window": [
+     "2026-10-05T17:26:02+00:00",
+     "2026-10-05T17:35:42+00:00"
+    ],
+    "tokens": 3459387,
+    "models": {
+     "Opus 5.5": 3459387
+    },
+    "usd": 1.8434,
+    "aic": null,
+    "calls": 39,
+    "modelSeconds": 152.6
+   },
+   {
+    "harness": "claude-code",
+    "session": "claude -p (.model-runs.json)",
+    "what": "requirements\u2194tests mapping (rerun-model.py)",
+    "window": [
+     "2026-10-05T17:34:35+00:00",
+     "2026-10-05T17:35:28+00:00"
+    ],
+    "tokens": 53633,
+    "models": {
+     "Sonnet 5.5": 53633
+    },
+    "usd": 0.265,
+    "aic": null,
+    "calls": 1,
+    "modelSeconds": 52.6,
+    "program": "rerun-model.py"
+   }
+  ],
+  "tokens": 3513020,
+  "usd": 2.1084,
+  "aic": null,
+  "modelSeconds": 205.2
+ },
+ "wallclock": {
+  "started": "2026-10-05T17:27:38+00:00",
+  "ended": "2026-10-05T17:35:43+00:00",
+  "seconds": 485,
+  "modelSeconds": 205.2,
+  "steps": [
+   {
+    "label": "Code City capture",
+    "tabs": [
+     "city"
+    ],
+    "seconds": 95
+   },
+   {
+    "label": "sequence diagrams from traces",
+    "tabs": [
+     "sequence"
+    ],
+    "seconds": 204
+   },
+   {
+    "label": "review-points.md and the two commits",
+    "tabs": [
+     "review"
+    ],
+    "seconds": 1
+   },
+   {
+    "label": "test change manifest",
+    "tabs": [
+     "requirements"
+    ],
+    "seconds": 1
+   },
+   {
+    "label": "diagram deltas",
+    "tabs": [
+     "data",
+     "packages"
+    ],
+    "seconds": 30
+   },
+   {
+    "label": "what landed after the review commit",
+    "tabs": [
+     "review"
+    ],
+    "seconds": 0
+   },
+   {
+    "label": "entry-point complexity",
+    "tabs": [
+     "complexity"
+    ],
+    "seconds": 2
+   },
+   {
+    "label": "REST contract diff",
+    "tabs": [
+     "api"
+    ],
+    "seconds": 3
+   },
+   {
+    "label": "pb33f report",
+    "tabs": [
+     "api"
+    ],
+    "seconds": 1
+   },
+   {
+    "label": "structural logging scan",
+    "tabs": [
+     "logging"
+    ],
+    "seconds": 0
+   },
+   {
+    "label": "codeowners check",
+    "tabs": [
+     "owners"
+    ],
+    "seconds": 0
+   },
+   {
+    "label": "Playwright trace recordings",
+    "tabs": [
+     "requirements"
+    ],
+    "seconds": 24
+   },
+   {
+    "label": "feature recording",
+    "tabs": [
+     "behaviour"
+    ],
+    "seconds": 121
+   },
+   {
+    "label": "per-test coverage of the change",
+    "tabs": [
+     "requirements"
+    ],
+    "seconds": 72
+   },
+   {
+    "label": "container view projected from the sequences",
+    "tabs": [
+     "packages"
+    ],
+    "seconds": 16
+   },
+   {
+    "label": "design-system audit",
+    "tabs": [
+     "dsaudit"
+    ],
+    "seconds": 45
+   },
+   {
+    "label": "assemble content.json and build the page",
+    "tabs": [
+     "guide"
+    ],
+    "seconds": 0
+   }
+  ],
+  "stepSeconds": 615
+ },
  "refreshes": [
   {
-   "at": "2026-10-03T06:02:30+00:00",
-   "seconds": 39.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T07:38:11+00:00",
-   "seconds": 40.2,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T07:41:38+00:00",
-   "seconds": 75.5,
-   "steps": "static"
-  },
-  {
-   "at": "2026-10-03T07:44:13+00:00",
-   "seconds": 40.5,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T08:01:13+00:00",
-   "seconds": 40.5,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T08:02:47+00:00",
+   "at": "2026-10-05T17:39:05+00:00",
    "seconds": 38.2,
-   "steps": "static"
-  },
-  {
-   "at": "2026-10-03T08:04:48+00:00",
-   "seconds": 71.7,
-   "steps": "static"
-  },
-  {
-   "at": "2026-10-03T08:07:37+00:00",
-   "seconds": 38.5,
-   "steps": "tests"
-  },
-  {
-   "at": "2026-10-03T21:38:06+00:00",
-   "seconds": 45.3,
    "steps": "none"
   },
   {
-   "at": "2026-10-03T22:07:51+00:00",
-   "seconds": 47.0,
-   "steps": "tests"
-  },
-  {
-   "at": "2026-10-03T22:21:44+00:00",
-   "seconds": 49.3,
-   "steps": "tests"
-  },
-  {
-   "at": "2026-10-04T08:02:40+00:00",
-   "seconds": 48.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-04T08:21:25+00:00",
-   "seconds": 48.5,
+   "at": "2026-10-05T17:39:45+00:00",
+   "seconds": 33.2,
    "steps": "none"
   }
  ]

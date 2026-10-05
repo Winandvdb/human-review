@@ -1,0 +1,24 @@
+  * traces -> requirements
+    $ git rev-parse HEAD
+    $ git rev-parse --short HEAD
+    $ cd petclinic-test && PW_TRACE=on COVERAGE_DIR=../.human-review/coverage ./test-on-own-stack.sh npm run test:cucumber
+↻ petclinic-be762955 is already up
+http://localhost:54891
+📏 per-test coverage → /Users/victorrentea/workspace/petclinic-pr-visit-has-vet/.human-review/coverage (JaCoCo agent on 127.0.0.1:54874)
+🧪 npm run test:cucumber → app http://127.0.0.1:54891, backend http://127.0.0.1:54875 (petclinic-be762955)
+
+> qa@1.0.0 test:cucumber
+> SKIP_SERVER_START=1 cucumber-js
+
+..........................................🎚️  Detail: simplified · click an arrow to reveal its SQL / JSON payloads
+🔭 Tempo behind http://localhost:3300
+⏳ Waiting 5.0s for the last trace window to close…
+⚠️  "Searching with an empty last name lists every owner": fetch failed — skipped
+📊 Generated 0 diagram(s)
+
+
+7 scenarios (7 passed)
+28 steps (28 passed)
+0m19.833s (executing steps: 0m14.809s)
+    $ /Users/victorrentea/workspace/human-review/skills/human-review/scripts/playwright-traces.py --report "petclinic-test/test-results/playwright-report" --out .human-review/assets --json .human-review/assets/traces.json --limit 16 --project-dir "petclinic-test" --cucumber "petclinic-test/test-results/cucumber-traces"
+[traces] 15 trace(s), 3.3 MB -> .human-review/assets/traces

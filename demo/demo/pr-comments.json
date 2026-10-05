@@ -1,148 +1,197 @@
 {
   "version": 1,
-  "commit_id": "db6b67ece0336532484b6c96e1d080136e0198a0",
+  "commit_id": "ce56d9124a7ca87b1d8a9fc1045b4109e0f64165",
   "event": "COMMENT",
-  "body": "**Review record** from `review-points.md` (/code-review high): 3 auto-fixed · 5 declined and still open · 6 assumptions. Each is pinned on the line it is about.",
+  "body": "**Review record** from `review-points.md` (4 read-only Sonnet subagents (correctness, security, ticket-fit, tests briefs)): 4 auto-fixed · 9 declined and still open · 6 assumptions. Each is pinned on the line it is about.",
   "comments": [
     {
-      "hr_id": "F:the-vet-picker-could-not-load-on-the-screens",
+      "hr_id": "F:vet-tests-read-the-session-cache-not-the",
       "pile": "fixed",
-      "title": "The vet picker could not load on the screens that need it",
-      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/VetRestController.java",
-      "line": 50,
+      "title": "Vet tests read the session cache, not the database",
+      "path": "petclinic-backend/src/test/java/victor/training/petclinic/rest/VisitTest.java",
+      "line": 448,
       "side": "RIGHT",
-      "anchor": "@PreAuthorize(\"hasAnyRole(@roles.OWNER_ADMIN, @roles.VET_ADMIN)\")",
-      "body": "🛠 **Auto-fixed** in db6b67ec — The vet picker could not load on the screens that need it\n\n`GET /api/vets` sat under the class's `hasRole(VET_ADMIN)`, but the booking and edit forms are owner-admin screens. An owner-admin-only user opening *New Visit* got an error and a permanently empty combo — the one thing #37 asks for most. `PetTypeRestController` already solves the identical cross-role read, so this follows it, except narrower: only `listVets()` moves to `hasAnyRole(OWNER_ADMIN, VET_ADMIN)`; adding, editing and deleting vets stay VET_ADMIN.\n\n<sub>raised by /code-review high (cross-role read on a widened screen)</sub>"
+      "start_line": 445,
+      "body": "🛠 **Auto-fixed** in ce56d912 — Vet tests read the session cache, not the database\n\n<sub>raised by tests reviewer</sub>"
     },
     {
-      "hr_id": "F:booking-a-visit-read-the-vet-s-whole-specialty",
+      "hr_id": "F:unknown-vetid-on-edit-and-on-owner-page-booking",
       "pile": "fixed",
-      "title": "Booking a visit read the vet's whole specialty list to set one foreign key",
-      "path": "petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java",
-      "line": 19,
-      "side": "RIGHT",
-      "anchor": "Optional<Vet> findByIdWithoutSpecialties(int id);",
-      "body": "🛠 **Auto-fixed** in db6b67ec — Booking a visit read the vet's whole specialty list to set one foreign key\n\n`VetRepository.findById` `LEFT JOIN FETCH`es `v.specialties`, which is right for the vet screens and pure waste for `attendingVet`, which reads nothing off the vet but its identity. Both booking paths now use a lean `findByIdWithoutSpecialties`.\n\n<sub>raised by /code-review high (efficiency)</sub>"
-    },
-    {
-      "hr_id": "F:the-cucumber-update-step-dropped-the-vet-out-of",
-      "pile": "fixed",
-      "title": "The Cucumber update step dropped the vet out of its PUT body",
-      "path": "petclinic-backend/src/test/java/victor/training/petclinic/functional/VisitSteps.java",
-      "line": 95,
-      "side": "RIGHT",
-      "anchor": "{\"id\":%d,\"petId\":%d,\"date\":\"%s\",\"description\":\"%s\",\"vetId\":%s}",
-      "body": "🛠 **Auto-fixed** in db6b67ec — The Cucumber update step dropped the vet out of its PUT body\n\n`iUpdateVisitDescription` rebuilt the body from the GET but stopped at `description`, so after this change renaming a visit unassigned its vet. The step now carries `vetId` through like every other field, and `visits.feature` gained the scenario that would have caught it. I kept the endpoint's semantics (see Ignored) and fixed the client, which is where the defect actually was.\n\n<sub>raised by /code-review high (the PUT-clears-the-vet scenario)</sub>"
-    },
-    {
-      "hr_id": "I:make-put-api-visits-id-keep-the-vet-when-the",
-      "pile": "ignored",
-      "title": "Make PUT /api/visits/{id} keep the vet when the body omits vetId",
-      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java",
-      "line": 88,
-      "side": "RIGHT",
-      "anchor": "currentVisit.setVet(attendingVet(visitDto.getVetId()));",
-      "body": "🔴 **Open issue** · medium · declined by the author — Make PUT /api/visits/{id} keep the vet when the body omits vetId\n\n**Why declined:** \"assign only when the field is present\" is precisely the bug #37 tells me not to repeat.\n\nThe endpoint already replaces `date` and `description` unconditionally — a body without `date` nulls the date. Special-casing `vetId` would make one field in one DTO behave differently from its neighbours, and telling absent from explicit-null needs a `JsonNullable` wrapper that nothing else in this codebase uses. The ticket's second requirement is that clearing the field sticks; unconditional …\n\n<sub>raised by /code-review high (the same finding, its design half)</sub>"
-    },
-    {
-      "hr_id": "I:collapse-the-duplicated-attendingvet-helper",
-      "pile": "ignored",
-      "title": "Collapse the duplicated attendingVet helper",
-      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-      "line": 201,
-      "side": "RIGHT",
-      "anchor": "log.debug(\"Attending vet: {}\", vet.getLastName());",
-      "body": "🔴 **Open issue** · low · declined by the author — Collapse the duplicated attendingVet helper\n\n**Why declined:** three lines shared by two controllers that already duplicate the whole booking flow; the honest fix is collapsing those, which is a bigger change than #37 asks for.\n\nI first wrote it as one `default` method on `VetRepository`, which is where it belongs. It fails at runtime: Spring Data's `NullnessMethodInvocationValidator` rejects a null argument to any repository method, so \"no vet chosen\" became a 500 — and neither `org.springframework.lang.@Nullable` nor `org.jspecify.@Nullable` on the parameter talks it out of that. A `@Component` wrapping one ternary …\n\n<sub>raised by /code-review high (duplication)</sub>"
-    },
-    {
-      "hr_id": "I:a-denied-preauthorize-answers-500-instead-of-403",
-      "pile": "ignored",
-      "title": "A denied @PreAuthorize answers 500 instead of 403",
-      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/error/ExceptionControllerAdvice.java",
-      "line": 75,
-      "side": "RIGHT",
-      "anchor": "public ResponseEntity<ProblemDetail> handleGeneralException(Exception e, HttpServletRequest request) {",
-      "body": "🔴 **Open issue** · medium · declined by the author — A denied @PreAuthorize answers 500 instead of 403\n\n**Why declined:** it is global error handling on every endpoint, and #37 is about a column on visits.\n\n`handleGeneralException` catches `Exception`, which includes `AuthorizationDeniedException`, so every authorization failure in `rest/` is reported as an internal error — and the `ProblemDetail` echoes the exception's own message back to the caller. Worth its own ticket. `ownerAdmin_cannotAddAVet` therefore asserts the write is refused rather than pinning the status code, so fixing this will not …\n\n<sub>raised by me, while writing the test for the vet-picker fix</sub>"
-    },
-    {
-      "hr_id": "I:ownerrestcontroller-s-constructor-is-now-nine",
-      "pile": "ignored",
-      "title": "OwnerRestController's constructor is now nine parameters",
-      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-      "line": 67,
+      "title": "Unknown vetId on edit and on owner-page booking untested",
+      "path": "petclinic-backend/src/test/java/victor/training/petclinic/rest/VisitTest.java",
+      "line": 380,
       "side": "RIGHT",
       "anchor": "",
-      "body": "🔴 **Open issue** · low · declined by the author — OwnerRestController's constructor is now nine parameters\n\n**Why declined:** it was already eight, the ninth collaborator is genuinely needed, and every alternative is worse.\n\nResolving the vet needs a repository, and `mapper → repository` is forbidden by `docs/packages.puml`. Sonar will re-flag S107 because the constructor's lines changed, so this will show up as a new-code finding on a pre-existing violation.\n\n<sub>raised by me, anticipating SonarCloud java:S107 (this repo lowers the cap to 5)</sub>"
+      "body": "🛠 **Auto-fixed** in ce56d912 — Unknown vetId on edit and on owner-page booking untested\n\n<sub>raised by tests reviewer</sub>"
     },
     {
-      "hr_id": "I:the-user-manual-still-describes-the-visit",
-      "pile": "ignored",
-      "title": "The user manual still describes the visit screens without a vet",
-      "path": "user-manual/manual.md",
-      "line": 100,
+      "hr_id": "F:deleting-a-vet-with-visits-is-untested",
+      "pile": "fixed",
+      "title": "Deleting a vet with visits is untested",
+      "path": "petclinic-backend/src/test/java/victor/training/petclinic/rest/VisitTest.java",
+      "line": 429,
       "side": "RIGHT",
-      "anchor": "To add a visit, open the owner's record (see [Owners](#owners)), find the pet that came in for the visit, and click *Add Visit* in that pet's section. The *New Visit* form opens with the pet's identifying details at the top and the pet's previous visits listed below. Pick the *Date* from the calendar, write a *Description* of what was done, and click *Add Visit* to save. The visit appears under that pet on the owner record and in the chronological *Visits* list. The *Add Visit* button at the bottom of the list page only works in the context of a specific pet — always start from the owner's record.",
-      "body": "🔴 **Open issue** · low · declined by the author — The user manual still describes the visit screens without a vet\n\n**Why declined:** `manual.md` and its screenshots are regenerated by crawling the running UI, which needs the frontend's dependencies installed; hand-editing the prose would leave it disagreeing with its own screenshots.\n\n<sub>raised by me</sub>"
+      "body": "🛠 **Auto-fixed** in ce56d912 — Deleting a vet with visits is untested\n\n<sub>raised by tests reviewer</sub>"
     },
     {
-      "hr_id": "A:vet-id-is-on-delete-set-null-so-deleting-a-vet",
+      "hr_id": "F:chatbot-list-visits-omits-the-vet",
+      "pile": "fixed",
+      "title": "Chatbot list_visits omits the vet",
+      "path": "petclinic-backend/src/main/java/victor/training/petclinic/mcp/PetClinicMcp.java",
+      "line": 126,
+      "side": "RIGHT",
+      "anchor": "",
+      "body": "🛠 **Auto-fixed** in ce56d912 — Chatbot list_visits omits the vet\n\n<sub>raised by ticket-fit reviewer</sub>"
+    },
+    {
+      "hr_id": "I:put-without-vetid-clears-the-stored-vet",
+      "pile": "ignored",
+      "title": "PUT without vetId clears the stored vet",
+      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java",
+      "line": 85,
+      "side": "RIGHT",
+      "anchor": "currentVisit.setDate(visitDto.getDate());",
+      "body": "🔴 **Open issue** · low · declined by the author — PUT without vetId clears the stored vet\n\n**Why declined:** PUT replaces the whole visit, so clearing persists, as ticket item 2 demands. See the assumption.\n\n<sub>raised by correctness, security, ticket-fit and tests reviewers</sub>"
+    },
+    {
+      "hr_id": "I:unknown-vetid-answers-a-bare-404-not-a-400",
+      "pile": "ignored",
+      "title": "Unknown vetId answers a bare 404, not a 400",
+      "path": "petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java",
+      "line": 20,
+      "side": "RIGHT",
+      "anchor": "",
+      "body": "🔴 **Open issue** · low · declined by the author — Unknown vetId answers a bare 404, not a 400\n\n**Why declined:** same as unknown pet types, OwnerRestController.java:150; a 400 belongs in a codebase-wide change.\n\n<sub>raised by correctness, security and ticket-fit reviewers</sub>"
+    },
+    {
+      "hr_id": "I:vet-ids-can-be-enumerated-via-the-404",
+      "pile": "ignored",
+      "title": "Vet ids can be enumerated via the 404",
+      "path": "petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java",
+      "line": 20,
+      "side": "RIGHT",
+      "anchor": "",
+      "body": "🔴 **Open issue** · info · declined by the author — Vet ids can be enumerated via the 404\n\n**Why declined:** GET /api/vets lists every vet already; nothing is disclosed.\n\n<sub>raised by security reviewer</sub>"
+    },
+    {
+      "hr_id": "I:visits-expose-vet-names-to-every-caller",
+      "pile": "ignored",
+      "title": "Visits expose vet names to every caller",
+      "path": "petclinic-backend/src/main/java/victor/training/petclinic/mapper/VisitMapper.java",
+      "line": 53,
+      "side": "RIGHT",
+      "start_line": 51,
+      "anchor": "visitDto.setDate(visit.getDate());",
+      "body": "🔴 **Open issue** · info · declined by the author — Visits expose vet names to every caller\n\n**Why declined:** Visit endpoints are OWNER_ADMIN-only and vet names are already public via /api/vets.\n\n<sub>raised by security reviewer</sub>"
+    },
+    {
+      "hr_id": "I:any-existing-vet-can-be-attributed-to-a-visit",
+      "pile": "ignored",
+      "title": "Any existing vet can be attributed to a visit",
+      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
+      "line": 192,
+      "side": "RIGHT",
+      "anchor": "visit.setPet(pet);",
+      "body": "🔴 **Open issue** · info · declined by the author — Any existing vet can be attributed to a visit\n\n**Why declined:** choosing any vet is the feature; the ticket sets no eligibility rule.\n\n<sub>raised by security reviewer</sub>"
+    },
+    {
+      "hr_id": "I:chatbot-create-visit-cannot-choose-a-vet",
+      "pile": "ignored",
+      "title": "Chatbot create_visit cannot choose a vet",
+      "path": "petclinic-backend/src/main/java/victor/training/petclinic/mcp/PetClinicMcp.java",
+      "line": 55,
+      "side": "RIGHT",
+      "anchor": "public String createVisit(",
+      "body": "🔴 **Open issue** · low · declined by the author — Chatbot create_visit cannot choose a vet\n\n**Why declined:** the vet is optional at booking; owners rarely know it. Separate ticket if wanted.\n\n<sub>raised by ticket-fit reviewer</sub>"
+    },
+    {
+      "hr_id": "I:failed-vets-fetch-shows-no-vet-for-a-visit-with",
+      "pile": "ignored",
+      "title": "Failed vets fetch shows \"No vet\" for a visit with one",
+      "path": "petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.ts",
+      "line": 43,
+      "side": "RIGHT",
+      "anchor": "vets => this.vetOptions = toVetOptions(vets),",
+      "body": "🔴 **Open issue** · low · declined by the author — Failed vets fetch shows \"No vet\" for a visit with one\n\n**Why declined:** model keeps the old vetId, so saving does not clear it; display-only, error path.\n\n<sub>raised by correctness reviewer</sub>"
+    },
+    {
+      "hr_id": "I:clearing-the-combo-could-send-or-0",
+      "pile": "ignored",
+      "title": "Clearing the combo could send '' or 0",
+      "path": "petclinic-frontend/src/app/design-system/combo.component.ts",
+      "line": 57,
+      "side": "RIGHT",
+      "anchor": "this.value = index === '' ? null : this.valueOf(option);",
+      "body": "🔴 **Open issue** · info · declined by the author — Clearing the combo could send '' or 0\n\n**Why declined:** pick('') sets null, line 57; covered by the combo's own spec.\n\n<sub>raised by tests reviewer</sub>"
+    },
+    {
+      "hr_id": "I:pipe-renders-null-null-with-vetid-but-no-names",
+      "pile": "ignored",
+      "title": "Pipe renders \"null null\" with vetId but no names",
+      "path": "petclinic-frontend/src/app/visits/visit-vet.pipe.ts",
+      "line": 21,
+      "side": "RIGHT",
+      "body": "🔴 **Open issue** · info · declined by the author — Pipe renders \"null null\" with vetId but no names\n\n**Why declined:** VisitMapper.java:51-53 sets id and both names together from one entity.\n\n<sub>raised by tests reviewer</sub>"
+    },
+    {
+      "hr_id": "A:put-replaces-the-visit-a-missing-vetid-means-no",
       "pile": "assumption",
-      "title": "vet_id is ON DELETE SET NULL, so deleting a vet is never blocked",
+      "title": "PUT replaces the visit; a missing vetId means no vet",
+      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java",
+      "line": 85,
+      "side": "RIGHT",
+      "anchor": "currentVisit.setDate(visitDto.getDate());",
+      "body": "💭 **Assumption** · confidence 0.70 — PUT replaces the visit; a missing vetId means no vet\n\n**Not taken:** PATCH-like: absent keeps the vet, explicit null clears it\n\n**Why:** Ticket item 2 makes \"clear must stick\" the priority, and full-replace PUT is the simplest rule that guarantees it; the only client, our edit form, always sends the field. Four reviewers flagged the omitted-field case, which pulls confidence down."
+    },
+    {
+      "hr_id": "A:unknown-vetid-is-a-404",
+      "pile": "assumption",
+      "title": "Unknown vetId is a 404",
+      "path": "petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java",
+      "line": 20,
+      "side": "RIGHT",
+      "anchor": "",
+      "body": "💭 **Assumption** · confidence 0.60 — Unknown vetId is a 404\n\n**Not taken:** 400 naming vetId as the bad field\n\n**Why:** Matches how unknown pet types are handled. A 400 is more correct HTTP, which is why this is close to a coin flip."
+    },
+    {
+      "hr_id": "A:deleting-a-vet-keeps-their-visits-with-no-vet",
+      "pile": "assumption",
+      "title": "Deleting a vet keeps their visits, with no vet",
       "path": "petclinic-backend/src/main/resources/db/migration/V4__visit_vet.sql",
+      "line": 4,
+      "side": "RIGHT",
+      "anchor": "-- whose vet is gone is exactly the \"no vet\" case the app already has to render.",
+      "body": "💭 **Assumption** · confidence 0.60 — Deleting a vet keeps their visits, with no vet\n\n**Not taken:** refuse deleting a vet who has visits\n\n**Why:** Ticket item 4 makes \"no vet\" a normal state, and before this change vet deletion always succeeded. Losing who attended is a real history loss, so a business owner could reasonably pick refusal."
+    },
+    {
+      "hr_id": "A:no-vet-is-the-wording-for-a-visit-without-one",
+      "pile": "assumption",
+      "title": "\"No vet\" is the wording for a visit without one",
+      "path": "petclinic-frontend/src/app/visits/visit-vet.pipe.ts",
       "line": 5,
       "side": "RIGHT",
-      "anchor": "ALTER TABLE visits ADD COLUMN vet_id INT REFERENCES vets (id) ON DELETE SET NULL;",
-      "body": "💭 **Assumption** · confidence 0.55 — vet_id is ON DELETE SET NULL, so deleting a vet is never blocked\n\n**Not taken:** the default RESTRICT — a vet who has attended anything can no longer be deleted, and `DELETE /api/vets/{id}` starts failing on real data\n\n**Why:** #37 says a visit with no vet is normal and \"never an error\", so a vet's departure landing their old visits in that case is the reading that keeps the ticket's own rule true. RESTRICT would invent a new failure mode the ticket never asks for."
+      "body": "💭 **Assumption** · confidence 0.75 — \"No vet\" is the wording for a visit without one\n\n**Not taken:** \"—\" or \"Not assigned\"\n\n**Why:** Ticket item 4 rules out \"Unknown\" and blank; \"No vet\" says \"has none\" literally, and the same label serves as the combo placeholder."
     },
     {
-      "hr_id": "A:an-unknown-vetid-is-a-404-not-a-quietly",
+      "hr_id": "A:seed-gives-a-vet-to-some-demo-visits-only",
       "pile": "assumption",
-      "title": "An unknown vetId is a 404, not a quietly unattended visit",
-      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java",
-      "line": 93,
-      "side": "RIGHT",
-      "anchor": "private Vet attendingVet(Integer vetId) {",
-      "body": "💭 **Assumption** · confidence 0.70 — An unknown vetId is a 404, not a quietly unattended visit\n\n**Not taken:** the house `petOfId` pattern — build a `Vet` carrying only the id, run no query, and let the foreign key reject a bad one as a 500\n\n**Why:** `petId` already takes the stub route, so consistency argued for it; correctness won. A typo'd vet id is a client error and reads like one, at the cost of one lean query per booking."
-    },
-    {
-      "hr_id": "A:a-visit-with-no-vet-reads-none-and-the-dropdown",
-      "pile": "assumption",
-      "title": "A visit with no vet reads \"none\", and the dropdown offers \"-- none --\"",
-      "path": "petclinic-frontend/src/app/visits/visit.ts",
-      "line": 14,
-      "side": "RIGHT",
-      "anchor": "export function vetLabel(visit: Visit): string {",
-      "body": "💭 **Assumption** · confidence 0.90 — A visit with no vet reads \"none\", and the dropdown offers \"-- none --\"\n\n**Not taken:** an em dash, or leaving the cell empty and letting the reader infer\n\n**Why:** #37's fourth requirement is that the visit reads as *having none* — not \"Unknown\", not blank-because-broken. A blank cell is indistinguishable from a failed load, which is the thing the requirement rules out."
-    },
-    {
-      "hr_id": "A:the-seed-gives-some-visits-a-vet-and",
-      "pile": "assumption",
-      "title": "The seed gives some visits a vet and deliberately withholds one from others",
+      "title": "Seed gives a vet to some demo visits only",
       "path": "petclinic-backend/src/main/resources/db/seed/R__seed.sql",
-      "line": 118,
+      "line": 145,
       "side": "RIGHT",
-      "anchor": "-- vet_id is deliberately NULL on some rows: an appointment is routinely booked before anyone",
-      "body": "💭 **Assumption** · confidence 0.45 — The seed gives some visits a vet and deliberately withholds one from others\n\n**Not taken:** leave every seeded visit unattended, since the ticket only says old rows keep no vet\n\n**Why:** a demo dataset where nothing has a vet cannot show the feature at all, and one where everything does never exercises the \"none\" rendering. The older batch (the four visits on Alice's cats) stays vet-less as the pre-change history; Milton's three cover both."
+      "start_line": 142,
+      "anchor": "INSERT INTO users (username, password, enabled) VALUES",
+      "body": "💭 **Assumption** · confidence 0.65 — Seed gives a vet to some demo visits only\n\n**Not taken:** leave every seeded visit without a vet\n\n**Why:** The demo should show both states; ticket item 4 is about real legacy rows, not the demo dataset."
     },
     {
-      "hr_id": "A:the-vet-rides-on-visitdto-as-three-flat-fields",
+      "hr_id": "A:mcp-create-visit-takes-no-vet-list-visits-shows",
       "pile": "assumption",
-      "title": "The vet rides on VisitDto as three flat fields, not a nested VetDto",
-      "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/VisitDto.java",
-      "line": 46,
-      "side": "RIGHT",
-      "anchor": "private @Nullable Integer vetId;",
-      "body": "💭 **Assumption** · confidence 0.80 — The vet rides on VisitDto as three flat fields, not a nested VetDto\n\n**Not taken:** `vet: VetDto`, the shape the vet screens already speak\n\n**Why:** `VisitDto` already flattens the owner into `ownerId`/`ownerFirstName`/ `ownerLastName`, and a nested `VetDto` carries `specialties`, which would put a vet's whole specialty list on every row of the all-visits table."
-    },
-    {
-      "hr_id": "A:mcp-s-create-visit-and-the-chatbot-were-left",
-      "pile": "assumption",
-      "title": "MCP's create_visit and the chatbot were left alone",
+      "title": "MCP create_visit takes no vet; list_visits shows it",
       "path": "petclinic-backend/src/main/java/victor/training/petclinic/mcp/PetClinicMcp.java",
-      "line": 48,
+      "line": 55,
       "side": "RIGHT",
-      "anchor": "name = \"create_visit\",",
-      "body": "💭 **Assumption** · confidence 0.60 — MCP's create_visit and the chatbot were left alone\n\n**Not taken:** read \"everywhere throughout the app\" to include the MCP surface and let the assistant book with a vet\n\n**Why:** the ticket's own four requirements name the booking form, the edit form, the owner's page and the all-visits screen. The MCP tools keep booking without a vet, which is a valid visit under this change, so nothing there breaks."
+      "anchor": "public String createVisit(",
+      "body": "💭 **Assumption** · confidence 0.70 — MCP create_visit takes no vet; list_visits shows it\n\n**Not taken:** also add a vet parameter to create_visit\n\n**Why:** \"Everywhere\" in the ticket covers displaying, which list_visits does; choosing a vet at booking stays a staff action in the UI."
     }
   ],
   "generated_by": "push-pr-comments.py --from-review-points"

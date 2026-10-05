@@ -45,89 +45,11 @@
         "same_output": false
       },
       {
-        "file": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-        "abs_file": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet/petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-        "line": 199,
-        "column": 9,
-        "end_line": 199,
-        "level": "INFO",
-        "receiver": "log",
-        "flavour": "SLF4J",
-        "evidence": "declared `Logger log`",
-        "confidence": "declared",
-        "method": "info",
-        "format": "\"Booked visit {} for pet {}\"",
-        "args": [
-          "visit.getId()",
-          "petId"
-        ],
-        "raw_line": "        log.info(\"Booked visit {} for pet {}\", visit.getId(), petId);",
-        "text": "log.info(\"Booked visit {} for pet {}\", visit.getId(), petId)",
-        "method_start": 190,
-        "method_end": 205,
-        "origins": [
-          {
-            "line": 192,
-            "name": "visit",
-            "kind": "local",
-            "text": "visitMapper.toVisit(visitFieldsDto)"
-          },
-          {
-            "line": 191,
-            "name": "petId",
-            "kind": "param",
-            "text": ""
-          }
-        ],
-        "arg_types": [
-          "Integer",
-          "int"
-        ],
-        "change": "added",
-        "was": "",
-        "same_output": false
-      },
-      {
-        "file": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-        "abs_file": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet/petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-        "line": 201,
-        "column": 13,
-        "end_line": 201,
-        "level": "DEBUG",
-        "receiver": "log",
-        "flavour": "SLF4J",
-        "evidence": "declared `Logger log`",
-        "confidence": "declared",
-        "method": "debug",
-        "format": "\"Attending vet: {}\"",
-        "args": [
-          "vet.getLastName()"
-        ],
-        "raw_line": "            log.debug(\"Attending vet: {}\", vet.getLastName());",
-        "text": "log.debug(\"Attending vet: {}\", vet.getLastName())",
-        "method_start": 190,
-        "method_end": 205,
-        "origins": [
-          {
-            "line": 196,
-            "name": "vet",
-            "kind": "local",
-            "text": "attendingVet(visitFieldsDto.getVetId())"
-          }
-        ],
-        "arg_types": [
-          "String"
-        ],
-        "change": "added",
-        "was": "",
-        "same_output": false
-      },
-      {
         "file": "petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java",
         "abs_file": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet/petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java",
-        "line": 75,
+        "line": 73,
         "column": 9,
-        "end_line": 75,
+        "end_line": 73,
         "level": "INFO",
         "receiver": "log",
         "flavour": "SLF4J",
@@ -141,11 +63,11 @@
         ],
         "raw_line": "        log.info(\"Booking visit for pet {}: {}\", visitDto.getPetId(), visitDto.getDescription());",
         "text": "log.info(\"Booking visit for pet {}: {}\", visitDto.getPetId(), visitDto.getDescription())",
-        "method_start": 73,
-        "method_end": 80,
+        "method_start": 71,
+        "method_end": 78,
         "origins": [
           {
-            "line": 74,
+            "line": 72,
             "name": "visitDto",
             "kind": "param",
             "text": ""
@@ -313,7 +235,7 @@
       {
         "file": "petclinic-backend/src/test/java/victor/training/petclinic/genseq/SequenceTraceExtension.java",
         "abs_file": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet/petclinic-backend/src/test/java/victor/training/petclinic/genseq/SequenceTraceExtension.java",
-        "line": 133,
+        "line": 216,
         "column": 13,
         "kind": "System.err",
         "raw_line": "            System.err.println(\"\u26a0\ufe0f  genseq: could not record the trace window (\" + e.getMessage() + \")\");",
@@ -322,7 +244,7 @@
       {
         "file": "petclinic-backend/src/test/java/victor/training/petclinic/genseq/SequenceTraceExtension.java",
         "abs_file": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet/petclinic-backend/src/test/java/victor/training/petclinic/genseq/SequenceTraceExtension.java",
-        "line": 154,
+        "line": 237,
         "column": 13,
         "kind": "System.err",
         "raw_line": "            System.err.println(\"\u26a0\ufe0f  genseq: could not clear the previous run's windows (\" + e.getMessage() + \")\");",
@@ -340,7 +262,7 @@
     ]
   },
   "stats": {
-    "files_with_loggers": 4,
+    "files_with_loggers": 3,
     "symbols": {
       "petclinic-backend/src/main/java/victor/training/petclinic/notification/NotificationServiceClient.java": [
         {
@@ -351,22 +273,13 @@
           "line": 17
         }
       ],
-      "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java": [
-        {
-          "name": "log",
-          "flavour": "SLF4J",
-          "evidence": "declared `Logger log`",
-          "confidence": "declared",
-          "line": 54
-        }
-      ],
       "petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java": [
         {
           "name": "log",
           "flavour": "SLF4J",
           "evidence": "declared `Logger log`",
           "confidence": "declared",
-          "line": 31
+          "line": 30
         }
       ],
       "petclinic-backend/src/main/java/victor/training/petclinic/rest/error/ExceptionControllerAdvice.java": [
@@ -646,25 +559,25 @@
       ],
       "petclinic-backend/src/main/java/victor/training/petclinic/mcp/PetClinicMcp.java": [
         {
-          "line": 35,
+          "line": 36,
           "name": "MAX_UPCOMING_VISITS_PER_PET",
           "type": "int",
           "text": "static final int MAX_UPCOMING_VISITS_PER_PET = 3;"
         },
         {
-          "line": 37,
+          "line": 38,
           "name": "ownerRepository",
           "type": "OwnerRepository",
           "text": "private final OwnerRepository ownerRepository;"
         },
         {
-          "line": 38,
+          "line": 39,
           "name": "petRepository",
           "type": "PetRepository",
           "text": "private final PetRepository petRepository;"
         },
         {
-          "line": 39,
+          "line": 40,
           "name": "visitRepository",
           "type": "VisitRepository",
           "text": "private final VisitRepository visitRepository;"
@@ -724,61 +637,55 @@
       ],
       "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java": [
         {
-          "line": 54,
-          "name": "log",
-          "type": "Logger",
-          "text": "private static final Logger log = LoggerFactory.getLogger(OwnerRestController.class);"
-        },
-        {
-          "line": 56,
+          "line": 52,
           "name": "ownerRepository",
           "type": "OwnerRepository",
           "text": "private final OwnerRepository ownerRepository;"
         },
         {
-          "line": 57,
+          "line": 53,
           "name": "petRepository",
           "type": "PetRepository",
           "text": "private final PetRepository petRepository;"
         },
         {
-          "line": 58,
+          "line": 54,
           "name": "visitRepository",
           "type": "VisitRepository",
           "text": "private final VisitRepository visitRepository;"
         },
         {
-          "line": 59,
+          "line": 55,
           "name": "petTypeRepository",
           "type": "PetTypeRepository",
           "text": "private final PetTypeRepository petTypeRepository;"
         },
         {
-          "line": 60,
+          "line": 56,
           "name": "vetRepository",
           "type": "VetRepository",
           "text": "private final VetRepository vetRepository;"
         },
         {
-          "line": 62,
+          "line": 58,
           "name": "ownerMapper",
           "type": "OwnerMapper",
           "text": "private final OwnerMapper ownerMapper;"
         },
         {
-          "line": 64,
+          "line": 60,
           "name": "petMapper",
           "type": "PetMapper",
           "text": "private final PetMapper petMapper;"
         },
         {
-          "line": 66,
+          "line": 62,
           "name": "visitMapper",
           "type": "VisitMapper",
           "text": "private final VisitMapper visitMapper;"
         },
         {
-          "line": 68,
+          "line": 64,
           "name": "notificationSender",
           "type": "NotificationSender",
           "text": "private final NotificationSender notificationSender;"
@@ -898,28 +805,28 @@
       ],
       "petclinic-backend/src/main/java/victor/training/petclinic/rest/VisitRestController.java": [
         {
-          "line": 31,
+          "line": 30,
           "name": "log",
           "type": "Logger",
           "text": "private static final Logger log = LoggerFactory.getLogger(VisitRestController.class);"
         },
         {
-          "line": 33,
+          "line": 32,
           "name": "visitRepository",
           "type": "VisitRepository",
           "text": "private final VisitRepository visitRepository;"
+        },
+        {
+          "line": 33,
+          "name": "visitMapper",
+          "type": "VisitMapper",
+          "text": "private final VisitMapper visitMapper;"
         },
         {
           "line": 34,
           "name": "vetRepository",
           "type": "VetRepository",
           "text": "private final VetRepository vetRepository;"
-        },
-        {
-          "line": 35,
-          "name": "visitMapper",
-          "type": "VisitMapper",
-          "text": "private final VisitMapper visitMapper;"
         }
       ],
       "petclinic-backend/src/main/java/victor/training/petclinic/rest/dto/OwnerDto.java": [
@@ -1201,7 +1108,7 @@
           "line": 44,
           "name": "vetId",
           "type": "Integer",
-          "text": "@Min(0)\n    @Schema(example = \"1\", description = \"The ID of the vet attending the visit; absent when none is assigned.\")\n    private @Nullable Integer vetId;"
+          "text": "@Min(0)\n    @Schema(example = \"1\", description = \"The ID of the vet who attends the visit; null for none.\")\n    private @Nullable Integer vetId;"
         },
         {
           "line": 48,
@@ -1230,10 +1137,10 @@
           "text": "@NotNull\n    @Size(min = 1, max = 255)\n    @Schema(example = \"rabies shot\", description = \"The description for the visit.\")\n    private String description;"
         },
         {
-          "line": 24,
+          "line": 22,
           "name": "vetId",
           "type": "Integer",
-          "text": "@Min(0)\n    @Schema(example = \"1\", description = \"The ID of the vet attending the visit; null for none.\")\n    private @Nullable Integer vetId;"
+          "text": "@Min(0)\n    @Schema(example = \"1\", description = \"The ID of the vet who attends the visit; null for none.\")\n    private @Nullable Integer vetId;"
         }
       ],
       "petclinic-backend/src/main/java/victor/training/petclinic/rest/error/ExceptionControllerAdvice.java": [
@@ -1374,40 +1281,46 @@
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/genseq/SequenceTraceExtension.java": [
         {
-          "line": 46,
+          "line": 51,
           "name": "TEST_NAME",
           "type": "AttributeKey<String>",
           "text": "private static final AttributeKey<String> TEST_NAME = AttributeKey.stringKey(\"test.name\");"
         },
         {
-          "line": 48,
+          "line": 53,
           "name": "WINDOWS_DIR",
           "type": "String",
           "text": "private static final String WINDOWS_DIR = \"petclinic-test/test-results/trace-windows\";"
         },
         {
-          "line": 55,
+          "line": 60,
           "name": "PRE_PAD_MS",
           "type": "long",
           "text": "private static final long PRE_PAD_MS = 1_000;"
         },
         {
-          "line": 57,
+          "line": 62,
           "name": "POST_PAD_MS",
           "type": "long",
           "text": "private static final long POST_PAD_MS = 5_000;"
         },
         {
-          "line": 59,
+          "line": 64,
           "name": "NAMESPACE",
           "type": "ExtensionContext.Namespace",
           "text": "private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace\n            .create(SequenceTraceExtension.class);"
         },
         {
-          "line": 67,
+          "line": 74,
           "name": "swept",
           "type": "AtomicBoolean",
           "text": "private static final AtomicBoolean swept = new AtomicBoolean();"
+        },
+        {
+          "line": 82,
+          "name": "SELECT_ENV",
+          "type": "String",
+          "text": "static final String SELECT_ENV = \"GENSEQ_SELECT\";"
         }
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/genseq/Steps.java": [
@@ -1504,48 +1417,56 @@
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/guardrail/DeploymentDiagramTest.java": [
         {
-          "line": 54,
+          "line": 57,
           "name": "DIAGRAM",
           "type": "Path",
           "text": "private static final Path DIAGRAM = Paths.get(\"docs/Deployment.drawio.png\");"
         },
         {
-          "line": 55,
+          "line": 58,
           "name": "TRACE_DIAGRAMS",
           "type": "Path",
           "text": "private static final Path TRACE_DIAGRAMS = Paths.get(\"../petclinic-test/generated\");"
         },
         {
-          "line": 67,
+          "line": 70,
           "name": "DEPLOYED_SUITE",
           "type": "Pattern",
           "text": "private static final Pattern DEPLOYED_SUITE = Pattern.compile(\"\\\\.(?:spec\\\\.ts|feature)\\\\..*\\\\.genseq\\\\.puml$\");"
         },
         {
-          "line": 169,
+          "line": 172,
           "name": "CALL",
           "type": "Pattern",
-          "text": "private static final Pattern CALL = Pattern.compile(\"^\\\\s*(\\\\w+)\\\\s+->\\\\s+(\\\\w+)\\\\s*:\", Pattern.MULTILINE);"
+          "text": "private static final Pattern CALL = Pattern.compile(\n            \"^\\\\s*(?:\\\"([^\\\"]+)\\\"|(\\\\w+))\\\\s+->\\\\s+(?:\\\"([^\\\"]+)\\\"|(\\\\w+))\\\\s*:\", Pattern.MULTILINE);"
         }
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/guardrail/DomainModelExtractor.java": [
         {
-          "line": 47,
+          "line": 51,
           "name": "ONE",
           "type": "String",
           "text": "static final String ONE = \"1\";"
         },
         {
-          "line": 48,
+          "line": 52,
           "name": "MANY",
           "type": "String",
           "text": "static final String MANY = \"0..*\";"
         },
         {
-          "line": 50,
+          "line": 54,
           "name": "DOMAIN_MODEL_PKG",
           "type": "String",
           "text": "private static final String DOMAIN_MODEL_PKG = \"victor.training.petclinic.domain\";"
+        }
+      ],
+      "petclinic-backend/src/test/java/victor/training/petclinic/guardrail/DomainModelExtractorShould.java": [
+        {
+          "line": 10,
+          "name": "model",
+          "type": "DomainModelExtractor",
+          "text": "private final DomainModelExtractor model = new DomainModelExtractor();"
         }
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/guardrail/DomainModelExtractorTest.java": [
@@ -1820,28 +1741,66 @@
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/mcp/ListVisitsToolTest.java": [
         {
-          "line": 31,
+          "line": 34,
           "name": "petClinicMcp",
           "type": "PetClinicMcp",
           "text": "@Autowired\n    PetClinicMcp petClinicMcp;"
         },
         {
-          "line": 33,
+          "line": 36,
           "name": "ownerRepository",
           "type": "OwnerRepository",
           "text": "@Autowired\n    OwnerRepository ownerRepository;"
         },
         {
-          "line": 35,
+          "line": 38,
           "name": "petRepository",
           "type": "PetRepository",
           "text": "@Autowired\n    PetRepository petRepository;"
         },
         {
-          "line": 37,
+          "line": 40,
           "name": "visitRepository",
           "type": "VisitRepository",
           "text": "@Autowired\n    VisitRepository visitRepository;"
+        },
+        {
+          "line": 42,
+          "name": "vetRepository",
+          "type": "VetRepository",
+          "text": "@Autowired\n    VetRepository vetRepository;"
+        }
+      ],
+      "petclinic-backend/src/test/java/victor/training/petclinic/mcp/McpElicitationRoundTripTest.java": [
+        {
+          "line": 43,
+          "name": "ELICITATION_ID",
+          "type": "Pattern",
+          "text": "private static final Pattern ELICITATION_ID = Pattern\n            .compile(\"\\\"method\\\":\\\"elicitation/create\\\",\\\"id\\\":\\\"([^\\\"]+)\\\"\");"
+        },
+        {
+          "line": 46,
+          "name": "port",
+          "type": "int",
+          "text": "@LocalServerPort\n    int port;"
+        },
+        {
+          "line": 49,
+          "name": "apiKey",
+          "type": "String",
+          "text": "@Value(\"${petclinic.mcp.api-key}\")\n    String apiKey;"
+        },
+        {
+          "line": 52,
+          "name": "http",
+          "type": "HttpClient",
+          "text": "private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();"
+        },
+        {
+          "line": 53,
+          "name": "sessionId",
+          "type": "String",
+          "text": "private String sessionId;"
         }
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/mcp/McpHttpSecurityTest.java": [
@@ -2248,67 +2207,73 @@
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/rest/VisitTest.java": [
         {
-          "line": 45,
+          "line": 48,
           "name": "mockMvc",
           "type": "MockMvc",
           "text": "@Autowired\n    MockMvc mockMvc;"
         },
         {
-          "line": 48,
+          "line": 51,
           "name": "mapper",
           "type": "ObjectMapper",
           "text": "ObjectMapper mapper = new ObjectMapper()\n            .registerModule(new JavaTimeModule())\n            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);"
         },
         {
-          "line": 52,
+          "line": 55,
           "name": "visitRepository",
           "type": "VisitRepository",
           "text": "@Autowired\n    VisitRepository visitRepository;"
         },
         {
-          "line": 55,
+          "line": 58,
           "name": "petRepository",
           "type": "PetRepository",
           "text": "@Autowired\n    PetRepository petRepository;"
         },
         {
-          "line": 58,
+          "line": 61,
           "name": "ownerRepository",
           "type": "OwnerRepository",
           "text": "@Autowired\n    OwnerRepository ownerRepository;"
         },
         {
-          "line": 61,
+          "line": 64,
           "name": "vetRepository",
           "type": "VetRepository",
           "text": "@Autowired\n    VetRepository vetRepository;"
         },
         {
-          "line": 64,
+          "line": 67,
+          "name": "entityManager",
+          "type": "EntityManager",
+          "text": "@Autowired\n    EntityManager entityManager;"
+        },
+        {
+          "line": 70,
           "name": "visitId",
           "type": "int",
           "text": "int visitId;"
         },
         {
-          "line": 65,
+          "line": 71,
           "name": "petId",
           "type": "int",
           "text": "int petId;"
         },
         {
-          "line": 66,
+          "line": 72,
           "name": "ownerId",
           "type": "int",
           "text": "int ownerId;"
         },
         {
-          "line": 67,
-          "name": "vetId",
-          "type": "int",
-          "text": "int vetId;"
+          "line": 73,
+          "name": "vet",
+          "type": "Vet",
+          "text": "Vet vet;"
         },
         {
-          "line": 68,
+          "line": 74,
           "name": "petTypeRepository",
           "type": "PetTypeRepository",
           "text": "@Autowired\n    private PetTypeRepository petTypeRepository;"
@@ -2324,13 +2289,13 @@
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/security/BasicAuthenticationConfigTest.java": [
         {
-          "line": 25,
+          "line": 22,
           "name": "mockMvc",
           "type": "MockMvc",
           "text": "@Autowired\n    MockMvc mockMvc;"
         },
         {
-          "line": 28,
+          "line": 25,
           "name": "passwordEncoder",
           "type": "PasswordEncoder",
           "text": "@Autowired\n    PasswordEncoder passwordEncoder;"
@@ -2339,86 +2304,7 @@
     }
   },
   "changed": {
-    "logging": [
-      {
-        "file": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-        "abs_file": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet/petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-        "line": 199,
-        "column": 9,
-        "end_line": 199,
-        "level": "INFO",
-        "receiver": "log",
-        "flavour": "SLF4J",
-        "evidence": "declared `Logger log`",
-        "confidence": "declared",
-        "method": "info",
-        "format": "\"Booked visit {} for pet {}\"",
-        "args": [
-          "visit.getId()",
-          "petId"
-        ],
-        "raw_line": "        log.info(\"Booked visit {} for pet {}\", visit.getId(), petId);",
-        "text": "log.info(\"Booked visit {} for pet {}\", visit.getId(), petId)",
-        "method_start": 190,
-        "method_end": 205,
-        "origins": [
-          {
-            "line": 192,
-            "name": "visit",
-            "kind": "local",
-            "text": "visitMapper.toVisit(visitFieldsDto)"
-          },
-          {
-            "line": 191,
-            "name": "petId",
-            "kind": "param",
-            "text": ""
-          }
-        ],
-        "arg_types": [
-          "Integer",
-          "int"
-        ],
-        "change": "added",
-        "was": "",
-        "same_output": false
-      },
-      {
-        "file": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-        "abs_file": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet/petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
-        "line": 201,
-        "column": 13,
-        "end_line": 201,
-        "level": "DEBUG",
-        "receiver": "log",
-        "flavour": "SLF4J",
-        "evidence": "declared `Logger log`",
-        "confidence": "declared",
-        "method": "debug",
-        "format": "\"Attending vet: {}\"",
-        "args": [
-          "vet.getLastName()"
-        ],
-        "raw_line": "            log.debug(\"Attending vet: {}\", vet.getLastName());",
-        "text": "log.debug(\"Attending vet: {}\", vet.getLastName())",
-        "method_start": 190,
-        "method_end": 205,
-        "origins": [
-          {
-            "line": 196,
-            "name": "vet",
-            "kind": "local",
-            "text": "attendingVet(visitFieldsDto.getVetId())"
-          }
-        ],
-        "arg_types": [
-          "String"
-        ],
-        "change": "added",
-        "was": "",
-        "same_output": false
-      }
-    ],
+    "logging": [],
     "antipattern": []
   }
 }

@@ -33,6 +33,8 @@
 .dsa-legend .k-ok i  { background: var(--dsa-ok); }
 .dsa-legend .k-bad i { background: var(--dsa-bad); }
 .dsa-legend .k-new i { background: var(--dsa-new); }
+.dsa-legend .k-frame i { background: transparent; border: 2px solid var(--dsa-frame);
+  box-sizing: border-box; }
 .dsa-legend .dsa-ink i { background: #d61fa5; }
 .dsa-legend .dsa-ghost i { background: #f5cde8; border: 1px solid #d61fa5; }
 .dsa-legend .dsa-ink, .dsa-legend .dsa-ghost { display: inline-flex;
@@ -50,7 +52,12 @@
 .dsa-v.ok  { color: var(--dsa-ok); }
 .dsa-table tr.ok td:first-child { border-left: 4px solid var(--dsa-ok); }
 .dsa-prov { opacity: .7; font-style: italic; }
-.dsa-sel { font-size: .78rem; opacity: .72; word-break: break-all; }
+/* Wraps only at the `<wbr>` after each `>` (`selector_html`), never mid-token. */
+.dsa-sel { font-size: .78rem; opacity: .72; word-break: normal; overflow-wrap: normal;
+  white-space: normal; }
+.dsa-sel .dsa-step { white-space: nowrap; }
+/* A side is a branch name or a short sha: one word, never broken over three lines. */
+.dsa-table td:nth-child(2) { white-space: nowrap; }
 /* One collapsible row per screen, closed by default — the same furniture the Sequence
    tab's `details.testpair` wears for the same reason: a run audits the whole catalogue,
    and most of it did not change in a way worth a picture. The triangle and the
@@ -78,7 +85,20 @@ details.dsa-screen > summary:hover { color: var(--link); }
 .dsa-frame { position: absolute; box-sizing: border-box; pointer-events: none;
   border: 3px solid var(--dsa-frame); border-radius: .35rem; }
 .dsa-frame.insert { border: 0; border-top: 3px dashed var(--dsa-frame); border-radius: 0; }
-.dsa:has(.dsa-frameon:not(:checked)) .dsa-frame { display: none; }
+/* What a frame holds is said in a caption UNDER the picture (`.dsa-framecap`), never on
+   it: the chip that rode the frame's top edge covered the table header it framed (eval
+   run 8). With several frames each carries only its number, outside its top-left corner. */
+.dsa-frame > b.dsa-fnum { position: absolute; left: -3px; top: -3px; transform: translateX(-100%);
+  font: 700 .68rem/1.15rem -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--dsa-label-fg); background: var(--dsa-frame); padding: 0 .3rem;
+  border-radius: .2rem; z-index: 2; }
+.dsa-framecap { margin: .4rem 0 0; font-size: .82rem; line-height: 1.5; display: flex;
+  flex-wrap: wrap; gap: .2rem 1rem; }
+.dsa-fcap { display: inline-flex; align-items: baseline; gap: .35rem; }
+.dsa-fcap i { width: .85rem; height: .85rem; border: 2px solid var(--dsa-frame);
+  border-radius: .2rem; box-sizing: border-box; align-self: center; flex: none; }
+.dsa:has(.dsa-frameon:not(:checked)) .dsa-frame,
+.dsa:has(.dsa-frameon:not(:checked)) .dsa-framecap { display: none; }
 .dsa-frametoggle { margin-left: .6rem; font-size: .82rem; display: inline-flex; gap: .35rem;
   align-items: center; cursor: pointer; user-select: none; color: var(--fg); }
 .dsa-frametoggle input { accent-color: var(--dsa-frame); margin: 0; }

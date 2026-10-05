@@ -1,0 +1,443 @@
+diff --git a/petclinic-backend/src/test/java/victor/training/petclinic/rest/VisitTest.java b/petclinic-backend/src/test/java/victor/training/petclinic/rest/VisitTest.java
+index 5aa31599..b45c71a3 100644
+--- a/petclinic-backend/src/test/java/victor/training/petclinic/rest/VisitTest.java
++++ b/petclinic-backend/src/test/java/victor/training/petclinic/rest/VisitTest.java
+@@ -3,6 +3,7 @@ package victor.training.petclinic.rest;
+ import com.fasterxml.jackson.databind.ObjectMapper;
+ import com.fasterxml.jackson.databind.SerializationFeature;
+ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
++import jakarta.persistence.EntityManager;
+ import jakarta.transaction.Transactional;
+ import org.assertj.core.api.Assertions;
+ import org.junit.jupiter.api.BeforeEach;
+@@ -14,10 +15,12 @@ import org.springframework.boot.test.context.SpringBootTest;
+ import org.springframework.http.MediaType;
+ import victor.training.petclinic.domain.Owner;
+ import victor.training.petclinic.domain.Pet;
++import victor.training.petclinic.domain.Vet;
+ import victor.training.petclinic.domain.Visit;
+ import victor.training.petclinic.repository.OwnerRepository;
+ import victor.training.petclinic.repository.PetRepository;
+ import victor.training.petclinic.repository.PetTypeRepository;
++import victor.training.petclinic.repository.VetRepository;
+ import victor.training.petclinic.repository.VisitRepository;
+ import victor.training.petclinic.rest.dto.VisitDto;
+ import victor.training.petclinic.rest.dto.VisitFieldsDto;
+@@ -29,7 +32,10 @@ import java.util.Arrays;
+ 
+ import static org.assertj.core.api.Assertions.assertThat;
+ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
++import static org.hamcrest.Matchers.contains;
++import static org.hamcrest.Matchers.nullValue;
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+ 
+ @SpringBootTest
+@@ -55,8 +61,16 @@ public class VisitTest {
+     @Autowired
+     OwnerRepository ownerRepository;
+ 
++    @Autowired
++    VetRepository vetRepository;
++
++    @Autowired
++    EntityManager entityManager;
++
+     int visitId;
+     int petId;
++    int ownerId;
++    Vet vet;
+     @Autowired
+     private PetTypeRepository petTypeRepository;
+ 
+@@ -68,6 +82,12 @@ public class VisitTest {
+         pet.setType(petTypeRepository.save(TestData.aPetType("dog")));
+         petRepository.save(pet);
+         petId = pet.getId();
++        ownerId = owner.getId();
++
++        vet = new Vet();
++        vet.setFirstName("James");
++        vet.setLastName("Herriot");
++        vetRepository.save(vet);
+ 
+         Visit visit = new Visit();
+         visit.setDate(LocalDate.now());
+@@ -231,4 +251,150 @@ public class VisitTest {
+             assertThat(visit.getDate()).isNotNull();
+         });
+     }
++
++    @Test
++    void create_withVet() throws Exception {
++        VisitDto newVisit = new VisitDto()
++                .setPetId(petId)
++                .setDate(LocalDate.now())
++                .setDescription("annual checkup")
++                .setVetId(vet.getId());
++
++        String location = mockMvc.perform(post("/api/visits")
++                .content(mapper.writeValueAsString(newVisit))
++                .contentType(MediaType.APPLICATION_JSON_VALUE))
++                .andExpect(status().isCreated())
++                .andReturn().getResponse().getHeader("Location");
++
++        VisitDto created = callGet(idFrom(location));
++        assertThat(created.getVetId()).isEqualTo(vet.getId());
++        assertThat(created.getVetFirstName()).isEqualTo("James");
++        assertThat(created.getVetLastName()).isEqualTo("Herriot");
++    }
++
++    @Test
++    void create_withoutVet() throws Exception {
++        VisitDto newVisit = new VisitDto()
++                .setPetId(petId)
++                .setDate(LocalDate.now())
++                .setDescription("annual checkup");
++
++        String location = mockMvc.perform(post("/api/visits")
++                .content(mapper.writeValueAsString(newVisit))
++                .contentType(MediaType.APPLICATION_JSON_VALUE))
++                .andExpect(status().isCreated())
++                .andReturn().getResponse().getHeader("Location");
++
++        VisitDto created = callGet(idFrom(location));
++        assertThat(created.getVetId()).isNull();
++        assertThat(created.getVetFirstName()).isNull();
++        assertThat(created.getVetLastName()).isNull();
++    }
++
++    @Test
++    void create_withUnknownVet_notFound() throws Exception {
++        VisitDto newVisit = new VisitDto()
++                .setPetId(petId)
++                .setDate(LocalDate.now())
++                .setDescription("annual checkup")
++                .setVetId(99999);
++
++        mockMvc.perform(post("/api/visits")
++                .content(mapper.writeValueAsString(newVisit))
++                .contentType(MediaType.APPLICATION_JSON_VALUE))
++                .andExpect(status().isNotFound());
++    }
++
++    @Test
++    void bookFromOwnerPage_withVet_isShownOnOwnerPage() throws Exception {
++        VisitFieldsDto newVisit = new VisitFieldsDto()
++                .setDate(LocalDate.now())
++                .setDescription("ear infection")
++                .setVetId(vet.getId());
++
++        mockMvc.perform(post("/api/owners/{ownerId}/pets/{petId}/visits", ownerId, petId)
++                .content(mapper.writeValueAsString(newVisit))
++                .contentType(MediaType.APPLICATION_JSON_VALUE))
++                .andExpect(status().isCreated());
++        entityManager.flush();
++        entityManager.clear(); // as a fresh request would: the pet's visits are reloaded
++
++        mockMvc.perform(get("/api/owners/{ownerId}", ownerId))
++                .andExpect(status().isOk())
++                .andExpect(jsonPath("$.pets[0].visits[?(@.description == 'ear infection')].vetId")
++                        .value(vet.getId()))
++                .andExpect(jsonPath("$.pets[0].visits[?(@.description == 'ear infection')].vetLastName")
++                        .value("Herriot"))
++                .andExpect(jsonPath("$.pets[0].visits[?(@.description == 'rabies shot')].vetId")
++                        .value(contains(nullValue())));
++    }
++
++    @Test
++    void bookFromOwnerPage_withoutVet() throws Exception {
++        VisitFieldsDto newVisit = new VisitFieldsDto()
++                .setDate(LocalDate.now())
++                .setDescription("ear infection");
++
++        mockMvc.perform(post("/api/owners/{ownerId}/pets/{petId}/visits", ownerId, petId)
++                .content(mapper.writeValueAsString(newVisit))
++                .contentType(MediaType.APPLICATION_JSON_VALUE))
++                .andExpect(status().isCreated());
++
++        assertThat(visitRepository.findByPetId(petId))
++                .filteredOn(v -> "ear infection".equals(v.getDescription()))
++                .singleElement()
++                .extracting(Visit::getVet)
++                .isNull();
++    }
++
++    @Test
++    void update_assignsVet() throws Exception {
++        VisitFieldsDto update = new VisitFieldsDto()
++                .setDate(LocalDate.now())
++                .setDescription("rabies shot")
++                .setVetId(vet.getId());
++
++        mockMvc.perform(put("/api/visits/" + visitId)
++                .content(mapper.writeValueAsString(update))
++                .contentType(MediaType.APPLICATION_JSON_VALUE))
++                .andExpect(status().isOk());
++
++        assertThat(callGet(visitId).getVetId()).isEqualTo(vet.getId());
++    }
++
++    @Test
++    void update_clearsVet() throws Exception {
++        Visit visit = visitRepository.findById(visitId).orElseThrow();
++        visit.setVet(vet);
++        visitRepository.save(visit);
++        VisitFieldsDto update = new VisitFieldsDto()
++                .setDate(LocalDate.now())
++                .setDescription("rabies shot")
++                .setVetId(null);
++
++        mockMvc.perform(put("/api/visits/" + visitId)
++                .content(mapper.writeValueAsString(update))
++                .contentType(MediaType.APPLICATION_JSON_VALUE))
++                .andExpect(status().isOk());
++
++        VisitDto updated = callGet(visitId);
++        assertThat(updated.getVetId()).isNull();
++        assertThat(updated.getVetLastName()).isNull();
++    }
++
++    @Test
++    void getAll_returnsVetNames() throws Exception {
++        Visit visit = visitRepository.findById(visitId).orElseThrow();
++        visit.setVet(vet);
++        visitRepository.save(visit);
++
++        mockMvc.perform(get("/api/visits"))
++                .andExpect(status().isOk())
++                .andExpect(jsonPath("$[?(@.id == %d)].vetFirstName", visitId).value("James"))
++                .andExpect(jsonPath("$[?(@.id == %d)].vetLastName", visitId).value("Herriot"));
++    }
++
++    private static int idFrom(String location) {
++        return Integer.parseInt(location.substring(location.lastIndexOf('/') + 1));
++    }
+ }
+diff --git a/petclinic-frontend/src/app/visits/visit-add/visit-add.component.spec.ts b/petclinic-frontend/src/app/visits/visit-add/visit-add.component.spec.ts
+index ad0a3a5c..07cb1045 100644
+--- a/petclinic-frontend/src/app/visits/visit-add/visit-add.component.spec.ts
++++ b/petclinic-frontend/src/app/visits/visit-add/visit-add.component.spec.ts
+@@ -16,6 +16,8 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
+ import Spy = jasmine.Spy;
+ import {OwnerService} from '../../owners/owner.service';
+ import {Owner} from '../../owners/owner';
++import {VetService} from '../../vets/vet.service';
++import {Vet} from '../../vets/vet';
+ 
+ class PetServiceStub {
+   addPet(pet: Pet): Observable<Pet> {
+@@ -34,6 +36,12 @@ class OwnerServiceStub {
+   }
+ }
+ 
++class VetServiceStub {
++  getVets(): Observable<Vet[]> {
++    return of([{id: 2, firstName: 'Helen', lastName: 'Leary', specialties: []}]);
++  }
++}
++
+ class VisitServiceStub {
+   addVisit(visit: any): Observable<any> {
+     return of(visit);
+@@ -57,6 +65,7 @@ describe('VisitAddComponent', () => {
+         {provide: PetService, useClass: PetServiceStub},
+         {provide: VisitService, useClass: VisitServiceStub},
+         {provide: OwnerService, useClass: OwnerServiceStub},
++        {provide: VetService, useClass: VetServiceStub},
+         {provide: Router, useClass: RouterStub},
+         {provide: ActivatedRoute, useClass: ActivatedRouteStub}
+       ]
+@@ -108,6 +117,19 @@ describe('VisitAddComponent', () => {
+     expect(router.navigate).toHaveBeenCalledWith(['/owners', 1]);
+   });
+ 
++  it('offers the vets, starting with no vet chosen', () => {
++    expect(component.vetOptions).toEqual([{id: 2, name: 'Helen Leary'}]);
++    expect(component.visit.vetId).toBeNull();
++  });
++
++  it('books the visit with the chosen vet', () => {
++    spyOn(visitService, 'addVisit').and.callThrough();
++    component.currentOwner = visitOwner;
++    const visit: any = { id: null, date: '2023-05-01', description: 'checkup', pet: testPet, vetId: 2 };
++    component.onSubmit(visit);
++    expect(visitService.addVisit).toHaveBeenCalledWith(jasmine.objectContaining({vetId: 2}));
++  });
++
+   it('should navigate to owner detail via gotoOwnerDetail', () => {
+     const router = fixture.debugElement.injector.get(Router) as unknown as RouterStub;
+     spyOn(router, 'navigate');
+diff --git a/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.spec.ts b/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.spec.ts
+index 5e447ea0..6ec74409 100644
+--- a/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.spec.ts
++++ b/petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.spec.ts
+@@ -16,6 +16,8 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
+ import Spy = jasmine.Spy;
+ import {OwnerService} from '../../owners/owner.service';
+ import {PetService} from '../../pets/pet.service';
++import {VetService} from '../../vets/vet.service';
++import {Vet} from '../../vets/vet';
+ 
+ const visitEditOwner = { id: 1, firstName: 'George', lastName: 'Franklin', address: '110 W. Liberty St.', city: 'Madison', telephone: '6085551023', pets: [] };
+ 
+@@ -34,6 +36,12 @@ class OwnerServiceStub {
+   }
+ }
+ 
++class VetServiceStub {
++  getVets(): Observable<Vet[]> {
++    return of([{id: 2, firstName: 'Helen', lastName: 'Leary', specialties: []}]);
++  }
++}
++
+ class PetServiceStub {
+   getPetById(petId: string): Observable<Pet> {
+     return of();
+@@ -57,6 +65,7 @@ describe('VisitEditComponent', () => {
+         {provide: VisitService, useClass: VisitServiceStub},
+         {provide: OwnerService, useClass: OwnerServiceStub},
+         {provide: PetService, useClass: PetServiceStub},
++        {provide: VetService, useClass: VetServiceStub},
+         {provide: Router, useClass: RouterStub},
+         {provide: ActivatedRoute, useClass: ActivatedRouteStub}
+       ]
+@@ -112,6 +121,15 @@ describe('VisitEditComponent', () => {
+     expect(router.navigate).toHaveBeenCalledWith(['/owners', 1]);
+   });
+ 
++  it('sends a cleared vet as null, so the server removes it', () => {
++    const update = spyOn(visitService, 'updateVisit').and.callThrough();
++    component.currentOwner = visitEditOwner as any;
++    const visit: Visit = { id: 1, date: '2023-05-01', description: 'updated', pet: testPet, vetId: null };
++    component.onSubmit(visit);
++    const body = JSON.parse(JSON.stringify(update.calls.mostRecent().args[1]));
++    expect(body.vetId).toBeNull();
++  });
++
+   it('should navigate to owner detail via gotoOwnerDetail', () => {
+     const router = fixture.debugElement.injector.get(Router) as unknown as RouterStub;
+     spyOn(router, 'navigate');
+diff --git a/petclinic-frontend/src/app/visits/visit-list/visit-list.component.spec.ts b/petclinic-frontend/src/app/visits/visit-list/visit-list.component.spec.ts
+index 1ff2a90f..93275750 100644
+--- a/petclinic-frontend/src/app/visits/visit-list/visit-list.component.spec.ts
++++ b/petclinic-frontend/src/app/visits/visit-list/visit-list.component.spec.ts
+@@ -4,6 +4,8 @@ import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+ import {CUSTOM_ELEMENTS_SCHEMA} from '@angular/core';
+ 
+ import {VisitListComponent} from './visit-list.component';
++import {VisitVetPipe} from '../visit-vet.pipe';
++import {By} from '@angular/platform-browser';
+ import {FormsModule} from '@angular/forms';
+ import {VisitService} from '../visit.service';
+ import {ActivatedRoute, Router} from '@angular/router';
+@@ -30,7 +32,7 @@ describe('VisitListComponent', () => {
+ 
+   beforeEach(waitForAsync(() => {
+     TestBed.configureTestingModule({
+-      declarations: [VisitListComponent],
++      declarations: [VisitListComponent, VisitVetPipe],
+       schemas: [CUSTOM_ELEMENTS_SCHEMA],
+       imports: [FormsModule],
+       providers: [
+@@ -67,6 +69,12 @@ describe('VisitListComponent', () => {
+       date: '2016-09-07',
+       description: '',
+       pet: testPet
++    }, {
++      id: 2,
++      date: '2017-01-01',
++      description: 'checkup',
++      pet: testPet,
++      vetId: 2, vetFirstName: 'Helen', vetLastName: 'Leary'
+     }];
+ 
+     visitService = fixture.debugElement.injector.get(VisitService);
+@@ -83,6 +91,12 @@ describe('VisitListComponent', () => {
+     expect(component).toBeTruthy();
+   });
+ 
++  it('shows the vet of each visit, and "No vet" where there is none', () => {
++    const cells = fixture.debugElement.queryAll(By.css('td.visit-vet'))
++      .map(cell => cell.nativeElement.textContent.trim());
++    expect(cells).toEqual(['No vet', 'Helen Leary']);
++  });
++
+   it('should call deleteVisit() method', () => {
+     fixture.detectChanges();
+     component.deleteVisit(component.visits[0]);
+diff --git a/petclinic-frontend/src/app/visits/visit-vet.pipe.spec.ts b/petclinic-frontend/src/app/visits/visit-vet.pipe.spec.ts
+new file mode 100644
+index 00000000..ae6e317c
+--- /dev/null
++++ b/petclinic-frontend/src/app/visits/visit-vet.pipe.spec.ts
+@@ -0,0 +1,21 @@
++import {NO_VET, toVetOptions, VisitVetPipe} from './visit-vet.pipe';
++import {Visit} from './visit';
++
++describe('VisitVetPipe', () => {
++  const pipe = new VisitVetPipe();
++
++  it('names the vet who attended', () => {
++    const visit = {vetId: 2, vetFirstName: 'Helen', vetLastName: 'Leary'} as Visit;
++    expect(pipe.transform(visit)).toBe('Helen Leary');
++  });
++
++  it('reads as having no vet when there is none', () => {
++    expect(pipe.transform({vetId: null} as Visit)).toBe(NO_VET);
++    expect(pipe.transform({} as Visit)).toBe(NO_VET);
++  });
++
++  it('offers each vet by id, labelled with the full name', () => {
++    expect(toVetOptions([{id: 2, firstName: 'Helen', lastName: 'Leary', specialties: []}]))
++      .toEqual([{id: 2, name: 'Helen Leary'}]);
++  });
++});
+diff --git a/petclinic-frontend/src/app/visits/visits-page/visits-page.component.spec.ts b/petclinic-frontend/src/app/visits/visits-page/visits-page.component.spec.ts
+index d935a947..c2d747fe 100644
+--- a/petclinic-frontend/src/app/visits/visits-page/visits-page.component.spec.ts
++++ b/petclinic-frontend/src/app/visits/visits-page/visits-page.component.spec.ts
+@@ -8,6 +8,7 @@ import {By} from '@angular/platform-browser';
+ import {VisitsPageComponent} from './visits-page.component';
+ import {VisitService} from '../visit.service';
+ import {Visit} from '../visit';
++import {VisitVetPipe} from '../visit-vet.pipe';
+ 
+ class VisitServiceStub {
+   getVisits(): Observable<Visit[]> {
+@@ -28,6 +29,7 @@ describe('VisitsPageComponent', () => {
+     {
+       id: 2, date: '2025-06-04', description: 'checkup', pet: null as any,
+       petId: 8, petName: 'Basil', ownerId: 2, ownerFirstName: 'Betty', ownerLastName: 'Davis',
++      vetId: 2, vetFirstName: 'Helen', vetLastName: 'Leary',
+     },
+     {
+       id: 3, date: '2023-09-10', description: 'spayed', pet: null as any,
+@@ -37,7 +39,7 @@ describe('VisitsPageComponent', () => {
+ 
+   beforeEach(waitForAsync(() => {
+     TestBed.configureTestingModule({
+-      declarations: [VisitsPageComponent],
++      declarations: [VisitsPageComponent, VisitVetPipe],
+       schemas: [NO_ERRORS_SCHEMA],
+       imports: [CommonModule, RouterTestingModule],
+       providers: [{provide: VisitService, useClass: VisitServiceStub}],
+@@ -73,6 +75,17 @@ describe('VisitsPageComponent', () => {
+     });
+   }));
+ 
++  it('shows the vet of each visit, and "No vet" where there is none', waitForAsync(() => {
++    spyOn(visitService, 'getVisits').and.returnValue(of(visits));
++    fixture.detectChanges();
++    fixture.whenStable().then(() => {
++      fixture.detectChanges();
++      const cells = fixture.debugElement.queryAll(By.css('td.visit-vet'))
++        .map(cell => cell.nativeElement.textContent.trim());
++      expect(cells).toEqual(['Helen Leary', 'No vet', 'No vet']);
++    });
++  }));
++
+   it('renders owner cell as a link to /owners/{ownerId}', waitForAsync(() => {
+     spyOn(visitService, 'getVisits').and.returnValue(of(visits));
+     fixture.detectChanges();

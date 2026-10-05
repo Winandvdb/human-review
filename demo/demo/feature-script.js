@@ -20,7 +20,7 @@
 // One thing changed against the previous implementation of this ticket, and it is the reason
 // this file is not the old one: the vet field is no longer a bare `<select id="vetId">`. It is
 // the design system's `<app-combo inputId="vet">`, which renders a `<select id="vet">` whose
-// option VALUES are array indices and whose empty option is the `-- none --` placeholder. So
+// option VALUES are array indices and whose empty option is the `No vet` placeholder. So
 // the picker is found by `#vet` and driven by label, never by value — a value here is a
 // position in a list, and a film that clicked position 1 would be filming the seed order.
 
@@ -130,11 +130,10 @@ module.exports = async ({page, say, pause, get, app, apiUrl}) => {
 
     "visits/:id/edit": async (screen) => {
       await page.goto(`${app}/${fill(screen.route)}`);
-      // A bare <select id="vet"> here, not the design-system combo: the branch plants that
-      // gap on purpose for the UX tab, so the film must not call it the combo.
+      // The same design-system combo as the booking form; its empty option is the "No vet" placeholder.
       const vetSelect = page.locator("select#vet");
       await vetSelect.waitFor();
-      await say("And on the edit form, picking “none” is what unassigns a vet.", vetSelect);
+      await say("And on the edit form, picking “No vet” is what unassigns a vet.", vetSelect);
       await pause(2100);
     },
   };

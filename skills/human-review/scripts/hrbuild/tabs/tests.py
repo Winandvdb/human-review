@@ -1102,12 +1102,19 @@ def cats_filter(cats: str) -> str:
     """The UI/API/unit key, each entry wrapped in a checked checkbox that filters the card.
 
     The key already named every kind the card lists, one chip and a few words each, so the
-    filter is the key itself rather than a second row of the same three words. Entries the
-    regex does not recognise are left as the model wrote them."""
+    filter is the key itself rather than a second row of the same three words. The few
+    words go on the chip's hover and only the chip stays on the row (Victor, 5 Oct 2026):
+    the row is the card's title row, and it also carries the tab's "Prompt to get this".
+    Entries the regex does not recognise are left as the model wrote them."""
     def entry(m: re.Match) -> str:
         cat = html.escape(m.group(2), quote=True)
+        words = " ".join(html.unescape(re.sub(r"<[^>]+>", "", m.group(3))).split())
+        chip = m.group(1)
+        if words and "data-tip=" not in chip:
+            chip = chip.replace('<span class="rm-cat"', '<span class="rm-cat" data-tip="'
+                                + html.escape(words, quote=True) + '"', 1)
         return (f'<label class="rm-catf"><input type="checkbox" checked data-cat="{cat}">'
-                f'{m.group(1)}{m.group(3)}</label>')
+                f'{chip}</label>')
     return re.sub(r'<span>\s*(<span class="rm-cat" data-cat="([^"]+)"[^>]*>.*?</span>)(.*?)</span>',
                   entry, cats, flags=re.S)
 
@@ -1157,10 +1164,10 @@ REQMAP_CSS = """
 /* The UI/API/unit key sits on the title row, over the card, in the stretch the title left
    empty; its margins are the title's, so the two read as one line. */
 .reqmap .rm-cats{grid-column:2;grid-row:1;align-self:center;min-height:0;margin:.2rem 2px .15rem}
-.reqmap .rm-cats .rm-catf{display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+.reqmap .rm-cats .rm-catf{display:inline-flex;align-items:center;gap:3px;cursor:pointer;
   user-select:none}
 .reqmap .rm-cats .rm-catf input{margin:0;cursor:pointer}
-.reqmap .rm-cats .rm-catf+.rm-catf{margin-left:14px}
+.reqmap .rm-cats .rm-catf+.rm-catf{margin-left:9px}
 .reqmap .rm-cats .rm-catf:has(input:not(:checked)){opacity:.5}
 .reqmap .rm-t[data-catoff=yes]{display:none}
 /* Two columns, two scrollbars (Victor, 4 Oct 2026): the ticket and the test list each

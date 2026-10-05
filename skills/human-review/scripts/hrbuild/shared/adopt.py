@@ -1,10 +1,11 @@
-"""The "Prompt to get this" buttons: one per adoptable piece, inside the card it is about.
+"""The "Prompt to get this" buttons: one per adoptable piece, where that piece ends.
 
 Every tab is its own module with its own producer, and several tabs are more than one
 mechanism — the Data tab's domain model is drawn by reflection over the classes, its ERD
 from the migration scripts, its conceptual model by hand. A reader who likes one of them
 wants that one in their own repository, so each piece offers a prompt they paste into
-their own coding agent, from the corner of the card that shows it.
+their own coding agent, from the corner of the card that shows it — or, when the piece is
+the whole tab, from under the tab's last card.
 
 Minimal on purpose (5 Oct 2026, Victor): the agent on the other end is a smart model with
 the repository at hand. It needs to know which piece, where it starts, and that it should
@@ -14,8 +15,9 @@ Placed after rendering, by anchor, rather than emitted by each renderer: five of
 cards come out of producer scripts (`includeHtml` fragments cached under `.human-review/`),
 and a button that needed a producer change would also need every cached fragment
 regenerated — the DS audit through Docker, the Tests matrix through a model. Here the
-producers stay unaware of the button; the cost is that `PLACES` names their classes, and
-`test_adopt.py` fails the day one of those classes stops being emitted.
+producers stay unaware of the button; the cost is that `PLACES` names the classes of the
+cards that carry one, and `test_adopt.py` fails the day one of those stops being emitted.
+A whole-tab button names nothing: it closes the panel.
 """
 from __future__ import annotations
 
@@ -86,7 +88,7 @@ PIECES: dict[str, tuple[str, str]] = {
         "branch", "scripts/puml-diff.sh"),
     "requirements": (
         "the ticket's requirements mapped to the tests that prove each one, side by side, "
-        "with the changed lines no test runs",
+        "with every test that runs the changed lines",
         "reference/matrix-prompt.md, scripts/rerun-model.py, scripts/testcov.py"),
     "sequence": (
         "sequence diagrams drawn from traced test runs, each beside the test that drew it",
@@ -116,30 +118,34 @@ DIAGRAM_KINDS = (
 )
 
 #: tab → where its buttons go: (piece, how, the opening tag it anchors on, which match).
-#: `in` — a row at the end of that card, inside its border; `after` — a row right under
-#: it; `col` — under it in a column of its own (the Demo's transcript, beside the player);
-#: `float` — over the bottom-right corner of the Tests panes, which fill the viewport and
-#: have no height to give; `upto` — a row closing the region that starts at the anchor and
-#: runs to the next Round kicker (the Review tab's three piles). Piece None is a diagram
-#: card, whose piece is read off its head. A tab whose anchor is missing gets one row at
-#: the end of the panel, so a renamed class costs placement, never the button.
+#: The rule (5 Oct 2026, Victor): a prompt about ONE card sits inside that card, in its
+#: bottom-right; a prompt about the WHOLE tab sits under the tab's content, outside every
+#: card. So: `in` — a row at the end of that card, inside its border; `end` — a row closing
+#: the panel, after everything in it (no anchor: whatever the producer's last card is
+#: called, the button cannot land inside it, nor inside the first of several); `col` —
+#: under it in a column of its own (the Demo's transcript, beside the player); `float` —
+#: over the bottom-right corner of the Tests panes, which fill the viewport and have no
+#: height to give; `upto` — a row closing the region that starts at the anchor and runs to
+#: the next Round kicker (the Review tab's three piles). Piece None is a diagram card, whose
+#: piece is read off its head. A tab whose anchor is missing gets one row at the end of the
+#: panel, so a renamed class costs placement, never the button.
 DIAGRAM_CARD = r'<div class="diagram(?![^"]*\bdgm-bare\b)[^"]*"'
-PLACES: dict[str, tuple[tuple[str | None, str, str, str], ...]] = {
+PLACES: dict[str, tuple[tuple[str | None, str, str | None, str | None], ...]] = {
     "review": (("review.assumed", "upto", r'<h2 id="assumed"', "first"),
                ("review.open", "upto", r'<h2 id="first"', "first"),
                ("review.fixed", "upto", r'<h2 id="fixed"', "first")),
     "behaviour": (("behaviour", "col", r'<ol class="transcript"', "first"),),
-    "api": (("api", "after", r'<iframe class="oaviframe"', "first"),),
+    "api": (("api", "end", None, None),),
     "data": ((None, "in", DIAGRAM_CARD, "all"),),
     "packages": ((None, "in", DIAGRAM_CARD, "all"),),
     "requirements": (("requirements", "float", r'<div class="rm-side"', "first"),),
-    "sequence": (("sequence", "after", r'<details class="testpair"', "last"),),
-    "city": (("city", "after", r'<a class="city"', "first"),),
-    "dsaudit": (("dsaudit", "in", r'<div class="dsa"', "first"),),
-    "complexity": (("complexity", "in", r'<div class="cx-list"', "last"),),
-    "logging": (("logging", "after", r'<figure class="snippet"', "last"),),
-    "owners": (("owners", "in", r'<div class="cow-row\b', "last"),),
-    "cost": (("cost", "after", r'<table class="costtab\b', "first"),),
+    "sequence": (("sequence", "end", None, None),),
+    "city": (("city", "end", None, None),),
+    "dsaudit": (("dsaudit", "end", None, None),),
+    "complexity": (("complexity", "end", None, None),),
+    "logging": (("logging", "end", None, None),),
+    "owners": (("owners", "end", None, None),),
+    "cost": (("cost", "end", None, None),),
 }
 
 # One token of markup: a comment, a whole script/style element (whose text may say `<div`
@@ -195,6 +201,9 @@ def place_prompts(tid: str, body: str) -> str:
         return body
     edits = []                      # (at, cut_to, text): applied back to front
     for piece, how, anchor, which in places:
+        if how == "end":
+            edits.append((len(body), len(body), adopt_html(piece, how="end")))
+            continue
         hits = list(re.finditer(anchor, body))
         hits = hits if which == "all" else hits[-1:] if which == "last" else hits[:1]
         taken = []                  # a card inside a card already given its button
@@ -228,7 +237,7 @@ def place_prompts(tid: str, body: str) -> str:
     if not edits:
         # The anchor moved: the button loses its place, not its existence.
         first = next(p for p, *_ in places)
-        return body + (adopt_html(first, how="after") if first else "")
+        return body + (adopt_html(first, how="end") if first else "")
     for at, to, text in sorted(edits, key=lambda e: e[0], reverse=True):
         body = body[:at] + text + body[to:]
     return body

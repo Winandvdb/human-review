@@ -1,4 +1,5 @@
-"""The "Prompt to get this" buttons: one per piece, inside the card it is about."""
+"""The "Prompt to get this" buttons: one per piece — inside the card it is about, or under
+the whole tab when the piece is the tab."""
 import html
 import re
 from pathlib import Path
@@ -29,7 +30,8 @@ def test_every_file_a_prompt_points_at_is_in_the_skill(piece):
             assert (SKILL / start).exists(), start
 
 
-@pytest.mark.parametrize("anchor", sorted({a for p in PLACES.values() for _, _, a, _ in p}))
+@pytest.mark.parametrize("anchor", sorted({a for p in PLACES.values() for _, _, a, _ in p
+                                            if a}))
 def test_every_class_a_button_anchors_on_is_still_emitted_somewhere(anchor):
     """The producers do not know about the button, so a renamed class would silently move
     it to the foot of the panel. This is where that rename shows up."""
@@ -110,14 +112,42 @@ def test_the_tests_button_floats_over_the_panes_and_adds_no_height():
 
 
 def test_a_script_inside_a_card_cannot_close_it_early():
-    body = ('<div class="dsa"><script>var s = "</div><div>";</script>'
-            '<div class="dsa-row"></div></div><p>after</p>')
-    out = place_prompts("dsaudit", body)
+    body = ('<div class="diagram"><script>var s = "</div><div>";</script>'
+            '<div class="head"><b>Domain Model</b></div></div><p>after</p>')
+    out = place_prompts("data", body)
     assert out.endswith('</button></div></div><p>after</p>')
     assert _close(body, 0) == (len(body) - len("</div><p>after</p>"),
                                len(body) - len("<p>after</p>"))
 
 
 def test_a_tab_whose_anchor_moved_still_offers_its_button_at_the_end():
-    out = place_prompts("complexity", "<p>renamed markup</p>")
+    out = place_prompts("requirements", "<p>renamed markup</p>")
     assert out.startswith("<p>renamed markup</p>") and out.count("Prompt to get this") == 1
+
+
+#: The tabs whose prompt is about the whole tab, not one card of it (5 Oct 2026, Victor).
+WHOLE_TAB = ("api", "sequence", "city", "dsaudit", "complexity", "logging", "owners", "cost")
+
+
+@pytest.mark.parametrize("tid", WHOLE_TAB)
+def test_a_whole_tab_prompt_closes_the_panel_outside_every_card(tid):
+    """UX had it after the first of its screens, Complexity inside its last list's card,
+    CODEOWNERS inside the approval card: each anchored on a card, and a card is the one
+    place a prompt about the whole tab must not be."""
+    body = ('<div class="dsa"><details>Book A Visit</details></div>'
+            '<div class="dsa"><details>Edit A Visit</details></div>'
+            '<div class="cx-group"><div class="cx-list">JOBS</div></div>'
+            '<div class="cow"><div class="cow-row">approval</div></div>'
+            '<script>var s = "</div>";</script>')
+    out = place_prompts(tid, body)
+    assert out.startswith(body) and out.count("Prompt to get this") == 1
+    assert out[len(body):].startswith('<div class="adoptline adopt-end">')
+    assert all(how == "end" for _, how, _, _ in PLACES[tid])
+
+
+def test_every_tab_is_either_per_card_or_whole_tab_or_one_of_the_agreed_exceptions():
+    per_card = {"data", "packages", "review"}
+    agreed = {"requirements": "float", "behaviour": "col"}   # the Tests panes, the Demo
+    assert set(PLACES) == per_card | set(WHOLE_TAB) | set(agreed)
+    for tid, how in agreed.items():
+        assert [h for _, h, _, _ in PLACES[tid]] == [how]

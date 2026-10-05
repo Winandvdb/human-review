@@ -1,15 +1,32 @@
-/* "Prompt to get this": a prompt for the reader's own agent, one per piece, in the bottom-right
-   of the card it is about -- where the eye lands once that card is read, and quiet until
-   then. A small pill, never a row of its own under the panel: that row was a band of
-   nothing between every tab and the footer. */
+/* "Prompt to get this": a prompt for the reader's own agent, one per piece. A piece that is
+   one card has it in that card's bottom-right corner; a piece that is the whole tab has it
+   in a row closing the panel (`.adopt-end`), under the last card and outside all of them --
+   where the eye lands once that piece is read. A small pill either way, never a band of its
+   own: the row is as tall as the pill and no taller.
+   Purple, to stand out from the page's own controls (blue links, grey pills): those are
+   commands for this page, this one is a message for someone else's agent. The pair is
+   defined here rather than in core.css because this module is the only one that paints
+   with it; the dark values are lifted the way the page's own --link is (#1a4fa0 ->
+   #8ab4f8), so the ink clears 4.5:1 on --card and on its own hover tint in both schemes
+   (6.7:1 and 5.9:1 light, 7.2:1 and 6.5:1 dark). */
+:root { --adopt:#6d3fc0; --adopt-soft:#f3edfc; }
+@media (prefers-color-scheme: dark) {
+  :root { --adopt:#b79cf5; --adopt-soft:#2a2140; }
+}
 .adoptline { display:flex; justify-content:flex-end; margin-top:.45rem; }
-button.adopt { border:1px solid var(--line); background:var(--card); color:var(--muted);
+.adopt-end { margin-top:.35rem; }
+button.adopt { border:1px solid var(--adopt); background:var(--card); color:var(--adopt);
                cursor:pointer; border-radius:999px; font:600 .72rem/1.6 inherit;
                padding:0 .6rem; white-space:nowrap; }
-button.adopt:hover { color:var(--fg); border-color:var(--link); }
+button.adopt:hover, button.adopt:focus-visible { background:var(--adopt-soft); }
+button.adopt:focus-visible { outline:2px solid var(--adopt); outline-offset:1px; }
+/* The UX tab's last screen card keeps 2rem under it for the footer (ds-audit.py). With the
+   pill between them that 2rem lands above the pill instead, so it drops to the 1rem the
+   screens keep between each other. Here and not in the producer: its CSS is cached with
+   the fragment, and regenerating that means the audit through Docker. */
+.dsa-run:has(~ .adopt-end) > .dsa:not(:has(~ .dsa)) { margin-bottom:1rem; }
 /* Inside a card: the card's own bottom padding is most of the room the row needs. */
 .diagram:has(> .adopt-in) { padding-bottom:.6rem; }
-.cx-list > .adopt-in { margin:0; padding:.35rem .6rem; }
 /* The Demo's transcript column stretches to the player's height, so the pill sits in the
    free space under the cues, level with the voice switch under the film. */
 .adoptcol { display:flex; flex-direction:column; align-self:stretch; min-width:0; }

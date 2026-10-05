@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "commit_id": "7b11e1c401612b9d9fa3835b6055ee45b001357a",
+  "commit_id": "44c8da18a26129ea683df492beed502b1a54b285",
   "event": "COMMENT",
   "body": "**Review record** from `review-points.md` (4 read-only subagents (correctness, security, tests, ticket-fit; sonnet) + CI/SonarCloud): 5 auto-fixed · 13 declined and still open · 7 assumptions. Each is pinned on the line it is about.",
   "comments": [
@@ -13,7 +13,7 @@
       "side": "RIGHT",
       "start_line": 117,
       "anchor": "}",
-      "body": "🛠 **Auto-fixed** in 7b11e1c4 — A failed page load left paginator and sort describing an unloaded page\n\n<sub>raised by correctness, tests and ticket-fit reviewers</sub>"
+      "body": "🛠 **Auto-fixed** in 44c8da18 — A failed page load left paginator and sort describing an unloaded page\n\n<sub>raised by correctness, tests and ticket-fit reviewers</sub>"
     },
     {
       "hr_id": "F:type-mismatch-400-echoed-raw-caller-input-into",
@@ -24,7 +24,7 @@
       "side": "RIGHT",
       "start_line": 89,
       "anchor": "log.warn(\"Validation failed: {}\", detail);",
-      "body": "🛠 **Auto-fixed** in 7b11e1c4 — Type-mismatch 400 echoed raw caller input into the log and body\n\n<sub>raised by security and correctness reviewers</sub>"
+      "body": "🛠 **Auto-fixed** in 44c8da18 — Type-mismatch 400 echoed raw caller input into the log and body\n\n<sub>raised by security and correctness reviewers</sub>"
     },
     {
       "hr_id": "F:invalid-parameter-tests-asserted-only-the-http",
@@ -34,7 +34,7 @@
       "line": 130,
       "side": "RIGHT",
       "anchor": ".andExpect(jsonPath(\"$.title\").value(\"Validation Error\"))",
-      "body": "🛠 **Auto-fixed** in 7b11e1c4 — Invalid-parameter tests asserted only the HTTP status\n\n<sub>raised by tests reviewer</sub>"
+      "body": "🛠 **Auto-fixed** in 44c8da18 — Invalid-parameter tests asserted only the HTTP status\n\n<sub>raised by tests reviewer</sub>"
     },
     {
       "hr_id": "F:release-md-stated-verifications-without-saying",
@@ -45,7 +45,7 @@
       "side": "RIGHT",
       "start_line": 23,
       "anchor": "(2026-10-03). The indexes are invisible to the old queries and to `ddl-auto=validate`.",
-      "body": "🛠 **Auto-fixed** in 7b11e1c4 — release.md stated verifications without saying where they came from\n\n<sub>raised by ticket-fit reviewer</sub>"
+      "body": "🛠 **Auto-fixed** in 44c8da18 — release.md stated verifications without saying where they came from\n\n<sub>raised by ticket-fit reviewer</sub>"
     },
     {
       "hr_id": "F:sonar-generic-length-assertions-and-mutable",
@@ -55,7 +55,7 @@
       "line": 72,
       "side": "RIGHT",
       "anchor": "expect(rows()).toHaveSize(10);",
-      "body": "🛠 **Auto-fixed** in 7b11e1c4 — Sonar: generic length assertions and mutable injected members\n\n<sub>raised by CI (SonarCloud)</sub>"
+      "body": "🛠 **Auto-fixed** in 44c8da18 — Sonar: generic length assertions and mutable injected members\n\n<sub>raised by CI (SonarCloud)</sub>"
     },
     {
       "hr_id": "I:deep-page-offsets-as-an-unauthenticated-dos",

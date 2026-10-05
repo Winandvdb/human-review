@@ -1,10 +1,10 @@
 {
- "base": "eb6a0d1f58053105682bba4325dcc66f808b29f5",
+ "base": "953025046dffc353a4e99d094c9dbe786bdb4e8f",
  "head": "HEAD",
  "points_file": "review-points.md",
  "commits": 2,
- "implementation": "fdd38d681e0bc9d8e6b97461705e40dd0d8676ca",
- "review": "7b11e1c401612b9d9fa3835b6055ee45b001357a",
+ "implementation": "d86823865a3c7931f020d9d866ca7541b89cd969",
+ "review": "44c8da18a26129ea683df492beed502b1a54b285",
  "session": "33e81a92-5167-4f48-a157-691425b82012",
  "fallback": false,
  "after": [],
@@ -13,13 +13,13 @@
  "takeover": null,
  "auto_fixes": [
   {
-   "sha": "7b11e1c401612b9d9fa3835b6055ee45b001357a",
+   "sha": "44c8da18a26129ea683df492beed502b1a54b285",
    "when": "2026-10-03T23:29:20+03:00",
    "subject": "[auto-fix] Owners grid review: consistent controls after a failed load, no echoed input in 400s, firmer tests"
   }
  ],
  "review_commits": [
-  "7b11e1c401612b9d9fa3835b6055ee45b001357a"
+  "44c8da18a26129ea683df492beed502b1a54b285"
  ],
  "warnings": []
 }

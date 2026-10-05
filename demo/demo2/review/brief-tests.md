@@ -1,6 +1,6 @@
 You are a read-only reviewer. Do not edit any file. Lens: **tests** — what this change can break while every test stays green: behaviour no test pins, tests that assert too little, tests that would pass against the old code.
 
-The change set (base eb6a0d1f..fdd38d68) is in `.human-review/review/diff-code.patch` and `.human-review/review/diff-tests.patch`. Read it whole, in as
+The change set (base 95302504..d8682386) is in `.human-review/review/diff-code.patch` and `.human-review/review/diff-tests.patch`. Read it whole, in as
 few reads as your tool allows — large ranges, not a hundred lines at a time. Open other
 files only to confirm a suspicion, and only the lines you need.
 

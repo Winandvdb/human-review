@@ -1,5 +1,5 @@
-[run-steps] base eb6a0d1f5805: the base the review audited (review-points.md), inside origin/main
-    $ git merge-base eb6a0d1f58053105682bba4325dcc66f808b29f5 HEAD
+[run-steps] base 953025045805: the base the review audited (review-points.md), inside origin/main
+    $ git merge-base 953025046dffc353a4e99d094c9dbe786bdb4e8f HEAD
   > city: started at +0 s (log: .human-review/logs/city.log)
   > sequence: started at +0 s (log: .human-review/logs/sequence.log)
   > basestack: started at +0 s (log: .human-review/logs/basestack.log)
@@ -28,11 +28,11 @@
   > traces: started at +46 s (log: .human-review/logs/traces.log)
   < traces: ran in 1.1 s, at +47 s
   > video: started at +47 s (log: .human-review/logs/video.log)
-    FAILED: the app would not start: ./start-docker.sh up --ref 7b11e1c401612b9d9fa3835b6055ee45b001357a --ttl 1800
-  < video: failed in 0.9 s, at +48 s — the app would not start: ./start-docker.sh up --ref 7b11e1c401612b9d9fa3835b6055ee45b001357a --ttl 1800
+    FAILED: the app would not start: ./start-docker.sh up --ref 44c8da18a26129ea683df492beed502b1a54b285 --ttl 1800
+  < video: failed in 0.9 s, at +48 s — the app would not start: ./start-docker.sh up --ref 44c8da18a26129ea683df492beed502b1a54b285 --ttl 1800
   > dsaudit: started at +48 s (log: .human-review/logs/dsaudit.log)
-    FAILED: the app would not start: ./start-docker.sh up --ref 7b11e1c401612b9d9fa3835b6055ee45b001357a --ttl 1800
-  < dsaudit: failed in 0.9 s, at +49 s — the app would not start: ./start-docker.sh up --ref 7b11e1c401612b9d9fa3835b6055ee45b001357a --ttl 1800
+    FAILED: the app would not start: ./start-docker.sh up --ref 44c8da18a26129ea683df492beed502b1a54b285 --ttl 1800
+  < dsaudit: failed in 0.9 s, at +49 s — the app would not start: ./start-docker.sh up --ref 44c8da18a26129ea683df492beed502b1a54b285 --ttl 1800
   < sequence: ran in 214.7 s, at +215 s
   > c2: started at +215 s (log: .human-review/logs/c2.log)
   > testcov: started at +215 s (log: .human-review/logs/testcov.log)
@@ -43,7 +43,7 @@
 
   step         status   why / what to say
   basestack    ran      
-               note     started the merge-base stack (eb6a0d1f) early, for the design-system audit
+               note     started the merge-base stack (95302504) early, for the design-system audit
   reviewpoints ran      
   aftermath    ran      
   diagrams     ran      
@@ -54,12 +54,12 @@
   city         ran      
                note     a suite behind the city's coverage colours did not pass (cd petclinic-test && PW_TRACE=on COVERAGE_DIR=../.human-review/coverage ./test-on-own-stack.sh npm test); say so next to the CRAP reading
                note     codecity lit: 6 changed (put this measured number under the image; never type one)
-  video        failed   the app would not start: ./start-docker.sh up --ref 7b11e1c401612b9d9fa3835b6055ee45b001357a --ttl 1800
+  video        failed   the app would not start: ./start-docker.sh up --ref 44c8da18a26129ea683df492beed502b1a54b285 --ttl 1800
   complexity   ran      
   api          ran      
   specchanges  ran      
   logging      ran      
-  dsaudit      failed   the app would not start: ./start-docker.sh up --ref 7b11e1c401612b9d9fa3835b6055ee45b001357a --ttl 1800
+  dsaudit      failed   the app would not start: ./start-docker.sh up --ref 44c8da18a26129ea683df492beed502b1a54b285 --ttl 1800
   owners       ran      
   tests        ran      
   traces       ran      

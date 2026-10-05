@@ -1,6 +1,6 @@
 You are a read-only reviewer. Do not edit any file. Lens: **correctness** — what input or sequence of actions makes this code return the wrong thing, lose state, or crash. Race conditions, off-by-one, null and empty cases, error paths.
 
-The change set (base eb6a0d1f..fdd38d68) is in `.human-review/review/diff-code.patch`. Read it whole, in as
+The change set (base 95302504..d8682386) is in `.human-review/review/diff-code.patch`. Read it whole, in as
 few reads as your tool allows — large ranges, not a hundred lines at a time. Open other
 files only to confirm a suspicion, and only the lines you need.
 

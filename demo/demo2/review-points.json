@@ -3,15 +3,15 @@
  "mode": "points",
  "source": "review-points.md",
  "provenance": {
-  "base": "eb6a0d1f58053105682bba4325dcc66f808b29f5",
-  "auditedBase": "eb6a0d1f58053105682bba4325dcc66f808b29f5",
-  "auditedHead": "fdd38d681e0bc9d8e6b97461705e40dd0d8676ca",
-  "implementation": "fdd38d681e0bc9d8e6b97461705e40dd0d8676ca",
-  "head": "fdd38d681e0bc9d8e6b97461705e40dd0d8676ca",
+  "base": "953025046dffc353a4e99d094c9dbe786bdb4e8f",
+  "auditedBase": "953025046dffc353a4e99d094c9dbe786bdb4e8f",
+  "auditedHead": "d86823865a3c7931f020d9d866ca7541b89cd969",
+  "implementation": "d86823865a3c7931f020d9d866ca7541b89cd969",
+  "head": "d86823865a3c7931f020d9d866ca7541b89cd969",
   "reviewers": "4 read-only subagents (correctness, security, tests, ticket-fit; sonnet) + CI/SonarCloud",
   "harness": "claude-code",
   "session": "33e81a92-5167-4f48-a157-691425b82012",
-  "reviewCommit": "7b11e1c401612b9d9fa3835b6055ee45b001357a"
+  "reviewCommit": "44c8da18a26129ea683df492beed502b1a54b285"
  },
  "fixed_in": "HEAD",
  "findings": [
@@ -424,17 +424,17 @@
   }
  ],
  "meta": {
-  "base": "eb6a0d1f58053105682bba4325dcc66f808b29f5",
-  "implementation": "fdd38d681e0bc9d8e6b97461705e40dd0d8676ca",
+  "base": "953025046dffc353a4e99d094c9dbe786bdb4e8f",
+  "implementation": "d86823865a3c7931f020d9d866ca7541b89cd969",
   "reviewers": "4 read-only subagents (correctness, security, tests, ticket-fit; sonnet) + CI/SonarCloud",
   "session": "33e81a92-5167-4f48-a157-691425b82012"
  },
  "frontmatter": {
-  "base": "eb6a0d1f58053105682bba4325dcc66f808b29f5",
-  "audited-base": "eb6a0d1f58053105682bba4325dcc66f808b29f5",
-  "audited-head": "fdd38d681e0bc9d8e6b97461705e40dd0d8676ca",
-  "implementation": "fdd38d681e0bc9d8e6b97461705e40dd0d8676ca",
-  "head": "fdd38d681e0bc9d8e6b97461705e40dd0d8676ca",
+  "base": "953025046dffc353a4e99d094c9dbe786bdb4e8f",
+  "audited-base": "953025046dffc353a4e99d094c9dbe786bdb4e8f",
+  "audited-head": "d86823865a3c7931f020d9d866ca7541b89cd969",
+  "implementation": "d86823865a3c7931f020d9d866ca7541b89cd969",
+  "head": "d86823865a3c7931f020d9d866ca7541b89cd969",
   "reviewers": "4 read-only subagents (correctness, security, tests, ticket-fit; sonnet) + CI/SonarCloud",
   "harness": "claude-code",
   "session": "33e81a92-5167-4f48-a157-691425b82012",

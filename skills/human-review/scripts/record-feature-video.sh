@@ -151,10 +151,13 @@ else
 fi
 
 VOICES_META="${OUT%.webm}.voices.json"
+# Discovery is 5860c087, not the most-liked Attenborough on Fish (c39a76f6): that one was
+# cloned off a clip with a music bed under it, and every film carried a drone at ~230/400 Hz
+# between the words (−55 dB there, against −67 dB for this one and −65 for the 🐘).
 FISH_VOICES='[
   {"key": "trump", "label": "🐘", "id": "e58b0d7efca34eb38d5c4985e378abcb"},
   {"key": "discovery", "label": "Discovery", "tip": "David Attenborough",
-   "id": "c39a76f685cf4f8fb41cd5d3d66b497d"}]'
+   "id": "5860c08729ef4623a05addbf5fa543ec"}]'
 export HR_FISH_VOICES="${NARRATION_FISH_VOICES:-$FISH_VOICES}"
 rm -rf "$VOICEDIR/fish"
 mkdir -p "$(dirname "$OUT")" "$VOICEDIR/fish"

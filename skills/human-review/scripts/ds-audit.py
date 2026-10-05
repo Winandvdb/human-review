@@ -216,6 +216,48 @@ SNAPSHOT_JS = r"""
     return sigOf(el);
   };
 
+  // What the reader is shown of a judged element: its tag, the attributes somebody wrote
+  // and a short inside, as data rather than as a string. Python pretty-prints and caps it
+  // (`pretty_html`), so the cut is testable without a browser. Angular's own stamps are not
+  // markup anybody wrote: `_ngcontent-*` / `_nghost-*` scope the CSS, `ng-reflect-*` mirror
+  // bindings in a dev build, and the state classes are the VOLATILE ones dropped above.
+  const NOISE_ATTR = /^(_ngcontent|_nghost|ng-reflect-|ng-version$|style$)/;
+  const SNIP_KIDS = 4;
+  const shortOf = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+  const snipOf = (el, depth) => {
+    const attrs = [];
+    for (const a of Array.from(el.attributes)) {
+      if (NOISE_ATTR.test(a.name)) continue;
+      const v = a.name === 'class' ? classesOf(el).join(' ') : a.value;
+      if (a.name === 'class' && !v) continue;
+      attrs.push([a.name, shortOf(v, 60)]);
+    }
+    const node = { tag: el.tagName.toLowerCase(), attrs: attrs };
+    const kids = Array.from(el.children).filter((c) => !/^(script|style|template)$/i.test(c.tagName));
+    if (!kids.length) {
+      const said = el.textContent.replace(/\s+/g, ' ').trim();
+      if (said) node.text = shortOf(said, 48);
+    } else if (depth > 0) {
+      node.children = kids.slice(0, SNIP_KIDS).map((c) => snipOf(c, depth - 1));
+    }
+    const rest = depth > 0 ? kids.slice(SNIP_KIDS) : kids;
+    if (rest.length) {
+      node.more = rest.length;
+      if (new Set(rest.map((c) => c.tagName)).size === 1) node.more_tag = rest[0].tagName.toLowerCase();
+    }
+    return node;
+  };
+  // The custom elements around it, nearest first. The first one whose template holds the
+  // element is the file it was written in (`locate_source`).
+  const hostsOf = (el) => {
+    const out = [];
+    for (let p = el.parentElement; p && p !== document.body && out.length < 8; p = p.parentElement) {
+      const t = p.tagName.toLowerCase();
+      if (t.includes('-')) out.push(t);
+    }
+    return out;
+  };
+
   const out = [];
   const all = document.body.querySelectorAll('*');
   for (let i = 0; i < all.length && out.length < MAX; i++) {
@@ -231,6 +273,9 @@ SNAPSHOT_JS = r"""
     // Text is the DOM's own answer to "did this change"; capped so a table does not
     // turn the snapshot into a copy of the page.
     const text = (el.children.length === 0 ? el.textContent : '').trim().slice(0, 120);
+    // Only what can become a verdict carries its markup: every node of the page would
+    // turn the snapshot into a second copy of the DOM.
+    const judged = isNative(el) || !!el.getAttribute('data-ds') || !!kitOf(el);
 
     out.push({
       sig: sigOf(el),
@@ -258,6 +303,8 @@ SNAPSHOT_JS = r"""
       box: { x: Math.round(r.x + window.scrollX), y: Math.round(r.y + window.scrollY),
              w: Math.round(r.width), h: Math.round(r.height) },
       text: text,
+      html: judged ? snipOf(el, 2) : null,
+      hosts: judged ? hostsOf(el) : [],
     });
   }
   return {
@@ -428,6 +475,11 @@ def derive_registry(snapshots: dict, source_roots: list[Path]) -> dict:
                               "detail": "", "seen_on": []})
                 if side not in comp["seen_on"]:
                     comp["seen_on"].append(side)
+                # The element a template writes to use it — `<app-combo>` — which is what
+                # a gap's rule names: "combo" is the audit's word, the tag is the author's.
+                tags = comp.setdefault("tags", [])
+                if n["tag"] not in tags:
+                    tags.append(n["tag"])
 
     # 1 — declared
     for side, snap in snapshots.items():
@@ -710,7 +762,7 @@ def _kit_finding(side, n, kit, covered, claimed, nodes) -> dict:
 
 def _finding(side: str, n: dict, verdict: str, role: dict | None, message: str,
              *, role_name: str | None = None) -> dict:
-    return {
+    f = {
         "id": f'{side}:{n["sig"]}',
         "side": side,
         "verdict": verdict,
@@ -719,11 +771,313 @@ def _finding(side: str, n: dict, verdict: str, role: dict | None, message: str,
         "ds": n.get("ds"),
         "element": {"tag": n["tag"], "id": n.get("id"), "name": n.get("name"),
                     "label": n.get("label") or "", "sig": n["sig"],
-                    **({"kit": n["kit"]} if n.get("kit") else {})},
+                    **({"kit": n["kit"]} if n.get("kit") else {}),
+                    **({"hosts": n["hosts"]} if n.get("hosts") else {})},
         "selector": n["selector"],
         "box": n["box"],
         "message": message,
     }
+    # Only a verdict that is drawn gets its markup: the reader opens it from the row, and
+    # an `internal` or `uncovered` control has no row to open it from.
+    if verdict in DRAWN:
+        f["snippet"] = snippet_of(n)
+    return f
+
+
+# ── what a verdict shows when it is opened ────────────────────────────────────────
+#
+# A red box on a screenshot says *that* something is wrong and leaves the reader to find
+# *what*: which element it is in the markup, which file it was written in, and why that is
+# a gap rather than a choice. Each drawn verdict carries the three — `snippet`, `source`,
+# `rule` — in the JSON, and the row under it in the table renders them.
+
+DRAWN = ("ds", "bare", "foreign")
+SNIPPET_LINES = 10
+VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+             "source", "track", "wbr"}
+
+
+# Written bare when empty (`disabled`, not `disabled=""`); any other empty value is a value,
+# and `<option value>` would read as an attribute somebody forgot to finish.
+BOOLEAN_ATTRS = {"disabled", "required", "multiple", "readonly", "selected", "checked",
+                 "hidden", "autofocus", "novalidate", "open"}
+
+
+def _open_tag(node: dict) -> str:
+    attrs = "".join(f" {k}" if v == "" and k in BOOLEAN_ATTRS
+                    else f' {k}="{html.escape(v, quote=True)}"'
+                    for k, v in node.get("attrs") or [])
+    return f'<{node["tag"]}{attrs}>'
+
+
+def _html_lines(node: dict, depth: int = 0) -> list[str]:
+    pad = "  " * depth
+    head = pad + _open_tag(node)
+    if node["tag"] in VOID_TAGS:
+        return [head]
+    kids, more = node.get("children") or [], node.get("more") or 0
+    if not kids and not more:
+        return [f'{head}{html.escape(node.get("text") or "", quote=False)}</{node["tag"]}>']
+    lines = [head]
+    for k in kids:
+        lines += _html_lines(k, depth + 1)
+    if more:
+        # A raw `<option>` is legal inside a comment, and the block is read as code: an
+        # entity there would be shown to the reader as the five characters `&lt;`.
+        what = f' <{node["more_tag"]}>' if node.get("more_tag") else ""
+        lines.append(f"{pad}  <!-- {more} more{what} -->")
+    lines.append(f'{pad}</{node["tag"]}>')
+    return lines
+
+
+def pretty_html(node: dict, max_lines: int = SNIPPET_LINES) -> str:
+    """The element as markup a reader can scan: one tag per line, two-space indent, at most
+    `max_lines`. A longer one keeps its head and its closing tag and says how much of the
+    middle it left out — the opening tag is the finding, its fourteenth `<option>` is not."""
+    lines = _html_lines(node)
+    if len(lines) > max_lines:
+        hidden = len(lines) - (max_lines - 1)
+        lines = lines[:max_lines - 2] + [f"  <!-- … {hidden} more lines -->", lines[-1]]
+    return "\n".join(lines)
+
+
+def snippet_of(n: dict) -> dict:
+    """`{"html": …, "from": "rendered" | "reconstructed"}` for one snapshot node.
+
+    A capture taken before the extractor recorded markup has only the identity the
+    snapshot always kept, and the tag rebuilt from it says so rather than passing for the
+    page's own."""
+    if n.get("html"):
+        return {"html": pretty_html(n["html"]), "from": "rendered"}
+    attrs = [[k, n[k]] for k in ("id", "name", "type") if n.get(k)]
+    if n.get("ds"):
+        attrs.append(["data-ds", n["ds"]])
+    return {"html": pretty_html({"tag": n["tag"], "attrs": attrs, "more": 0}),
+            "from": "reconstructed"}
+
+
+def _component_tag(ds: str, registry: dict) -> str:
+    comp = next((c for c in registry.get("components") or [] if c["ds"] == ds), {})
+    tags = comp.get("tags") or []
+    return (f"<code>&lt;{html.escape(tags[0])}&gt;</code>" if tags
+            else f'its <b>{html.escape(ds)}</b> component')
+
+
+def _other_screens(ds: str, registry: dict, screen: str) -> int:
+    """On how many *other* screens of the branch the component renders. A component the
+    rest of the app already uses is the strongest form of "one belongs here"."""
+    comp = next((c for c in registry.get("components") or [] if c["ds"] == ds), {})
+    seen = {s.rsplit(":", 1)[0] for s in comp.get("seen_on") or []
+            if ":" in s and s.rsplit(":", 1)[1] == "new"}
+    return len(seen - {screen})
+
+
+CONSISTENT = "use the component so styling, keyboard behaviour and validation stay consistent"
+
+
+def rule_html(f: dict, registry: dict, screen: str) -> str:
+    """The rule a drawn verdict applies, in one sentence that names the component.
+
+    The message in the table is the verdict ("not the design-system component"); this is
+    the reason, spelled out for the one reader who does not already know what the design
+    system offers or why it matters — the person who copied the older template."""
+    el = f["element"]
+    tag = f'<code>&lt;{html.escape(el["tag"])}&gt;</code>'
+    kit = KIT_CONTROLS.get(el.get("kit") or "")
+    if el.get("kit") == "mat-sort":
+        tag = "<code>matSort</code>"
+    if f["verdict"] == "ds":
+        return (f'The design system’s <b>{html.escape(f.get("ds") or "")}</b> component '
+                f'({_component_tag(f.get("ds") or "", registry)}) — the control this '
+                "role should be.")
+    if f["verdict"] == "foreign":
+        what = kit[0] if kit else f'<code>{html.escape(el["tag"])}</code>'
+        return (f"{_a(what)} ({tag}) is a control from outside the design system, which "
+                f'has no component for a <code>{html.escape(f.get("role") or "")}</code>: '
+                "either the design system gets one, or the team agrees this library is "
+                "allowed here — otherwise every screen picks its own.")
+    owners = f.get("expected_ds") or []
+    offers = " or ".join(_component_tag(d, registry) for d in owners) or "a component"
+    used = [n for n in (_other_screens(d, registry, screen) for d in owners) if n]
+    names = " or ".join(f"<b>{html.escape(d)}</b>" for d in owners)
+    usage = f", used on {_n(max(used), 'other screen')}" if used else ""
+    what = f"{_a(kit[0])} ({tag})" if kit else f"A native {tag}"
+    out = (f"{what} where the design system offers {offers} ({names}{usage}): "
+           f"{CONSISTENT}.")
+    if (f.get("history") or "").startswith("was a design-system"):
+        out += " On the base this field was the component; this branch replaced it."
+    if f.get("resolved"):
+        out += " This branch migrated it."
+    return out
+
+
+def _a(noun: str) -> str:
+    """"An Angular Material select", "A PrimeNG dropdown" — the article a sentence needs."""
+    plain = re.sub(r"<[^>]+>", "", noun)
+    return ("An " if plain[:1].lower() in "aeiou" else "A ") + noun
+
+
+# ── where it was written ──────────────────────────────────────────────────────────
+#
+# The screenshot shows the element as rendered; the fix happens in a template. Angular
+# makes the mapping cheap: every component names its selector and its template, and the
+# page records which custom elements sit around the control (`hosts`, nearest first). The
+# first of those whose template has an opening tag matching the control — on its id, its
+# name, its formControlName — is the file and the line. A control projected into a child
+# component is not in that child's template, so the search keeps climbing.
+
+_COMPONENT_DECL = re.compile(r"@Component\s*\(\s*\{")
+_SELECTOR_DECL = re.compile(r"""\bselector\s*:\s*(['"`])(.+?)\1""", re.S)
+_TEMPLATE_URL = re.compile(r"""\btemplateUrl\s*:\s*(['"`])(.+?)\1""")
+_INLINE_TEMPLATE = re.compile(r"\btemplate\s*:\s*`")
+
+
+def template_index(roots: list[Path]) -> dict[str, dict]:
+    """Element selector → `{"path", "line0", "text"}`: the template that component renders.
+
+    `line0` is the line the template text starts after — zero for a `templateUrl` file,
+    the backtick's line for an inline `template:` — so a match inside it is reported at
+    the line a reader would find it on."""
+    out: dict[str, dict] = {}
+    for root in roots:
+        if not root.exists():
+            continue
+        files = [root] if root.is_file() else sorted(
+            p for p in root.rglob("*.ts")
+            if "node_modules" not in p.parts and not p.name.endswith(".spec.ts"))
+        for ts in files:
+            try:
+                text = ts.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for m in _COMPONENT_DECL.finditer(text):
+                end = text.find("export class", m.end())
+                chunk = text[m.end():end if end > 0 else None]
+                sel = _SELECTOR_DECL.search(chunk)
+                if not sel:
+                    continue
+                tags = [s.strip() for s in sel.group(2).split(",")
+                        if re.fullmatch(r"[a-z][\w]*-[\w-]*", s.strip())]
+                url = _TEMPLATE_URL.search(chunk)
+                inline = _INLINE_TEMPLATE.search(chunk)
+                if url:
+                    path = (ts.parent / url.group(2)).resolve()
+                    try:
+                        entry = {"path": path, "line0": 0,
+                                 "text": path.read_text(encoding="utf-8", errors="replace")}
+                    except OSError:
+                        continue
+                elif inline:
+                    start = m.end() + inline.end()
+                    close = text.find("`", start)
+                    entry = {"path": ts.resolve(), "line0": text.count("\n", 0, start),
+                             "text": text[start:close if close > 0 else None]}
+                else:
+                    continue
+                for t in tags:
+                    out.setdefault(t, entry)
+    return out
+
+
+def _identity(f: dict) -> list[tuple[str, str | None]]:
+    """What a template would have written to make this element: the attributes that name
+    it. Read off the rendered markup when there is some, which knows `formcontrolname`
+    from `name`; else off the snapshot's own fields."""
+    el = f["element"]
+    snip = f.get("snippet") or {}
+    ident = []
+    if snip.get("from") == "rendered":
+        head = snip["html"].split("\n", 1)[0]
+        rendered = {}
+        for k, v in re.findall(r'\s([\w:.-]+)="([^"]*)"', head):
+            rendered.setdefault(k.lower(), html.unescape(v))
+        for k in ("id", "name", "formcontrolname"):
+            v = rendered.get(k)
+            if v and not (k == "id" and AUTO_ID.match(v)):
+                ident.append((k, v))
+    else:
+        # The snapshot's `name` is `name` or `formcontrolname`, whichever was there.
+        if el.get("id") and not AUTO_ID.match(el["id"]):
+            ident.append(("id", el["id"]))
+        if el.get("name"):
+            ident += [("name", el["name"]), ("formcontrolname", el["name"])]
+    if el.get("kit") == "mat-sort":
+        ident.append(("matsort", None))
+    return ident
+
+
+def _attr_written(attrs: str, name: str, value: str | None) -> bool:
+    """A static attribute in a template's opening tag. `[name]`, `[attr.id]`, `#name` and
+    `data-name` are other attributes, so the name may not follow `[ ( . # -` or a letter."""
+    pat = rf"(?<![\w\[\(.*#-]){re.escape(name)}"
+    pat += (rf"""\s*=\s*["']{re.escape(value)}["']""" if value is not None
+            else r"(?![\w-])")
+    return bool(re.search(pat, attrs, re.I))
+
+
+def _match_in(entry: dict, tag: str, ident, *, identified_only: bool) -> dict | None:
+    hits = []
+    for m in re.finditer(rf"""<{re.escape(tag)}(?=[\s/>])((?:[^>"']|"[^"]*"|'[^']*')*)>""",
+                         entry["text"], re.I):
+        score = sum(3 for k, v in ident if _attr_written(m.group(1), k, v))
+        line = entry["line0"] + entry["text"].count("\n", 0, m.start()) + 1
+        hits.append((score, line))
+    if not hits:
+        return None
+    best = max(s for s, _ in hits)
+    if identified_only and best == 0:
+        return None
+    lines = [ln for s, ln in hits if s == best]
+    return {"path": entry["path"], "line": lines[0], "matches": len(lines)}
+
+
+def locate_source(f: dict, index: dict, repo_root: Path,
+                  changed: list[str] | tuple = ()) -> dict | None:
+    """`{"file", "line", "via", "matches"}` — where this element was written — or None.
+
+    `via` is the component whose template it was found in, or `search` when the page did
+    not say (a capture older than `hosts`) and every template was searched for an opening
+    tag that names the element; then only a match on an id or a name counts, the changed
+    templates are tried first, and `matches` says when more than one tag fits equally."""
+    el = f["element"]
+    tag = "table" if el.get("kit") == "mat-sort" else el["tag"]
+    ident = _identity(f)
+    hit, via = None, None
+    for h in el.get("hosts") or []:
+        entry = index.get(h)
+        if entry and h != tag:
+            hit = _match_in(entry, tag, ident, identified_only=False)
+            if hit:
+                via = h
+                break
+    if hit is None and ident:
+        entries = list({id(e): e for e in index.values()}.values())
+        rel = lambda e: _rel(e["path"], repo_root)
+        entries.sort(key=lambda e: (rel(e) not in set(changed), rel(e)))
+        for entry in entries:
+            hit = _match_in(entry, tag, ident, identified_only=True)
+            if hit:
+                via = "search"
+                break
+    if hit is None:
+        return None
+    return {"file": _rel(hit["path"], repo_root), "line": hit["line"], "via": via,
+            "matches": hit["matches"]}
+
+
+def _rel(path: Path, root: Path) -> str:
+    try:
+        return str(Path(path).resolve().relative_to(Path(root).resolve()))
+    except ValueError:
+        return str(path)
+
+
+def attach_sources(screen: dict, index: dict, repo_root: Path, changed=()) -> dict:
+    """Give every drawn verdict of a screen its `source` (or None: not found)."""
+    for f in screen["findings"]:
+        if f["verdict"] in DRAWN:
+            f["source"] = locate_source(f, index, repo_root, changed)
+    return screen
 
 
 # ── the comparison: DOM decides, pixels corroborate ───────────────────────────────
@@ -1225,6 +1579,42 @@ details.dsa-screen > summary .dsa-sumtail { font-weight: 400; }
 .dsa-unlisted { color: var(--dsa-bad); border: 1px solid var(--dsa-bad); border-radius: 6px;
   padding: .45rem .7rem; margin: .4rem 0 .8rem; font-size: .9rem; }
 .dsa-unlisted code { color: inherit; }
+/* One number per drawn verdict, on the picture and at the head of its row
+   (`number_findings`). Inside a change frame the frame's own chip carries it; a mark
+   outside every frame wears it the way a frame does, outside its top-left corner, in the
+   verdict's colour. The row's chip is the same chip in the same colour, so the eye can
+   match the two without reading. */
+.dsa-mark > b.dsa-mnum { left: -3px; top: -3px; transform: translateX(-100%);
+  padding: 0 .3rem; z-index: 2; }
+.dsa-mark { cursor: pointer; }
+.dsa-rnum { display: inline-block; min-width: 1.15rem; box-sizing: border-box; text-align: center;
+  margin-right: .4rem; padding: 0 .25rem; border-radius: .2rem; cursor: help;
+  font: 700 .68rem/1.15rem -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--dsa-label-fg); }
+.dsa-rnum.framed { background: var(--dsa-frame); }
+.dsa-rnum.bad { background: var(--dsa-bad); }
+.dsa-rnum.ok { background: var(--dsa-ok); }
+/* What opens under a verdict's row (`detail_html`): the rule, then the element's markup
+   under the page's own source bar. The bar and the token colours are the page's snippet
+   stylesheet; only the spacing is local — a rendered element has no line numbers, so its
+   code would otherwise touch the block's left edge. */
+.dsa-table tr:has(+ tr.dsa-more) td { border-bottom-color: transparent; }
+/* Its one wide cell is the row's second, which the side column's `nowrap` would otherwise
+   reach: the rule ran 200px past the card on one unbroken line. */
+.dsa-table tr.dsa-more td { padding-top: 0; white-space: normal; }
+details.dsa-why > summary { cursor: pointer; font-size: .84rem; line-height: 1.5; }
+details.dsa-why.ok > summary { font-size: .78rem; opacity: .65; }
+details.dsa-why.ok[open] > summary { opacity: .8; }
+.dsa-whyk { font-weight: 700; text-transform: uppercase; font-size: .68rem; letter-spacing: .04em;
+  color: var(--dsa-bad); margin-right: .15rem; }
+.dsa-rule { margin: .3rem 0 0; font-size: .82rem; opacity: .85; }
+.dsa-snip { margin: .45rem 0 .35rem; padding: .45rem .6rem; max-width: 56rem; }
+.dsa-snip .srcbar { margin-bottom: .35rem; }
+.dsa-snip pre.code { padding-left: .7rem; }
+details.dsa-why.ok .dsa-snip { opacity: .85; }
+.dsa-nosrc { font-size: .78rem; opacity: .75; font-style: italic; }
+.dsa-srcnote { font-size: .72rem; opacity: .7; cursor: help; }
+.dsa-table tr.dsa-more.flash td { background: color-mix(in srgb, var(--dsa-hot) 16%, transparent); }
 :root { --dsa-ok: #1f7a45; --dsa-bad: #c1121f; --dsa-new: #1a4fa0; --dsa-hot: #f0a500;
         --dsa-label-fg: #ffffff; --dsa-frame: #a23fd6; --dsa-warn: #946200; }
 @media (prefers-color-scheme: dark) {
@@ -1249,6 +1639,22 @@ HL_JS = """<script>
     scope.querySelectorAll('.dsa-mark.hot').forEach(function (m) { m.classList.remove('hot'); });
     marks(scope, tr.getAttribute('data-find')).forEach(function (m) { m.classList.add('hot'); });
   });
+  // A mark on the picture opens what its row says about it: the markup, the template line,
+  // the rule. The row may be off-screen under a tall shot, so it is brought into view and
+  // flashed once, the way a hover on the row lights the mark.
+  document.addEventListener('click', function (ev) {
+    var mark = ev.target.closest && ev.target.closest('.dsa-mark[data-find]');
+    if (!mark) return;
+    var scope = mark.closest('.dsa');
+    var row = scope && scope.querySelector('tr.dsa-more[data-find="'
+      + CSS.escape(mark.getAttribute('data-find')) + '"]');
+    if (!row) return;
+    var more = row.querySelector('details');
+    if (more) more.open = true;
+    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    row.classList.add('flash');
+    setTimeout(function () { row.classList.remove('flash'); }, 1200);
+  });
   // "frame the changes" is one preference, not one per screen: flipping any flips all.
   document.addEventListener('change', function (ev) {
     if (!ev.target.classList || !ev.target.classList.contains('dsa-frameon')) return;
@@ -1269,10 +1675,17 @@ def _pct(v, total):
 
 
 def shot_html(png_rel: str, page: dict, marks: list[dict],
-              frames: list[dict] | None = None) -> str:
+              frames: list[dict] | None = None, numbered: bool | None = None) -> str:
     """A screenshot with boxes over it, positioned in percentages so the picture stays
     responsive — the report is read on a laptop and on a projector. `frames` are the
-    change frames (`change_frames`), drawn under the marks so a badge stays readable."""
+    change frames (`change_frames`), drawn under the marks so a badge stays readable.
+
+    `numbered` says whether the numbers are drawn (`number_findings` decides it for the
+    whole screen, so both sides agree); left out, they are drawn when this side has more
+    than one frame. A frame's number is its place in the list, which every frame's twin
+    on the other side shares — so `2` is the same change in New and in Old even where the
+    other side's `1` is only an insertion line. A mark outside every frame carries its
+    own number (`num`), the one its row in the table carries."""
     w, h = max(page["w"], 1), max(page["h"], 1)
     out = [f'<div class="dsa-shot"><img src="{html.escape(png_rel)}" alt="" loading="lazy">']
     # A frame's words go UNDER the picture, never on it. The chip used to ride the frame's
@@ -1280,33 +1693,170 @@ def shot_html(png_rel: str, page: dict, marks: list[dict],
     # reader came to look at, covered by the label explaining it. With more than one frame
     # each gets a small number outside its corner, and the caption is keyed by it.
     boxed = [fr for fr in frames or [] if not fr.get("insert")]
+    if numbered is None:
+        numbered = len(boxed) > 1
     caps = []
-    for fr in frames or []:
+    for i, fr in enumerate(frames or []):
         style = (f'left:{_pct(fr["x"], w)};top:{_pct(fr["y"], h)};'
                  f'width:{_pct(fr["w"], w)};height:{_pct(fr["h"], h)}')
         label = "" if fr.get("insert") else frame_label(fr, marks)
         tip = "Inserted here" if fr.get("insert") else label
         chip = ""
         if not fr.get("insert"):
-            n = len(caps) + 1
+            n = i + 1
             caps.append((n, label))
-            chip = f'<b class="dsa-fnum">{n}</b>' if len(boxed) > 1 else ""
+            chip = f'<b class="dsa-fnum">{n}</b>' if numbered else ""
         out.append(f'<div class="dsa-frame{" insert" if fr.get("insert") else ""}" '
                    f'style="{style}" data-tip="{html.escape(tip)}">{chip}</div>')
     for m in marks:
         b = m["box"]
         style = (f'left:{_pct(b["x"], w)};top:{_pct(b["y"], h)};'
                  f'width:{_pct(b["w"], w)};height:{_pct(b["h"], h)}')
+        num = (f'<b class="dsa-mnum">{m["num"]}</b>'
+               if numbered and m.get("num") and not m.get("in_frame") else "")
         out.append(
             f'<div class="dsa-mark {m["cls"]}" style="{style}" '
             f'data-find="{html.escape(m["id"])}" data-tip="{html.escape(m["tip"])}">'
-            f'<b>{html.escape(m["badge"])}</b></div>')
+            f'<b>{html.escape(m["badge"])}</b>{num}</div>')
     out.append("</div>")
     if caps:
         out.append('<p class="dsa-framecap">' + "".join(
-            f'<span class="dsa-fcap"><i></i>{f"{n} " if len(caps) > 1 else ""}'
+            f'<span class="dsa-fcap"><i></i>{f"{n} " if numbered else ""}'
             f'<b>{html.escape(label)}</b></span>' for n, label in caps) + "</p>")
     return "".join(out)
+
+
+def _centre_in(box: dict, frame: dict) -> bool:
+    cx, cy = box["x"] + box["w"] / 2, box["y"] + box["h"] / 2
+    return (frame["x"] <= cx <= frame["x"] + frame["w"]
+            and frame["y"] <= cy <= frame["y"] + frame["h"])
+
+
+def number_findings(findings: list[dict], frames: dict) -> tuple[dict, bool]:
+    """`{finding id: (number, in_frame)}` for every drawn verdict, and whether to draw them.
+
+    One set of numbers per screen, shared by the picture and the table. A verdict inside a
+    change frame takes that frame's number — the reader already sees it on the frame, and
+    a second, different number beside it would be two names for one place. One outside
+    every frame (a gap the base already had, on a screen the branch changed elsewhere)
+    gets the next number after the frames, keyed on the field, so the same field is the
+    same number in New and in Old. Numbers are drawn only when there is more than one of
+    them: a single frame around a single control needs no key."""
+    count = max(len(frames.get("new") or []), len(frames.get("old") or []))
+    on_picture = {i + 1 for side in ("new", "old")
+                  for i, fr in enumerate(frames.get(side) or []) if not fr.get("insert")}
+    nums, orphans = {}, {}
+    drawn = sorted((f for f in findings if f["verdict"] in DRAWN),
+                   key=lambda f: (f["side"] != "new", f["box"]["y"], f["box"]["x"]))
+    for f in drawn:
+        hit = next((i + 1 for i, fr in enumerate(frames.get(f["side"]) or [])
+                    if not fr.get("insert") and _centre_in(f["box"], fr)), None)
+        if hit:
+            nums[f["id"]] = (hit, True)
+            continue
+        el = f["element"]
+        key = el.get("id") or el.get("name") or el.get("label") or el["sig"]
+        if key not in orphans:
+            orphans[key] = count + len(orphans) + 1
+        nums[f["id"]] = (orphans[key], False)
+        on_picture.add(orphans[key])
+    return nums, len(on_picture) > 1
+
+
+def _snippets_module():
+    """The page's snippet machinery — the source bar and its two handles — imported the
+    way `page_base_commit` imports the page base: the package sits next to this file."""
+    if str(HERE) not in sys.path:
+        sys.path.insert(0, str(HERE))
+    from hrbuild.shared import snippets
+    return snippets
+
+
+def _highlight(text: str) -> str:
+    """Token-coloured the way every other quoted block on the page is: Pygments at build
+    time, into the `pre.code` classes the page's snippet stylesheet colours."""
+    try:
+        from pygments import highlight
+        from pygments.formatters import HtmlFormatter
+        from pygments.lexers import HtmlLexer
+    except ImportError:
+        return html.escape(text)
+    return highlight(text, HtmlLexer(), HtmlFormatter(nowrap=True)).rstrip("\n")
+
+
+def _source_links(rel: str, root: Path, line: int, base: str) -> str:
+    """The VS Code and github.com handles of a source bar, against the audit's base — the
+    two `_snippet_links` emits for a quoted block, built from the same two functions with
+    the base passed in rather than read off the page's global. Either drops itself where
+    it could not open what it promises; their notes on stderr would be about the review
+    page, not this step, so they are kept out of its log."""
+    import contextlib
+    import io
+    s = _snippets_module()
+    if not all(hasattr(s, n) for n in ("diff_link_html", "_github_compare_link",
+                                       "_shown_in_compare", "_icon")):
+        return ""
+    with contextlib.redirect_stderr(io.StringIO()):
+        vsc = s.diff_link_html(rel, base, root, face=s._icon("VSC"), line=line)
+        at = line if s._shown_in_compare(rel, base, str(root), line) else None
+        gh = s._github_compare_link(rel, base.removeprefix("origin/"), root, line=at,
+                                    face=s._icon("GH"))
+    return vsc + gh
+
+
+def source_bar(f: dict, root: Path | None, base: str | None) -> str:
+    """The header over the element's markup: the template it was written in, at the line,
+    with the page's own two handles — or, when no template was found, that sentence."""
+    snip = f.get("snippet") or {}
+    badge = ('<span class="code-badge" data-diff="unchanged" data-tip="The element as the '
+             'browser rendered it, trimmed; the file beside it is where it was written">'
+             'as rendered</span>' if snip.get("from") == "rendered" else
+             '<span class="code-badge" data-diff="unchanged" data-tip="This capture predates '
+             'the markup being recorded: the tag is rebuilt from its id and name">'
+             'rebuilt</span>')
+    src = f.get("source")
+    if not src:
+        return (f'<div class="srcbar"><span class="dsa-nosrc">no template under the audited '
+                f'source writes this element</span>{badge}</div>')
+    rel, line = src["file"], src["line"]
+    note = ""
+    if src.get("matches", 1) > 1:
+        note = (f'<span class="dsa-srcnote" data-tip="More than one opening tag there fits '
+                f'equally; this is the first">1 of {src["matches"]} '
+                f'&lt;{html.escape(f["element"]["tag"])}&gt;</span>')
+    path = Path(root or ".") / rel
+    # Whatever bar every other quoted block wears. The page's builder has carried the two
+    # handles as `links`, and is dropping them for a bar whose file name is the one link;
+    # this follows whichever it is rather than keeping a second opinion about it.
+    import inspect
+    build_bar = _snippets_module()._extract_module().srcbar_html
+    takes_links = "links" in inspect.signature(build_bar).parameters
+    links = (_source_links(rel, Path(root), line, base)
+             if takes_links and root and base and path.is_file() else "")
+    return build_bar(f"vscode://file/{path.resolve()}:{line}:1", rel, str(line),
+                     badge + note, *([links] if takes_links else []))
+
+
+def detail_html(f: dict, registry: dict, screen: str, root: Path | None,
+                base: str | None) -> str:
+    """What opens under a drawn verdict's row: the rule in one sentence, then the element's
+    markup under the bar naming the template line it came from. A gap opens by default —
+    it is the product; a component that is right stays shut, one click away."""
+    rule = f.get("rule") or rule_html(f, registry, screen)
+    snip = f.get("snippet") or snippet_of({"tag": f["element"]["tag"],
+                                            "id": f["element"].get("id"),
+                                            "name": f["element"].get("name"),
+                                            "ds": f.get("ds")})
+    f = dict(f, snippet=snip)
+    bad = f["verdict"] in ("bare", "foreign") and not f.get("resolved")
+    figure = (f'<figure class="snippet dsa-snip">{source_bar(f, root, base)}'
+              f'<pre class="code lang-html"><code>{_highlight(snip["html"])}</code></pre>'
+              "</figure>")
+    if bad:
+        return (f'<details class="dsa-why bad" open><summary><span class="dsa-whyk">why'
+                f'</span> {rule}</summary>{figure}</details>')
+    return (f'<details class="dsa-why ok"><summary>markup and template</summary>'
+            f'<p class="dsa-rule">{rule}</p>{figure}</details>')
 
 
 def short_selector(selector: str, keep: int = 2) -> str:
@@ -1335,12 +1885,7 @@ def frame_label(frame: dict, marks: list[dict]) -> str:
     An unlabelled purple box said "something here changed" and left the reader to work
     out what, and whether it was fine. The chip names the verdicts the frame holds —
     `✗ matSort · ✗ Select page of owners — added` — or says there is nothing to judge."""
-    def inside(m):
-        b = m["box"]
-        cx, cy = b["x"] + b["w"] / 2, b["y"] + b["h"] / 2
-        return (frame["x"] <= cx <= frame["x"] + frame["w"]
-                and frame["y"] <= cy <= frame["y"] + frame["h"])
-    held = [m for m in marks if inside(m)]
+    held = [m for m in marks if _centre_in(m["box"], frame)]
     names = list(dict.fromkeys(m.get("short") or m["badge"] for m in held))
     if not names:
         return "changed \u2014 nothing here to judge"
@@ -1537,16 +2082,21 @@ def screen_has_nothing_to_judge(screen: dict) -> bool:
     return not any(c[side].get(k) for side in ("new", "old") for k in ("bare", "ds", "foreign"))
 
 
-def render_screen(screen: dict, assets_prefix: str, build) -> str:
+def render_screen(screen: dict, assets_prefix: str, build, registry: dict | None = None,
+                  root: Path | None = None, base: str | None = None) -> str:
     findings = screen["findings"]
     pages = {s: screen["sides"][s]["page"] for s in ("new", "old")}
     stem = f'{assets_prefix}ds-audit-{slug(screen["screen"])}'
 
     frames = screen.get("frames") or {}
+    nums, numbered = number_findings(findings, frames)
 
     def annotated(side):
-        return LEGEND + shot_html(f"{stem}-{side}.png", pages[side],
-                                  _marks_for(findings, side), frames.get(side))
+        marks = [dict(m, num=nums.get(m["id"], (None, False))[0],
+                      in_frame=nums.get(m["id"], (None, False))[1])
+                 for m in _marks_for(findings, side)]
+        return LEGEND + shot_html(f"{stem}-{side}.png", pages[side], marks,
+                                  frames.get(side), numbered)
 
     # The delta pane: the pixel mask over the new shot, with the elements the DOM says
     # are new or changed outlined on top of it. Neither half is enough on its own.
@@ -1564,7 +2114,7 @@ def render_screen(screen: dict, assets_prefix: str, build) -> str:
     # one *opens* is a separate question, and here the answer is New — see the call to
     # `dgm_views_html` at the bottom of this function.
     panes = [("diff", DIFF_LEGEND + shot_html(f"{stem}-delta.png", pages["new"], delta_marks,
-                                                      frames.get("new"))),
+                                                      frames.get("new"), numbered)),
              ("new", annotated("new")), ("old", annotated("old"))]
 
     rows = []
@@ -1577,9 +2127,15 @@ def render_screen(screen: dict, assets_prefix: str, build) -> str:
                else "ok")
         word = "gap" if cls == "bad" else ("fixed" if f.get("resolved") else "ok")
         churn_txt = "\u2014" if st.get("pixel_churn") is None else f'{st["pixel_churn"]:.0%}'
+        # The number the picture carries for it \u2014 on its frame, or on the mark itself.
+        num, framed = nums.get(f["id"], (None, False))
+        view = "New" if f["side"] == "new" else "Old"
+        chip = (f'<b class="dsa-rnum {"framed" if framed else cls}" data-tip="'
+                f'{"Frame" if framed else "Mark"} {num} on the {view} picture">{num}</b>'
+                if numbered and num else "")
         rows.append(
             f'<tr class="{cls}" data-find="{html.escape(f["id"])}">'
-            f'<td><span class="dsa-v {cls}">{word}</span></td>'
+            f'<td>{chip}<span class="dsa-v {cls}">{word}</span></td>'
             f'<td>{html.escape(screen["sides"][f["side"]]["label"])}</td>'
             f'<td><b>{html.escape(element_name(f))}</b>'
             f'<br><code class="dsa-sel" data-tip="{html.escape(f["selector"])}">'
@@ -1590,6 +2146,11 @@ def render_screen(screen: dict, assets_prefix: str, build) -> str:
                if f.get("history") else "") + '</td>'
             f'<td>{html.escape(st.get("status", "\u2014"))}</td>'
             f'<td>{churn_txt}</td></tr>')
+        # The element itself, under its row: the markup, the template line, the rule.
+        rows.append(
+            f'<tr class="dsa-more {cls}" data-find="{html.escape(f["id"])}"><td></td>'
+            f'<td colspan="6">{detail_html(f, registry or {}, screen["screen"], root, base)}'
+            "</td></tr>")
 
     counts = screen["summary"]
     # One line: the fold's arrow, the verdict icon, the name, the route, and the two
@@ -1691,12 +2252,18 @@ def regression_tip(result: dict) -> str:
             + "".join(f"<li>{r}</li>" for r in rows) + "</ul>")
 
 
-def render(result: dict, assets_prefix: str) -> str:
+def render(result: dict, assets_prefix: str, *, root: Path | None = None,
+           base: str | None = None) -> str:
     """The fragment: the registry once, then one three-state viewer per screen.
 
     The viewer is the report\u2019s own \u2014 the Diff / New-Old control built last round
     for exactly this shape of content. A second one with different ergonomics on the same
     page would be the mistake worth failing a build over.
+
+    `root` is the checkout the templates a verdict points at live in, and `base` the
+    commit the branch is compared with; with both, each template line gets the page's two
+    handles (the diff in VS Code, the change on github.com). Without, the bar still links
+    the file at its line.
     """
     build = _build_review()
     counts = result["summary"]
@@ -1741,7 +2308,8 @@ def render(result: dict, assets_prefix: str) -> str:
         f'<p class="dsa-hdr">{verdict_line}</p>'
         # Screens with a verdict first — a gap, a regression, a component — so the tab
         # opens on a marked-up picture; the changed-but-nothing-to-judge ones trail.
-        + "".join(render_screen(sc, assets_prefix, build)
+        + "".join(render_screen(sc, assets_prefix, build, result.get("registry") or {},
+                                root, base)
                   for sc in sorted(touched, key=screen_has_nothing_to_judge))
         + f'<script type="application/json" class="ds-audit-data">{payload}</script>'
         + HL_JS + "</div>")
@@ -1983,6 +2551,10 @@ def build_screen(name, old_snap, new_snap, registry, *, sides_meta, delta,
                       "pixel_churn": st.get("pixel_churn"),
                       "status": st.get("status", "absent")}
         f.setdefault("severity", "info")
+        # Last, because it reads what the passes above decided: the history ("this branch
+        # replaced it") and the migration (`resolved`) are both part of the sentence.
+        if f["verdict"] in DRAWN:
+            f["rule"] = rule_html(f, registry, name)
 
     return {
         "screen": name,
@@ -2134,9 +2706,11 @@ def main():
     args.asset_prefix = asset_prefix(args.asset_prefix)
     commits = {"new": args.commit_new or _git("rev-parse", "HEAD"),
                "old": args.commit_old or page_base_commit(args.base_ref)}
+    sources = [Path(x) for x in args.source]
+    repo_root = Path(_git("rev-parse", "--show-toplevel") or Path.cwd())
     if args.rerender:
         rerender(Path(args.rerender), Path(args.assets), args.asset_prefix, Path(args.out),
-                 commits)
+                 commits, sources=sources, repo_root=repo_root)
         return
 
     assets = Path(args.assets)
@@ -2247,7 +2821,9 @@ def main():
     # One registry over every screen and every source tree: a component is a component
     # whichever form happens to render it, and a screen that renders none of them is
     # still audited against the ones that exist.
-    registry = derive_registry(snaps, [Path(x) for x in args.source])
+    registry = derive_registry(snaps, sources)
+    templates = template_index(sources)
+    changed = changed_files(commits["old"], sources)
 
     screens = []
     for name, stem, pair, pngs in screens_io:
@@ -2273,6 +2849,7 @@ def main():
                               sides_meta=sides_meta,
                               delta={"dom": dom, "elements": elements},
                               route=routes.get(name))
+        attach_sources(screen, templates, repo_root, changed)
         if screen_touched(screen):
             screen["frames"] = change_frames(pngs["old"], pngs["new"])
         screens.append(screen)
@@ -2283,7 +2860,8 @@ def main():
     Path(args.json_out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.json_out).write_text(json.dumps(result, indent=1), encoding="utf-8")
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.out).write_text(render(result, args.asset_prefix), encoding="utf-8")
+    Path(args.out).write_text(render(result, args.asset_prefix, root=repo_root,
+                                     base=commits["old"] or None), encoding="utf-8")
 
     s = result["summary"]
     print(f'[ds-audit] {args.out} · {len(screens)} screen(s), '
@@ -2292,12 +2870,25 @@ def main():
           f'→ {args.json_out}', file=sys.stderr)
 
 
+def changed_files(base: str, sources: list[Path]) -> list[str]:
+    """Repo-relative paths under `sources` that differ between `base` and HEAD — the
+    templates a source search tries first."""
+    if not base or not sources:
+        return []
+    return _git("diff", "--name-only", base, "HEAD", "--",
+                *[str(s) for s in sources]).split()
+
+
 def rerender(json_path: Path, assets: Path, prefix: str, out: Path,
-             commits: dict | None = None) -> None:
+             commits: dict | None = None, *, sources: list[Path] | None = None,
+             repo_root: Path | None = None) -> None:
     """A generator change, seen without a second pair of builds: the result JSON already
     carries every verdict, and the frames only need the two PNGs beside it. A side whose
-    commit was never recorded gets it now, from the same resolution a capture uses."""
+    commit was never recorded gets it now, from the same resolution a capture uses; a
+    drawn verdict with no `source` yet is located now, when `--source` says where."""
     result = json.loads(json_path.read_text(encoding="utf-8"))
+    templates = template_index(sources or [])
+    changed = changed_files((commits or {}).get("old", ""), sources or [])
     for sc in result["screens"]:
         if commits:
             stamp_sides(sc["sides"], commits)
@@ -2305,8 +2896,15 @@ def rerender(json_path: Path, assets: Path, prefix: str, out: Path,
         old, new = Path(f"{stem}-old.png"), Path(f"{stem}-new.png")
         if screen_touched(sc) and old.is_file() and new.is_file():
             sc["frames"] = change_frames(old, new)
+        if templates:
+            for f in sc["findings"]:
+                if f["verdict"] in DRAWN and not f.get("source"):
+                    f.setdefault("snippet", snippet_of({**f["element"], "ds": f.get("ds")}))
+                    f["source"] = locate_source(f, templates, repo_root or Path.cwd(),
+                                                changed)
     json_path.write_text(json.dumps(result, indent=1), encoding="utf-8")
-    out.write_text(render(result, prefix), encoding="utf-8")
+    out.write_text(render(result, prefix, root=repo_root,
+                          base=(commits or {}).get("old") or None), encoding="utf-8")
     print(f"[ds-audit] re-rendered {out} from {json_path}", file=sys.stderr)
 
 

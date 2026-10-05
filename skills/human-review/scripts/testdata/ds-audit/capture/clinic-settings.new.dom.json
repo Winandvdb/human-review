@@ -34,7 +34,8 @@
     "w": 1180,
     "h": 24
    },
-   "text": "Clinic settings"
+   "text": "Clinic settings",
+   "hosts": []
   },
   {
    "sig": "form#settings",
@@ -60,7 +61,8 @@
     "w": 1180,
     "h": 34
    },
-   "text": ""
+   "text": "",
+   "hosts": []
   },
   {
    "sig": "form#settings>div.pc-field.row:1",
@@ -89,7 +91,8 @@
     "w": 1180,
     "h": 34
    },
-   "text": ""
+   "text": "",
+   "hosts": []
   },
   {
    "sig": "form#settings>div.pc-field.row:1>label:1",
@@ -115,7 +118,8 @@
     "w": 150,
     "h": 17
    },
-   "text": "Time zone"
+   "text": "Time zone",
+   "hosts": []
   },
   {
    "sig": "form#settings>div.pc-field.row:1>div.control:1",
@@ -143,7 +147,8 @@
     "w": 420,
     "h": 34
    },
-   "text": ""
+   "text": "",
+   "hosts": []
   },
   {
    "sig": "form#settings>div.pc-field.row:1>div.control:1>div[data-ds=combo#timezone]",
@@ -171,7 +176,48 @@
     "w": 420,
     "h": 34
    },
-   "text": ""
+   "text": "",
+   "html": {
+    "tag": "div",
+    "attrs": [
+     [
+      "class",
+      "pc-combo"
+     ],
+     [
+      "data-ds",
+      "combo"
+     ]
+    ],
+    "children": [
+     {
+      "tag": "select",
+      "attrs": [
+       [
+        "id",
+        "timezone"
+       ],
+       [
+        "name",
+        "timezone"
+       ]
+      ],
+      "children": [
+       {
+        "tag": "option",
+        "attrs": [],
+        "text": "Europe/Bucharest"
+       },
+       {
+        "tag": "option",
+        "attrs": [],
+        "text": "UTC"
+       }
+      ]
+     }
+    ]
+   },
+   "hosts": []
   },
   {
    "sig": "select#timezone",
@@ -197,7 +243,33 @@
     "w": 398,
     "h": 20
    },
-   "text": ""
+   "text": "",
+   "html": {
+    "tag": "select",
+    "attrs": [
+     [
+      "id",
+      "timezone"
+     ],
+     [
+      "name",
+      "timezone"
+     ]
+    ],
+    "children": [
+     {
+      "tag": "option",
+      "attrs": [],
+      "text": "Europe/Bucharest"
+     },
+     {
+      "tag": "option",
+      "attrs": [],
+      "text": "UTC"
+     }
+    ]
+   },
+   "hosts": []
   }
  ],
  "settled": true,

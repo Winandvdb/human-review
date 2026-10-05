@@ -197,6 +197,16 @@
    "at": "2026-10-05T17:39:45+00:00",
    "seconds": 33.2,
    "steps": "none"
+  },
+  {
+   "at": "2026-10-05T19:32:10+00:00",
+   "seconds": 10.6,
+   "steps": "reviewpoints,aftermath"
+  },
+  {
+   "at": "2026-10-05T19:54:15+00:00",
+   "seconds": 174.7,
+   "steps": "sequence"
   }
  ]
 }

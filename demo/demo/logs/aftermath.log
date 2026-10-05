@@ -1,3 +1,10 @@
   * aftermath -> review
     $ git rev-parse HEAD
     $ git diff --numstat be762955d5f477feeca0f7db55e32fa1c2fb8db5..HEAD
+    $ git show --numstat --format= 0c3f5d70179f77d35437bcd0d61f1353970b96b7
+    $ git show --numstat --format= ca6b33ed3c2b821ef944d68ffab08468c852852f
+    $ git show --numstat --format= 5a4cf83fdf32f732f0333fa67609333a21c74c48
+    $ git show --numstat --format= 20e1df3268305e23809c8944eeb8e338af699cb4
+    $ git show --numstat --format= 51500ddc8ccb8600bb5ac333f5ccffacc27cc4e6
+    $ git show --numstat --format= 1044914d4bece7d7becbf7c3fa398ffdc1182c28
+    $ git show --numstat --format= 5f84b2cdf4dbcbebf70b7a398bba00e9aa04e236

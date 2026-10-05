@@ -11,7 +11,7 @@
   "reviewers": "4 read-only Sonnet subagents (correctness, security, ticket-fit, tests briefs)",
   "harness": "claude-code",
   "session": "82329d0a-55d2-448f-aff5-0363cf80b32f",
-  "reviewCommit": "5f84b2cdf4dbcbebf70b7a398bba00e9aa04e236"
+  "reviewCommit": "be762955d5f477feeca0f7db55e32fa1c2fb8db5"
  },
  "fixed_in": "HEAD",
  "findings": [

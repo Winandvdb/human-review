@@ -1303,24 +1303,30 @@ def test_the_show_all_button_sits_after_the_footer_not_in_the_strip(tmp_path):
     strip = page[page.index('class="tabstrip"'):]
     assert "allbtn" not in strip[:strip.index("</div>")]
     foot = page[page.index("<footer>"):page.index("</footer>")]
-    assert "allbtn" in foot and "show single page" in foot
+    assert "allbtn" in foot and "Single page" in foot
 
 
-def test_the_footer_is_one_centred_line_with_the_control_under_it(tmp_path):
+def test_the_footer_is_one_centred_line_ending_on_its_control_then_the_path(tmp_path):
     """The provenance and the offer are one sentence, centred — not two blocks pushed to
     opposite ends of a flex row, which on a wide screen read as a header bar rather than as
-    the page's closing line. The control is not a word of that sentence: it stands on its
-    own line below, centred, so it reads as the page's one control."""
+    the page's closing line. The one control is that sentence's last word, not a line of its
+    own (5 Oct 2026: every footer line is a line the tab above does not get), and the
+    page's path on disk is the second and last line, its 📋 after it."""
     page, _ = _build(tmp_path, BARE)
     foot = page[page.index("<footer>"):page.index("</footer>")]
     assert '<p class="footrow">' in foot
-    assert foot.index("</p>") < foot.index("allbar"), "the line closes before the button"
-    assert "footer .footrow { text-align:center; }" in page
+    assert "footer .footrow { text-align:center; margin:0; }" in page
     assert "footer .footrow > span { display:inline; }" in page
-    assert "footer .allbar { display:flex; justify-content:center;" in page
-    # One line, so nothing between the two halves but a space.
     line = foot[foot.index('<p class="footrow">'):foot.index("</p>")]
     assert line.count("<span") >= 2 and "<div" not in line
+    assert 'class="allbtn"' in line and "allbar" not in foot
+    # The path, then the clipboard: text first, the mark that acts on it after.
+    disk = foot[foot.index('class="diskline"'):]
+    assert disk.index('id="hr-diskpath"') < disk.index('class="diskcopy copycmd"')
+    assert disk.index("</span>") < disk.index("\U0001F4CB")
+    # Off disk the path is plain text: no hover promising a click until a server says so.
+    span = disk[disk.index("<span"):disk.index("</span>")]
+    assert "data-tip" not in span and "button" not in span
 
 
 def test_the_footer_says_where_the_page_came_from_and_where_to_see_it(tmp_path):
@@ -1340,8 +1346,8 @@ def test_the_footer_says_where_the_page_came_from_and_where_to_see_it(tmp_path):
     assert "run it locally" not in foot and "pkgs/container/human-review" not in foot
     assert "adapt it to your liking" not in foot
     assert "Download here" not in foot and "Download zip" not in foot
-    # After the sentence and before the control, so the row still reads sentence-first.
-    assert foot.index("takeaway") < foot.index("allbar")
+    # The sentence first, the control as its last word.
+    assert foot.index("takeaway") < foot.index("allbtn")
 
 
 def test_the_content_files_provenance_sentence_is_not_said_twice(tmp_path):
@@ -1369,9 +1375,9 @@ def test_the_show_all_button_says_what_it_does_next(tmp_path):
     carried the state while the button sat among the tabs, and at the foot of the page
     there is nothing beside it to read a highlight against."""
     page, _ = _build(tmp_path, BARE)
-    assert 'data-label-off="show single page"' in page
+    assert 'data-label-off="Single page"' in page
     assert 'data-label-on="back to one tab at a time"' in page
-    assert ">show single page</button>" in page, "the unpressed label is also the markup"
+    assert ">Single page</button>" in page, "the unpressed label is also the markup"
     assert "(single)" not in page
 
 

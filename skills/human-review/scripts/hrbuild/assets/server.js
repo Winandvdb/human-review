@@ -313,19 +313,23 @@ window.HR = (function () {
     chip.setAttribute('data-tip', 'Served by the review server (serve-review.py): the '
       + 'buttons on this page run their action here instead of copying a command, '
       + 'recordings play in the page, and \u21BA regenerates it.');
-    // A small red \u25A0 beside the badge: stop the server now rather than wait out its idle
-    // timeout. The page stays on screen as it was, and says so.
+    // A \u23F9\uFE0F after the word, inside the badge: stop the server now rather than wait
+    // out its idle timeout. Inside the pill, not a round button beside it — one pill reads
+    // as "served, and here is how to stop that", two read as two states. Its own button,
+    // with its own tip, so the word before it keeps the badge's hover.
+    // The page stays on screen as it was, and says so.
     if (j.stop && !document.getElementById('hr-stop')) {
       var stop = document.createElement('button');
       stop.type = 'button';
       stop.id = 'hr-stop';
-      stop.className = 'chip chip-stop';
-      stop.textContent = '\u25A0';
+      stop.className = 'chip-stop';
+      stop.textContent = '\u23F9\uFE0F';
       stop.setAttribute('aria-label', 'Stop the review server');
       stop.setAttribute('data-tip', 'Stop the review server now. It stops by itself after '
         + 'a few idle hours anyway; this page stays open, as a static copy.');
-      chip.parentNode.insertBefore(stop, chip.nextSibling);
-      stop.addEventListener('click', function () {
+      chip.appendChild(stop);
+      stop.addEventListener('click', function (ev) {
+        ev.stopPropagation();
         stop.disabled = true;
         fetch('/__stop__', {
           method: 'POST', cache: 'no-store',

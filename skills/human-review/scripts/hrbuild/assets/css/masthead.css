@@ -18,7 +18,9 @@
    none of them. Full-bleed like the strip was, padded back to the text column. */
 .masthead { position:sticky; top:0; z-index:31; background:var(--bg);
             margin-left:calc(50% - 50vw); width:100vw;
-            padding:.6rem max(1.25rem, calc(50vw - 540px + 1.25rem)) .3rem;
+            /* .15rem on top, not .6rem: the h1's own line box already carries ~5px of
+               leading above the text, so .6rem made a ~15px empty band over the title. */
+            padding:.15rem max(1.25rem, calc(50vw - 540px + 1.25rem)) .3rem;
             border-bottom:1px solid var(--line); }
 .masthead .titlerow { align-items:baseline; gap:.3rem .9rem; }
 /* One line, always: the PR and its name on the left, the score hard right. Nothing here

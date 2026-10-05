@@ -360,6 +360,33 @@
     document.addEventListener('visibilitychange', ask);
   });
 
+  // The path in the footer: plain text off disk, a Finder link where the server says it
+  // can `open -R`. The page names which of the served files it is — its own URL path — and
+  // the server refuses anything outside the directory it serves.
+  window.HR.onready(function (caps) {
+    var path = document.getElementById('hr-diskpath');
+    if (!caps || !caps.reveal || !path) return;
+    path.classList.add('reveals');
+    path.setAttribute('role', 'button');
+    path.tabIndex = 0;
+    path.setAttribute('data-tip', 'Show this file in Finder');
+    function reveal() {
+      fetch('/__reveal__', {
+        method: 'POST', cache: 'no-store',
+        headers: {'Content-Type': 'application/json',
+                  'X-Human-Review-Token': caps.token || ''},
+        body: JSON.stringify({page: decodeURIComponent(location.pathname)})
+      }).then(function (r) {
+        return r.ok ? flash('Showing it in Finder')
+                    : r.text().then(function (t) { flash(t || 'the review server refused'); });
+      }).catch(function () { flash('the review server is no longer running'); });
+    }
+    path.addEventListener('click', reveal);
+    path.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); reveal(); }
+    });
+  });
+
   // The banner is the consolation prize, so it must not be printed until we know there
   // is nothing better on offer — which is now something we learn after the page has
   // painted rather than from the URL. Waiting for the probe also means it is never shown

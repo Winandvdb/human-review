@@ -146,3 +146,29 @@ def test_the_badge_cannot_be_pressed_from_another_page(server, tmp_path, monkeyp
     status, _ = _call(server, "POST", srv.EDITOR_OPEN, {}, {"X-Human-Review-Token": "guess"})
 
     assert status == 403 and opened == []
+
+
+def test_pressing_the_footer_path_shows_the_served_page_in_finder(server, tmp_path, monkeypatch):
+    revealed = []
+    monkeypatch.setattr(srv, "reveal_in_finder", revealed.append)
+    (tmp_path / "review.html").write_text("<p>")
+
+    status, payload = _call(server, "POST", srv.REVEAL, {"page": "/review.html"})
+
+    target = (tmp_path / "review.html").resolve()
+    assert status == 200 and json.loads(payload) == {"revealed": str(target)}
+    assert revealed == [target]
+
+
+def test_the_footer_path_reveals_nothing_outside_the_served_folder(server, tmp_path, monkeypatch):
+    revealed = []
+    monkeypatch.setattr(srv, "reveal_in_finder", revealed.append)
+    outside = tmp_path.parent / "secret.txt"
+    outside.write_text("x")
+
+    for page in ("/../secret.txt", str(outside), "/missing.html"):
+        status, _ = _call(server, "POST", srv.REVEAL, {"page": page})
+        assert status == 404, page
+    status, _ = _call(server, "POST", srv.REVEAL, {"page": "/review.html"},
+                      {"X-Human-Review-Token": "guess"})
+    assert status == 403 and revealed == []

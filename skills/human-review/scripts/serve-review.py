@@ -78,6 +78,9 @@ EDITOR = "/__editor__"
 # that already has it. The folder is the server's own ROOT, never one the page names, and
 # nothing in git is touched — no checkout, no branch switch, whatever commit it is on.
 EDITOR_OPEN = "/__editor_open__"
+# Pressing the page's own path in the footer: show that file selected in Finder. The page
+# names which of the files this server serves it is, and nothing outside that directory.
+REVEAL = "/__reveal__"
 # The red ■ beside `Served`: shut this server down now instead of waiting out
 # `--idle-minutes`. The page that pressed it stays on screen, and falls back to static.
 STOP = "/__stop__"
@@ -498,6 +501,22 @@ def open_editor(root: Path) -> None:
     brings that window forward."""
     subprocess.Popen(["open", "-a", "Visual Studio Code", str(root)],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def reveal_in_finder(path: Path) -> None:
+    """`open -R`: a Finder window on the folder with the file selected — the answer to
+    "where is this?" that a path read off the screen leaves the reader to type."""
+    subprocess.Popen(["open", "-R", str(path)],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def served_file(root, page) -> Path | None:
+    """The file `page` names inside the served directory, or None. Resolved before the
+    check, so `../` and a symlink out of the folder are both refused."""
+    base = Path(root).resolve()
+    name = page.lstrip("/") if isinstance(page, str) and page.strip("/") else "review.html"
+    target = (base / name).resolve()
+    return target if target.is_relative_to(base) and target.is_file() else None
 
 
 def bridge_diff(target: Path, sha: str, line: int) -> bool:
@@ -1329,7 +1348,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         Handler.last_seen = time.time()
         route = self.path.split("?")[0]
-        if route not in (RUN, RERUN, RERUN_AI, EDITOR_OPEN, STOP):
+        if route not in (RUN, RERUN, RERUN_AI, EDITOR_OPEN, REVEAL, STOP):
             self.reply_text("no", 404)
             return
         problem = refuse_reason(self.headers)
@@ -1371,6 +1390,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return
             open_editor(Path(ROOT))
             self.reply_json({"opened": str(ROOT)})
+            return
+        if route == REVEAL:
+            try:
+                page = (json.loads(raw) or {}).get("page")
+            except Exception:
+                page = None
+            target = served_file(Handler.root, page)
+            if target is None:
+                self.reply_text("that page is not a file this server serves", 404)
+                return
+            reveal_in_finder(target)
+            self.reply_json({"revealed": str(target)})
             return
         if route in (RERUN, RERUN_AI):
             # No id and no parameters: there is exactly one thing each of these asks for,
@@ -1467,6 +1498,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                              "opens": Handler.opens, "runs": Handler.runs,
                              "token": Handler.token,
                              "stop": True,
+                             # The footer's path turns into a Finder link only where this
+                             # is said: a server started before /__reveal__ existed would
+                             # answer the press with a bare 404.
+                             "reveal": True,
                              # The baseline the page was served against. Empty when
                              # nothing is watching, which is how the page knows not to
                              # poll — a build that stopped watching takes the reload

@@ -1086,7 +1086,7 @@ def _main(argv=None) -> int:
 
     # Only a tabbed page grows a masthead; the plain single-column guide keeps the
     # heading it always had.
-    strip_html = allbtn_html = mode_html = rerun_fail_html = ""
+    strip_html = allbtn_html = diskline_html = mode_html = rerun_fail_html = ""
     if tabs:
         # Measured once, for every tab, before the loop: one subprocess and one transcript
         # scan rather than one per tab. `led` is None only when review-cost.py itself
@@ -1283,23 +1283,30 @@ def _main(argv=None) -> int:
         mode_html += RERUN_CHIP + rerun_tests_chip(rerun_tests) + RERUN_AI_CHIP
         rerun_fail_html = (rerun_progress_html(step_expectations(out_dir))
                        + RERUN_DONE + RERUN_FAIL + RERUN_AI_CONFIRM)
+        # The one control at the foot, at the end of the closing sentence rather than on a
+        # line of its own: the footer is two lines, and every line it spends is a line the
+        # tab above it does not get.
         allbtn_html = (
-            # Where this page sits on disk, on its own centred line above the one control
-            # at the foot. The URL bar says 127.0.0.1:7655 when it is served, which names a
-            # port and not a checkout — and with three petclinic checkouts each building
-            # its own review.html, "which file am I looking at?" has no other answer on
-            # screen. A copy button, so the path goes straight into a terminal or an
-            # editor; absolute, like the Serve command, because it is a fact about the
-            # machine that built the page.
-            '<div class="diskline"><button type="button" class="diskpath copycmd" '
-            f'data-copy="{html.escape(str(out_path), quote=True)}" '
-            'data-tip="Copy the path of this file on disk">'
-            f"{CMD_COPY} {html.escape(str(out_path))}</button></div>"
-            '<div class="allbar">'
-            '<button type="button" class="allbtn" aria-pressed="false" '
-            'data-label-off="show single page" data-label-on="back to one tab at a time" '
+            ' <button type="button" class="allbtn" aria-pressed="false" '
+            'data-label-off="Single page" data-label-on="back to one tab at a time" '
             'data-tip="All tabs on one page (for \u2318F)">'
-            "show single page</button></div>"
+            "Single page</button>"
+        )
+        # Where this page sits on disk, on its own centred line under that sentence. The URL
+        # bar says 127.0.0.1:7655 when it is served, which names a port and not a checkout —
+        # and with three petclinic checkouts each building its own review.html, "which file
+        # am I looking at?" has no other answer on screen. Absolute, like the Serve command,
+        # because it is a fact about the machine that built the page.
+        # Two controls, not one. The 📋 after the path copies it, served or not. The path
+        # itself is plain text until the probe says this server can `open -R` it — then
+        # editor.js turns it into a Finder link, the way it raises the VSC badge.
+        diskline_html = (
+            '<div class="diskline">'
+            f'<span class="diskpath" id="hr-diskpath">{html.escape(str(out_path))}</span>'
+            '<button type="button" class="diskcopy copycmd" '
+            f'data-copy="{html.escape(str(out_path), quote=True)}" '
+            'data-say="Copied the path of this page" aria-label="Copy the path" '
+            f'data-tip="Copy this path">{CMD_COPY}</button></div>'
         )
         body_html = "\n".join(panels)
         # These two facts used to be appended to the page as a `<p class="sub">` — and the
@@ -1365,7 +1372,7 @@ def _main(argv=None) -> int:
 {lede_html}
 
 {body_html}
-<footer><p class="footrow"><span>{_link_home(spec.get('footer', ''))}</span> {TAKEAWAY}</p>{allbtn_html}</footer>
+<footer><p class="footrow"><span>{_link_home(spec.get('footer', ''))}</span> {TAKEAWAY}{allbtn_html}</p>{diskline_html}</footer>
 </div>
 {SERVER_JS}
 {CAPTION_JS}

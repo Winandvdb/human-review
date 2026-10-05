@@ -1,4 +1,7 @@
-footer { margin-top:3.5rem; padding-top:1rem; border-top:1px solid var(--line); color:var(--muted); font-size:.85rem; }
+/* No rule above it and no gutter: the divider said nothing the change of type does not,
+   and 3.5rem of air plus a line plus 1rem of padding was a band of nothing between the
+   last panel and the closing sentence, on every tab. */
+footer { margin-top:1rem; color:var(--muted); font-size:.85rem; }
 /* The tab strip. A review is not one argument read top to bottom — it is five or six
     separate questions ("does the contract still hold?", "where did it land?"), and a
     reviewer answers them in whatever order their doubt takes them. Full-bleed and
@@ -107,33 +110,32 @@ button.tab .n.dot-green { background:#2e9e5b; }
 button.tab .n.dot-amber { background:#d98218; }
 button.tab .n.dot-red   { background:#d7263d; }
 button.tab .sev { width:6px; height:6px; border-radius:50%; background:var(--accent); }
-/* This used to be the last pill on the tab strip, where it sat in the corner of every
-   screenful for the whole read and was pressed roughly never — a permanent control for an
-   occasional act. It lives at the foot of the page now, which is where you arrive having
-   finished reading and is the moment the thing it offers ("show me all of it at once, so
-   ⌘F works") is actually worth wanting.
-   Under the footer's line, centred: it sat at the far end of that line for a while and
-   read as one more word of it. Alone on its own line, in the middle, it is unmistakably
-   the page's one control — the sentence above keeps its natural width and `flex-wrap`
-   still folds the two halves of that sentence on a narrow screen. */
 /* One line, centred, and the two halves are one sentence rather than two blocks pushed to
    opposite ends of it. They were two spans in a `flex` row that wrapped: on a wide screen
    the provenance sat left and the offer sat a long way right, reading as a header bar
    rather than as the one closing line it is. `inline` spans in a centred paragraph put
    them where a reader's eye lands after the last panel. */
-footer .footrow { text-align:center; }
+footer .footrow { text-align:center; margin:0; }
 footer .footrow > span { display:inline; }
-footer .allbar { display:flex; justify-content:center; align-items:center; gap:.6rem;
-                 margin-top:.3rem; }
+/* The single-page toggle used to be the last pill on the tab strip, pressed roughly never; then
+   a pill on a line of its own under this sentence. It is the sentence's last word now — a
+   small pill sized to the text it ends — because a whole line for an occasional act is
+   the line the panel above loses. */
 button.allbtn { border:1px solid var(--line); background:var(--card); color:var(--muted);
-                border-radius:999px; cursor:pointer; font:600 .74rem/1.9 inherit; padding:0 .7rem; }
+                border-radius:999px; cursor:pointer; font:600 .74rem/1.45 inherit;
+                padding:0 .55rem; margin-left:.3rem; vertical-align:baseline; }
 button.allbtn:hover { color:var(--fg); border-color:var(--link); }
 button.allbtn[aria-pressed="true"] { background:var(--link); border-color:var(--link); color:var(--on-fill); }
-button.diskpath { border:0; background:none; color:var(--muted); cursor:pointer;
-                  font:.72rem/1.9 ui-monospace, SFMono-Regular, Menlo, monospace; padding:0;
-                  overflow-wrap:anywhere; }
-button.diskpath:hover { color:var(--fg); }
-footer .diskline { text-align:center; margin-top:.9rem; }
+/* The page's path on disk, then the 📋 that copies it. The path is plain text off disk;
+   served, editor.js adds `.reveals` and a click shows the file in Finder. */
+footer .diskline { text-align:center; line-height:1.5; }
+.diskpath { color:var(--muted); font:.72rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+            overflow-wrap:anywhere; }
+.diskpath.reveals { cursor:pointer; }
+.diskpath.reveals:hover { color:var(--fg); text-decoration:underline; }
+button.diskcopy { border:0; background:none; cursor:pointer; padding:0 0 0 .35rem;
+                  font:.8rem/1.5 inherit; opacity:.75; }
+button.diskcopy:hover { opacity:1; }
 /* Adopt this tab: a prompt for the reader's own agent, at the foot of every panel, on the
    right -- where the eye lands once the tab is read, and out of the way until then. */
 .adoptline { text-align:right; margin-top:1rem; }

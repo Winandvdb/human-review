@@ -314,8 +314,10 @@ button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#2e7d32;
             font-size:.85rem; line-height:1; cursor:pointer; vertical-align:-.05em; }
 .titlerow .chip-stop:hover:not(:disabled) { filter:brightness(1.15); }
 .titlerow .chip-stop:disabled { opacity:.5; cursor:progress; }
-/* Can a click on a file:line reach VS Code at the reviewed commit? Green: a window is on it.
-   Amber: the branch is open at another commit, so only unchanged files open. Red: no window. */
+/* Is a VS Code window on this checkout, at the reviewed commit? Green: yes, and a press
+   brings it forward. Amber: the window is there but the checkout is on another branch or
+   commit, so only unchanged files open and a press also offers a checkout prompt. Red: no
+   window has the checkout; a press opens one. */
 .chip-vsc { font-weight:600; letter-spacing:.04em; cursor:pointer; }
 .chip-vsc.vsc-on { color:#2e7d32; border-color:#2e7d32; }
 .chip-vsc.vsc-near { color:#b26a00; border-color:#b26a00; }
@@ -324,6 +326,21 @@ button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#2e7d32;
   .chip-vsc.vsc-on { color:#6bd48a; border-color:#3f7f52; }
   .chip-vsc.vsc-near { color:#e0a44a; border-color:#8a6420; }
   .chip-vsc.vsc-off { color:#f0757f; border-color:#8f3a40; } }
+/* The prompt a press on an amber badge leaves under it: the sentence, the prompt itself,
+   and a 📋 that copies it (editor.js, `offerCheckout`). Placed by script under the badge. */
+#hr-vsc-pop { position:fixed; z-index:61; max-width:min(34rem, calc(100vw - 16px));
+            box-sizing:border-box; padding:.6rem .75rem; border-radius:.6rem;
+            border:1px solid #b26a00; background:var(--card); color:var(--fg);
+            box-shadow:0 6px 22px rgba(0,0,0,.18); font-size:.8rem; line-height:1.45; }
+#hr-vsc-pop p { margin:0 0 .4rem; }
+#hr-vsc-pop code { display:block; white-space:pre-wrap; word-break:break-word;
+            padding:.4rem .5rem; border-radius:.4rem; background:var(--bg); font-size:.76rem; }
+#hr-vsc-pop .vp-row { display:flex; justify-content:flex-end; gap:.4rem; margin-top:.45rem; }
+#hr-vsc-pop button { font:inherit; font-weight:600; cursor:pointer; border-radius:999px;
+            padding:.15rem .7rem; border:1px solid var(--line); background:var(--card);
+            color:var(--fg); }
+#hr-vsc-pop .vp-copy { border-color:#b26a00; }
+@media (prefers-color-scheme:dark) { #hr-vsc-pop, #hr-vsc-pop .vp-copy { border-color:#8a6420; } }
 @media (prefers-color-scheme:dark) {
   .titlescore.v-good { color:#6fce93; } .titlescore.v-mid { color:#e0a44a; }
   .titlescore.v-bad { color:#f0757f; } }

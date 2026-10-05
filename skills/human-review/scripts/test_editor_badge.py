@@ -114,6 +114,7 @@ def test_red_when_no_window_answers(tmp_path, monkeypatch):
 
 def test_the_endpoint_answers_the_page_and_is_not_use(server, monkeypatch):
     asked = []
+    monkeypatch.setattr(srv, "ROOT", None)
     monkeypatch.setattr(srv, "editor_state", lambda *a: asked.append(a) or {"state": "on", "tip": "x"})
     before = srv.Handler.last_seen
 
@@ -172,3 +173,138 @@ def test_the_footer_path_reveals_nothing_outside_the_served_folder(server, tmp_p
     status, _ = _call(server, "POST", srv.REVEAL, {"page": "/review.html"},
                       {"X-Human-Review-Token": "guess"})
     assert status == 403 and revealed == []
+
+
+# ---- the three states a press can be in, and what the press does in each ----------------
+
+class _Bridge(http.server.BaseHTTPRequestHandler):
+    """A VS Code window: answers /ping with its folders, and records /command presses."""
+    folders: list = []
+    focus_ok = True
+    pressed: list = []
+
+    def _reply(self, payload, status=200):
+        body = json.dumps(payload).encode()
+        self.send_response(status)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        self._reply({"ok": True, "app": "vscode", "folder": self.folders[0]["name"],
+                     "folders": self.folders})
+
+    def do_POST(self):
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        self.pressed.append(self.path)
+        if self.focus_ok:
+            self._reply({"ok": True})
+        else:  # a bridge from before the focus command was allowed
+            self._reply({"ok": False, "error": "not allowed"}, 400)
+
+    def log_message(self, *a):
+        pass
+
+
+def _bridge(tmp_path, monkeypatch, folder: Path, focus_ok=True):
+    H = type("H", (_Bridge,), {"folders": [{"name": folder.name, "path": str(folder),
+                                            "realPath": str(folder.resolve())}],
+                               "focus_ok": focus_ok, "pressed": []})
+    httpd = http.server.HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    registry = tmp_path / "home" / ".walkie-talkie" / "ide"
+    registry.mkdir(parents=True, exist_ok=True)
+    (registry / "vscode-1.json").write_text(
+        json.dumps({"port": httpd.server_address[1], "token": "t"}))
+    monkeypatch.setattr(srv.Path, "home", classmethod(lambda cls: tmp_path / "home"))
+    return httpd, H
+
+
+def test_state_one_window_on_the_reviewed_commit_no_prompt(repo, tmp_path, monkeypatch):
+    r, _, head = repo
+    httpd, _ = _bridge(tmp_path, monkeypatch, r)
+    try:
+        got = srv.editor_state(head, str(r), "feature")
+    finally:
+        httpd.shutdown()
+    assert got["state"] == "on" and got["window"] == "repo" and got["prompt"] is None
+    assert "reviewed commit" in got["tip"] and "front" in got["tip"]
+    assert got["checkout"] == {"path": str(r), "branch": "feature", "head": head}
+
+
+def test_state_two_window_on_another_branch_offers_a_checkout_prompt(repo, tmp_path, monkeypatch):
+    r, first, head = repo
+    _git(r, "checkout", "-q", "-b", "elsewhere", first)
+    httpd, _ = _bridge(tmp_path, monkeypatch, r)
+    try:
+        got = srv.editor_state(head, str(r), "feature")
+    finally:
+        httpd.shutdown()
+    assert got["state"] == "near" and got["window"] == "repo"
+    assert "elsewhere @ " + first[:8] in got["tip"] and "behind" in got["tip"]
+    assert got["checkout"]["branch"] == "elsewhere"
+    assert got["prompt"] == (f"In {r}, check out branch feature at {head} (stash or commit "
+                             "local changes first if any; don't discard them), then confirm "
+                             "with git status.")
+    # Nothing was moved to find that out.
+    assert _git(r, "branch", "--show-current") == "elsewhere"
+
+
+def test_state_three_no_window_on_the_checkout(repo, tmp_path, monkeypatch):
+    r, _, head = repo
+    other = tmp_path / "other"
+    other.mkdir()
+    httpd, _ = _bridge(tmp_path, monkeypatch, other)
+    try:
+        got = srv.editor_state(head, str(r), "feature")
+    finally:
+        httpd.shutdown()
+    assert got["state"] == "off" and got["window"] is None and got["prompt"] is None
+    assert f"No VS Code window has {r} open" in got["tip"] and "open this checkout" in got["tip"]
+
+
+def test_the_colour_is_about_the_servers_checkout_not_the_one_the_page_names(
+        server, repo, monkeypatch):
+    r, _, _ = repo
+    asked = []
+    monkeypatch.setattr(srv, "ROOT", r)
+    monkeypatch.setattr(srv, "editor_state", lambda *a: asked.append(a) or {"state": "off", "tip": ""})
+    _call(server, "GET", f"{srv.EDITOR}?sha=abc&root=/elsewhere&branch=b")
+    assert asked == [("abc", str(r), "b")]
+
+
+def test_pressing_green_asks_that_window_to_raise_itself_and_opens_nothing(
+        repo, tmp_path, monkeypatch):
+    r, _, _ = repo
+    launched = []
+    monkeypatch.setattr(srv, "_launch", launched.append)
+    httpd, H = _bridge(tmp_path, monkeypatch, tmp_path)   # a window on the folder above it
+    try:
+        got = srv.open_editor(r)
+    finally:
+        httpd.shutdown()
+    assert got == {"how": "focused", "window": tmp_path.name}
+    assert H.pressed == ["/command?id=workbench.action.focusWindow"] and launched == []
+
+
+def test_an_older_bridge_gets_open_a_on_the_folder_it_has_not_on_the_checkout(
+        repo, tmp_path, monkeypatch):
+    r, _, _ = repo
+    launched = []
+    monkeypatch.setattr(srv, "_launch", launched.append)
+    httpd, _ = _bridge(tmp_path, monkeypatch, tmp_path, focus_ok=False)
+    try:
+        got = srv.open_editor(r)
+    finally:
+        httpd.shutdown()
+    # The one spelling VS Code matches to that window, so it is reused, not duplicated.
+    assert got["how"] == "focused" and launched == [str(tmp_path)]
+
+
+def test_pressing_red_opens_vs_code_on_the_checkout(repo, tmp_path, monkeypatch):
+    r, _, _ = repo
+    launched = []
+    monkeypatch.setattr(srv, "_launch", launched.append)
+    monkeypatch.setattr(srv.Path, "home", classmethod(lambda cls: tmp_path / "nobody"))
+    assert srv.open_editor(r) == {"how": "opened", "window": None}
+    assert launched == [r]

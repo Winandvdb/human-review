@@ -71,8 +71,9 @@ RERUN = "/__rerun__"
 # something. They share the lock and nothing else.
 RERUN_AI = "/__rerun_ai__"
 WATCH = "/__watch__"
-# Polled by the VSC badge beside `Served`: is any VS Code window on the commit this guide
-# quotes? A poll, so — like WATCH — it does not count as somebody using the server.
+# Polled by the VSC badge beside `Served`: is a VS Code window on this checkout, and is the
+# checkout on the commit this guide quotes? A poll, so — like WATCH — it does not count as
+# somebody using the server.
 EDITOR = "/__editor__"
 # Pressing that badge: open VS Code on the reviewed checkout, or bring forward the window
 # that already has it. The folder is the server's own ROOT, never one the page names, and
@@ -433,74 +434,170 @@ def _git(cwd, *args) -> str:
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
-def editor_state(sha, root, branch) -> dict:
-    """Which VS Code windows could take a click on this guide, as one of three colours.
-
-    `on`: a window's checkout has HEAD at the reviewed commit — every link opens.
-    `near`: this repository is open on the reviewed branch, at another commit — a link opens
-    only where the file has not changed since, the rest refuse with a prompt.
-    `off`: neither, or no window answers at all — clicks will refuse.
-
-    Asks the same bridges `review_open` does, but only `/ping` (which folders each window
-    shows), and reads the rest from git here: a badge that polls must not cost a window
-    a round of git calls every few seconds."""
-    pings = []
+def _pings(timeout=1.5):
+    """(registry entry, /ping answer) for every VS Code window whose bridge answers."""
+    out = []
     for f in sorted((Path.home() / ".walkie-talkie" / "ide").glob("vscode-*.json")):
         try:
             entry = json.loads(f.read_text())
             req = urllib.request.Request(f"http://127.0.0.1:{entry['port']}/ping",
                                          headers={"x-relay-token": entry["token"]})
-            with urllib.request.urlopen(req, timeout=1.5) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 ping = json.loads(r.read())
         except Exception:
             continue
         if ping.get("ok") and ping.get("app") == "vscode":
-            pings.append(ping.get("folders") or [])
+            out.append((entry, ping))
+    return out
+
+
+def _claim(folders, spellings) -> int:
+    """How specifically a window's folders claim a checkout: the length of the deepest
+    folder that *is* it or sits above it (~/workspace), 0 when none does. Both spellings
+    of each side, because a checkout reached through a symlink is one tree under two names."""
+    best = 0
+    for f in folders:
+        for p in (f.get("path"), f.get("realPath")):
+            if p and any((s + "/").startswith(p.rstrip("/") + "/") for s in spellings if s):
+                best = max(best, len(p))
+    return best
+
+
+def checkout_prompt(root, sha, branch) -> str:
+    """What to paste to a coding agent so `root` holds the reviewed commit. Words only: the
+    server and the editor never move a checkout themselves."""
+    what = f"branch {branch} at {sha}" if branch else f"commit {sha}"
+    return (f"In {root}, check out {what} (stash or commit local changes first if any; "
+            "don't discard them), then confirm with git status.")
+
+
+def editor_state(sha, root, branch) -> dict:
+    """Is there a VS Code window on *this checkout*, and is the checkout on the reviewed
+    commit? Three colours, and they are the three things a press on the badge will do:
+
+    `on`: a window has `root` open and HEAD is the reviewed commit — the press brings that
+    window to the front.
+    `near`: a window has `root` open but it is on another branch, or behind/ahead — the
+    press brings it forward and offers a prompt (`prompt`) to check the commit out.
+    `off`: no window has `root` — the press opens VS Code on it.
+
+    "Has it open" means a workspace folder that is the checkout or a directory above it,
+    the same claim `owning_windows` routes clicks by. It used to be "any window on any
+    checkout at this sha", which is a fact about links, not about the press: a window on
+    another clone at the same commit turned the badge green, the press then asked VS Code
+    for `root`, and VS Code — which only reuses a window whose folder *is* that path —
+    opened a new one. Other checkouts on the reviewed commit are still named in the tip,
+    because a file:line click does reach them.
+
+    `checkout` is where `root` is now and `reviewed` what the page quotes, so the page can
+    say both without asking again. Read with git here, not from the windows: a badge that
+    polls must not cost a window a round of git calls every few seconds."""
+    pings = _pings()
+    root = root or ""
+    real = os.path.realpath(root) if root else ""
+    head = _git(root, "rev-parse", "HEAD") if root else ""
+    on = (_git(root, "branch", "--show-current") or "detached") if head else ""
+    at = bool(head and sha and head.startswith(sha))
+    rel = ""
+    if head and sha and not at:
+        if subprocess.run(["git", "-C", root, "merge-base", "--is-ancestor", head, sha],
+                          capture_output=True).returncode == 0:
+            rel = "behind the reviewed commit"
+        elif subprocess.run(["git", "-C", root, "merge-base", "--is-ancestor", sha, head],
+                            capture_output=True).returncode == 0:
+            rel = "ahead of the reviewed commit"
+    prompt = checkout_prompt(root, sha, branch) if head and sha and not at else None
+    where = f"{on} @ {head[:8]}" + (f", {rel}" if rel else "")
+    wanted = f"{branch + ' @ ' if branch else ''}{sha[:8]}"
+    facts = {"checkout": {"path": root, "branch": on, "head": head},
+             "reviewed": {"branch": branch, "sha": sha}, "prompt": prompt,
+             "note": (f"This checkout is on {where}, not the reviewed {wanted}."
+                      if prompt else None)}
     if not pings:
-        return {"state": "off", "tip": "No VS Code window answers: is the victor-vsc "
-                "extension installed and a window open?"}
-    root_top = _git(root, "rev-parse", "--show-toplevel") if root else ""
-    origin = _git(root, "remote", "get-url", "origin") if root else ""
-    # Every checkout a window shows: the one each folder sits in, and the reviewed checkout
-    # itself when a window is opened on a directory above it (~/workspace).
-    tops = {}
-    for folders in pings:
-        for f in folders:
+        return {"state": "off", "window": None, **facts,
+                "tip": "No VS Code window answers: is the victor-vsc extension installed "
+                       "and a window open? Click: open this checkout in VS Code."}
+    holder, claim = None, 0
+    for _entry, ping in pings:
+        c = _claim(ping.get("folders") or [], (root, real))
+        if c > claim:
+            holder, claim = ping, c
+    name = holder and (holder.get("folder") or Path(root).name)
+    if holder and at:
+        return {"state": "on", "window": name, **facts,
+                "tip": f"VS Code window {name} has this checkout on the reviewed commit "
+                       f"({on} @ {head[:8]}). Click: bring that window to the front."}
+    if holder:
+        return {"state": "near", "window": name, **facts,
+                "tip": f"VS Code window {name} has this checkout, but on {where}, not "
+                       f"{wanted}: links open only files unchanged since. Click: bring it "
+                       "to the front and get a prompt that checks out the reviewed commit."}
+    # No window on the checkout. Say what *is* open, and which of it a link still reaches.
+    seen, there = [], []
+    for _entry, ping in pings:
+        for f in ping.get("folders") or []:
             d = f.get("realPath") or f.get("path") or ""
             top = d and _git(d, "rev-parse", "--show-toplevel")
-            if top:
-                tops.setdefault(top, f.get("name") or Path(top).name)
-            if root_top and any(p and (root_top + "/").startswith(p.rstrip("/") + "/")
-                                for p in (f.get("path"), f.get("realPath"))):
-                tops.setdefault(root_top, f.get("name") or Path(root_top).name)
-    near, seen = [], []
-    for top, name in sorted(tops.items()):
-        head = _git(top, "rev-parse", "HEAD")
-        on = _git(top, "branch", "--show-current") or "detached"
-        seen.append(f"{name} ({on} @ {head[:8] or '?'})")
-        if head and sha and head.startswith(sha):
-            return {"state": "on", "tip": f"VS Code window {name} is on this commit "
-                    f"({on} @ {head[:8]}): every link opens there."}
-        # Same repository: one checkout of it (worktrees and the reviewed checkout itself
-        # share objects), or a clone of the same origin. A `main` in another repo is not it.
-        same = (origin and _git(top, "remote", "get-url", "origin") == origin) \
-            or (sha and subprocess.run(["git", "-C", top, "cat-file", "-e", f"{sha}^{{commit}}"],
-                                       capture_output=True).returncode == 0)
-        if same and branch and on == branch:
-            near.append(f"{name} ({on} @ {head[:8]})")
-    if near:
-        return {"state": "near", "tip": f"VS Code has {branch} open at another commit: "
-                f"{', '.join(near)}, not {sha[:8]}. Links open only files unchanged since."}
-    return {"state": "off", "tip": f"No VS Code window is on {branch or 'this commit'} @ {sha[:8]}. "
-            f"Open: {', '.join(seen) if seen else 'nothing in a git checkout'}."}
+            if not top:
+                continue
+            h = _git(top, "rev-parse", "HEAD")
+            label = f"{f.get('name') or Path(top).name} " \
+                    f"({_git(top, 'branch', '--show-current') or 'detached'} @ {h[:8] or '?'})"
+            if label not in seen:
+                seen.append(label)
+            if h and sha and h.startswith(sha):
+                there.append(f.get("name") or Path(top).name)
+    tip = f"No VS Code window has {root or 'this checkout'} open. " \
+          f"Open: {', '.join(seen) if seen else 'nothing in a git checkout'}."
+    if there:
+        tip += f" Links still open in {', '.join(there)}, on the reviewed commit."
+    tip += " Click: open this checkout in VS Code."
+    if prompt:
+        tip += f" It is on {where}, so the click also offers a prompt to check out {wanted}."
+    return {"state": "off", "window": None, **facts, "tip": tip}
 
 
-def open_editor(root: Path) -> None:
+def focus_window(entry) -> bool:
+    """Ask one window's bridge to raise itself — `workbench.action.focusWindow`, the same
+    native raise `/open-file` does after showing a file. False from a bridge too old to
+    allow it (400), or one that does not answer."""
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{entry['port']}/command?id=workbench.action.focusWindow",
+            method="POST", data=b"", headers={"x-relay-token": entry["token"]})
+        return bool(json.loads(urllib.request.urlopen(req, timeout=3).read() or b"{}").get("ok"))
+    except Exception:
+        return False
+
+
+def _launch(folder) -> None:
     """`open -a`, not `code`: without VSCODE_IPC_HOOK_CLI the CLI can start a second VS Code
-    instead of a window in the running one, and on a folder already open `open` only
-    brings that window forward."""
-    subprocess.Popen(["open", "-a", "Visual Studio Code", str(root)],
+    instead of a window in the running one."""
+    subprocess.Popen(["open", "-a", "Visual Studio Code", str(folder)],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def open_editor(root: Path) -> dict:
+    """Bring forward the VS Code window that has `root` open, or open one on it.
+
+    Through the window itself when one has it: `open -a <root>` reaches VS Code as a Finder
+    "open this", which prefers a new window and reuses one only when its folder is exactly
+    `root` — so a window opened on ~/workspace, or on a multi-root workspace holding the
+    checkout, got a duplicate beside it. The bridge knows which window it is and raises it.
+    A bridge from before it allowed that gets `open -a` on the folder *it* reports, the one
+    spelling VS Code matches to that window. Nothing in git is touched either way."""
+    root = Path(root)
+    for candidate in dict.fromkeys((root, root.resolve())):
+        for entry, info in owning_windows(candidate):
+            name = info.get("folder") or root.name
+            if focus_window(entry):
+                return {"how": "focused", "window": name}
+            folders = info.get("folders") or []
+            if len(folders) == 1 and folders[0].get("path"):
+                _launch(folders[0]["path"])
+                return {"how": "focused", "window": name}
+    _launch(root)
+    return {"how": "opened", "window": None}
 
 
 def reveal_in_finder(path: Path) -> None:
@@ -1388,8 +1485,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if ROOT is None or not Path(ROOT).is_dir():
                 self.reply_text("this page was not served from a checkout", 404)
                 return
-            open_editor(Path(ROOT))
-            self.reply_json({"opened": str(ROOT)})
+            # `how` says which it was — the page words its toast on it — and the prompt
+            # the page then offers comes from the poll, which already holds those facts.
+            self.reply_json({"opened": str(ROOT), **(open_editor(Path(ROOT)) or {})})
             return
         if route == REVEAL:
             try:
@@ -1462,7 +1560,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.reply_text(problem, 403)
                 return
             q = urllib.parse.parse_qs(self.path.partition("?")[2])
-            self.reply_json(editor_state(q.get("sha", [""])[0], q.get("root", [""])[0],
+            # The server's own checkout over the one the page names: the press opens ROOT,
+            # so the colour has to be about ROOT, or green and the press disagree again.
+            self.reply_json(editor_state(q.get("sha", [""])[0],
+                                         str(ROOT) if ROOT else q.get("root", [""])[0],
                                          q.get("branch", [""])[0]))
             return
         if watching:

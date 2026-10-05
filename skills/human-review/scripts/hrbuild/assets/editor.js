@@ -321,38 +321,101 @@
     copy(ref).then(function () { flash('Copied ' + ref + ' — paste into Quick Open (\u2318P)'); });
   });
 
-  // The VSC badge beside `Served`: will a file:line click reach a VS Code window on the
-  // reviewed commit? Asked again every few seconds while the tab is visible, because the
-  // answer changes under the page — a window opened, a branch switched, a commit made.
+  // The VSC badge beside `Served`: is a VS Code window on this checkout, and is the checkout
+  // on the reviewed commit? Asked again every few seconds while the tab is visible, because
+  // the answer changes under the page — a window opened, a branch switched, a commit made.
+  // The tip is the server's whole sentence, the state included: the colour alone cannot
+  // say *which* branch the window is on.
   window.HR.onready(function (caps) {
     var chip = document.getElementById('hr-vsc');
     if (!caps || !chip || !STAMP.hrHead) return;
+    var last = null;
     function ask() {
-      if (document.hidden) return;
-      fetch('/__editor__?' + commitQuery(), {cache: 'no-store'})
+      if (document.hidden) return Promise.resolve(last);
+      return fetch('/__editor__?' + commitQuery(), {cache: 'no-store'})
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) {
-          if (!j) return;
+          if (!j) return last;
+          last = j;
           chip.classList.remove('vsc-on', 'vsc-near', 'vsc-off');
           chip.classList.add('vsc-' + j.state);
-          chip.setAttribute('data-tip', j.tip + ' Click: open this checkout in VS Code.');
+          chip.setAttribute('data-tip', j.tip);
           chip.hidden = false;
+          return j;
         })
-        .catch(function () { chip.hidden = true; });
+        .catch(function () { chip.hidden = true; return null; });
     }
-    // Pressing it opens VS Code on the reviewed checkout — the server's own folder, not
-    // one this page names — or brings forward the window that already has it. Nothing
-    // is checked out; the next poll says what colour that left it.
+    // The checkout is not on the reviewed commit: say so beside the badge, with the prompt
+    // that would fix it and one 📋 that copies it. Words only — neither the server nor the
+    // editor checks anything out — and it stays until it is copied or dismissed, because a
+    // button that fades in 2.6 seconds is a button nobody manages to press.
+    var pop = null;
+    function closePop() { if (pop) { pop.remove(); pop = null; } }
+    function offerCheckout(j) {
+      closePop();
+      pop = document.createElement('div');
+      pop.id = 'hr-vsc-pop';
+      pop.setAttribute('role', 'dialog');
+      var say = document.createElement('p');
+      say.textContent = (j.note || 'This checkout is not on the reviewed commit.')
+        + ' Paste this to a coding agent:';
+      var code = document.createElement('code');
+      code.textContent = j.prompt;
+      var row = document.createElement('div');
+      row.className = 'vp-row';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'vp-copy';
+      b.textContent = '\ud83d\udccb Copy prompt';
+      b.addEventListener('click', function () {
+        copy(j.prompt).then(function () { flash('Copied \u2014 paste it to an agent'); closePop(); });
+      });
+      var x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'vp-close';
+      x.setAttribute('aria-label', 'Dismiss');
+      x.textContent = '\u00d7';
+      x.addEventListener('click', closePop);
+      row.appendChild(b);
+      row.appendChild(x);
+      pop.appendChild(say);
+      pop.appendChild(code);
+      pop.appendChild(row);
+      document.body.appendChild(pop);
+      // The badge's own tip is still up under the pointer that pressed it, and it opens
+      // below a chip this close to the top, i.e. over this. tip.js hides on focusout.
+      chip.dispatchEvent(new FocusEvent('focusout', {bubbles: true}));
+      // Under the badge, kept on screen: the masthead row can sit anywhere across the width.
+      var r = chip.getBoundingClientRect();
+      pop.style.top = Math.round(r.bottom + 6) + 'px';
+      pop.style.left = Math.max(8, Math.min(Math.round(r.left),
+        window.innerWidth - pop.offsetWidth - 8)) + 'px';
+    }
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closePop(); });
+    document.addEventListener('click', function (ev) {
+      if (pop && !pop.contains(ev.target) && ev.target !== chip) closePop();
+    });
+    // Pressing it brings forward the window that has this checkout, or opens VS Code on it
+    // — the server's own folder, not one this page names. Nothing is checked out; when the
+    // checkout is on another branch or commit, the press ends in the prompt above instead.
     chip.addEventListener('click', function () {
-      fetch('/__editor_open__', {
+      var opened = fetch('/__editor_open__', {
         method: 'POST', cache: 'no-store',
         headers: {'Content-Type': 'application/json',
                   'X-Human-Review-Token': caps.token || ''},
         body: '{}'
       }).then(function (r) {
-        return r.ok ? r.json().then(function (j) { flash('Opening VS Code on ' + j.opened); })
-                    : r.text().then(function (t) { flash(t || 'the review server refused'); });
-      }).catch(function () { flash('the review server is no longer running'); });
+        return r.ok ? r.json().then(function (j) {
+          flash(j.how === 'focused' ? 'Bringing VS Code window ' + (j.window || '') + ' to the front'
+                                    : 'Opening VS Code on ' + j.opened);
+          return true;
+        }) : r.text().then(function (t) { flash(t || 'the review server refused'); return false; });
+      }).catch(function () { flash('the review server is no longer running'); return false; });
+      // Asked afresh, not read off the last poll: a branch switched two seconds ago is
+      // exactly the case this prompt is for.
+      Promise.all([opened, ask()]).then(function (both) {
+        if (both[0] && both[1] && both[1].prompt) offerCheckout(both[1]);
+      });
       setTimeout(ask, 3000);
     });
     ask();

@@ -1,14 +1,65 @@
 {
- "base": "72d7a4afd69f33c04d267ada4ff022d817452633",
+ "base": "33977c2c2f7b0ac4ab3b8c621a22341074b5a128",
  "head": "HEAD",
  "points_file": "review-points.md",
- "commits": 66,
+ "commits": 73,
  "implementation": "1bcf74d4f14a165cabaaa7e9cd1cc5faaa3311b1",
  "review": "be762955d5f477feeca0f7db55e32fa1c2fb8db5",
  "session": "82329d0a-55d2-448f-aff5-0363cf80b32f",
  "fallback": false,
- "after": [],
- "after_detail": [],
+ "after": [
+  "0c3f5d70179f77d35437bcd0d61f1353970b96b7",
+  "ca6b33ed3c2b821ef944d68ffab08468c852852f",
+  "5a4cf83fdf32f732f0333fa67609333a21c74c48",
+  "20e1df3268305e23809c8944eeb8e338af699cb4",
+  "51500ddc8ccb8600bb5ac333f5ccffacc27cc4e6",
+  "1044914d4bece7d7becbf7c3fa398ffdc1182c28",
+  "5f84b2cdf4dbcbebf70b7a398bba00e9aa04e236"
+ ],
+ "after_detail": [
+  {
+   "sha": "0c3f5d70179f77d35437bcd0d61f1353970b96b7",
+   "when": "2026-10-05T20:53:07+03:00",
+   "subject": "conceptual-model-patch: a new line is one straight red segment, laid out by a human",
+   "auto_fix": false
+  },
+  {
+   "sha": "ca6b33ed3c2b821ef944d68ffab08468c852852f",
+   "when": "2026-10-05T20:53:40+03:00",
+   "subject": "Conceptual model: Visit\u2013Vet drawn by the patch script as a straight line, to be laid out by hand",
+   "auto_fix": false
+  },
+  {
+   "sha": "5a4cf83fdf32f732f0333fa67609333a21c74c48",
+   "when": "2026-10-05T20:58:45+03:00",
+   "subject": "Maven modules diagram: the caption names the command and the file, nothing more",
+   "auto_fix": false
+  },
+  {
+   "sha": "20e1df3268305e23809c8944eeb8e338af699cb4",
+   "when": "2026-10-05T21:01:15+03:00",
+   "subject": "Log the booked visit id and the attending vet",
+   "auto_fix": false
+  },
+  {
+   "sha": "51500ddc8ccb8600bb5ac333f5ccffacc27cc4e6",
+   "when": "2026-10-05T21:04:15+03:00",
+   "subject": "UX: Edit Visit's vet field as a native select, to show a design-system violation",
+   "auto_fix": false
+  },
+  {
+   "sha": "1044914d4bece7d7becbf7c3fa398ffdc1182c28",
+   "when": "2026-10-05T21:04:36+03:00",
+   "subject": "Merge remote-tracking branch 'origin/main' into test-pr",
+   "auto_fix": false
+  },
+  {
+   "sha": "5f84b2cdf4dbcbebf70b7a398bba00e9aa04e236",
+   "when": "2026-10-05T21:05:06+03:00",
+   "subject": "review-points: base moves to 33977c2c after merging main",
+   "auto_fix": false
+  }
+ ],
  "review_when": "2026-10-05T20:16:43+03:00",
  "takeover": null,
  "auto_fixes": [

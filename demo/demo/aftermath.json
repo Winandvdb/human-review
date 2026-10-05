@@ -1,7 +1,7 @@
 {
  "review": "be762955d5f477feeca0f7db55e32fa1c2fb8db5",
  "review_short": "be762955",
- "head": "be762955d5f477feeca0f7db55e32fa1c2fb8db5",
+ "head": "5f84b2cdf4dbcbebf70b7a398bba00e9aa04e236",
  "takeover": null,
  "generated_globs": [
   "**/generated/**",
@@ -28,22 +28,183 @@
   "**/poetry.lock",
   ".human-review/**"
  ],
- "commits": [],
- "totals": {
-  "commits": 0,
-  "files": 0,
-  "added": 0,
-  "deleted": 0,
-  "code": {
-   "files": 0,
+ "commits": [
+  {
+   "sha": "0c3f5d70179f77d35437bcd0d61f1353970b96b7",
+   "short": "0c3f5d70",
+   "when": "2026-10-05T20:53:07+03:00",
+   "subject": "conceptual-model-patch: a new line is one straight red segment, laid out by a human",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/README.md",
+     "added": 5,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-backend/docs/scripts/conceptual-model-patch.py",
+     "added": 39,
+     "deleted": 18,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-backend/src/test/java/victor/training/petclinic/guardrail/ConceptualModelDiagramTest.java",
+     "added": 2,
+     "deleted": 1,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 46,
+   "deleted": 19,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "ca6b33ed3c2b821ef944d68ffab08468c852852f",
+   "short": "ca6b33ed",
+   "when": "2026-10-05T20:53:40+03:00",
+   "subject": "Conceptual model: Visit\u2013Vet drawn by the patch script as a straight line, to be laid out by hand",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/ConceptualModel.drawio.png",
+     "added": 0,
+     "deleted": 0,
+     "binary": true,
+     "generated": true
+    }
+   ],
    "added": 0,
-   "deleted": 0
+   "deleted": 0,
+   "generated_only": true,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "5a4cf83fdf32f732f0333fa67609333a21c74c48",
+   "short": "5a4cf83f",
+   "when": "2026-10-05T20:58:45+03:00",
+   "subject": "Maven modules diagram: the caption names the command and the file, nothing more",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/generated/MavenModules.puml",
+     "added": 2,
+     "deleted": 2,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/scripts/mavenmodules/maven_modules_to_puml.py",
+     "added": 4,
+     "deleted": 4,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 6,
+   "deleted": 6,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "20e1df3268305e23809c8944eeb8e338af699cb4",
+   "short": "20e1df32",
+   "when": "2026-10-05T21:01:15+03:00",
+   "subject": "Log the booked visit id and the attending vet",
+   "files": [
+    {
+     "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
+     "added": 12,
+     "deleted": 1,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 12,
+   "deleted": 1,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "51500ddc8ccb8600bb5ac333f5ccffacc27cc4e6",
+   "short": "51500ddc",
+   "when": "2026-10-05T21:04:15+03:00",
+   "subject": "UX: Edit Visit's vet field as a native select, to show a design-system violation",
+   "files": [
+    {
+     "path": "petclinic-frontend/src/app/visits/visit-edit/visit-edit.component.html",
+     "added": 9,
+     "deleted": 2,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 9,
+   "deleted": 2,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "1044914d4bece7d7becbf7c3fa398ffdc1182c28",
+   "short": "1044914d",
+   "when": "2026-10-05T21:04:36+03:00",
+   "subject": "Merge remote-tracking branch 'origin/main' into test-pr",
+   "files": [],
+   "added": 0,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": false,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "5f84b2cdf4dbcbebf70b7a398bba00e9aa04e236",
+   "short": "5f84b2cd",
+   "when": "2026-10-05T21:05:06+03:00",
+   "subject": "review-points: base moves to 33977c2c after merging main",
+   "files": [
+    {
+     "path": "review-points.md",
+     "added": 2,
+     "deleted": 2,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 2,
+   "deleted": 2,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  }
+ ],
+ "totals": {
+  "commits": 7,
+  "files": 9,
+  "added": 75,
+  "deleted": 30,
+  "code": {
+   "files": 7,
+   "added": 73,
+   "deleted": 28
   },
   "generated": {
-   "files": 0,
-   "added": 0,
-   "deleted": 0
+   "files": 2,
+   "added": 2,
+   "deleted": 2
   }
  },
- "clean": true
+ "clean": false
 }

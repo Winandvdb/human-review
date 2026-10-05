@@ -74,6 +74,10 @@ WATCH = "/__watch__"
 # Polled by the VSC badge beside `Served`: is any VS Code window on the commit this guide
 # quotes? A poll, so — like WATCH — it does not count as somebody using the server.
 EDITOR = "/__editor__"
+# Pressing that badge: open VS Code on the reviewed checkout, or bring forward the window
+# that already has it. The folder is the server's own ROOT, never one the page names, and
+# nothing in git is touched — no checkout, no branch switch, whatever commit it is on.
+EDITOR_OPEN = "/__editor_open__"
 
 # The page asks "is there a review server here?" and a *wrong* yes is expensive: the demo
 # published on GitHub Pages is https, so the protocol check this replaced said yes, and
@@ -483,6 +487,14 @@ def editor_state(sha, root, branch) -> dict:
                 f"{', '.join(near)}, not {sha[:8]}. Links open only files unchanged since."}
     return {"state": "off", "tip": f"No VS Code window is on {branch or 'this commit'} @ {sha[:8]}. "
             f"Open: {', '.join(seen) if seen else 'nothing in a git checkout'}."}
+
+
+def open_editor(root: Path) -> None:
+    """`open -a`, not `code`: without VSCODE_IPC_HOOK_CLI the CLI can start a second VS Code
+    instead of a window in the running one, and on a folder already open `open` only
+    brings that window forward."""
+    subprocess.Popen(["open", "-a", "Visual Studio Code", str(root)],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def bridge_diff(target: Path, sha: str, line: int) -> bool:
@@ -1314,7 +1326,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         Handler.last_seen = time.time()
         route = self.path.split("?")[0]
-        if route not in (RUN, RERUN, RERUN_AI):
+        if route not in (RUN, RERUN, RERUN_AI, EDITOR_OPEN):
             self.reply_text("no", 404)
             return
         problem = refuse_reason(self.headers)
@@ -1338,6 +1350,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             raw = self.rfile.read(length) or b"{}"
         except Exception:
             self.reply_text("could not read the request body", 400)
+            return
+        if route == EDITOR_OPEN:
+            if ROOT is None or not Path(ROOT).is_dir():
+                self.reply_text("this page was not served from a checkout", 404)
+                return
+            open_editor(Path(ROOT))
+            self.reply_json({"opened": str(ROOT)})
             return
         if route in (RERUN, RERUN_AI):
             # No id and no parameters: there is exactly one thing each of these asks for,

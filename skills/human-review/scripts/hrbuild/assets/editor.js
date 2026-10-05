@@ -335,11 +335,26 @@
           if (!j) return;
           chip.classList.remove('vsc-on', 'vsc-near', 'vsc-off');
           chip.classList.add('vsc-' + j.state);
-          chip.setAttribute('data-tip', j.tip);
+          chip.setAttribute('data-tip', j.tip + ' Click: open this checkout in VS Code.');
           chip.hidden = false;
         })
         .catch(function () { chip.hidden = true; });
     }
+    // Pressing it opens VS Code on the reviewed checkout — the server's own folder, not
+    // one this page names — or brings forward the window that already has it. Nothing
+    // is checked out; the next poll says what colour that left it.
+    chip.addEventListener('click', function () {
+      fetch('/__editor_open__', {
+        method: 'POST', cache: 'no-store',
+        headers: {'Content-Type': 'application/json',
+                  'X-Human-Review-Token': caps.token || ''},
+        body: '{}'
+      }).then(function (r) {
+        return r.ok ? r.json().then(function (j) { flash('Opening VS Code on ' + j.opened); })
+                    : r.text().then(function (t) { flash(t || 'the review server refused'); });
+      }).catch(function () { flash('the review server is no longer running'); });
+      setTimeout(ask, 3000);
+    });
     ask();
     setInterval(ask, 5000);
     document.addEventListener('visibilitychange', ask);

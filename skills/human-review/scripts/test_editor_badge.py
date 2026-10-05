@@ -123,3 +123,26 @@ def test_the_endpoint_answers_the_page_and_is_not_use(server, monkeypatch):
     assert asked == [("abc", "/r", "b")]
     # Polled every few seconds by an open tab: like the watch poll, it keeps no server alive.
     assert srv.Handler.last_seen == before
+
+
+def test_pressing_the_badge_opens_the_servers_own_checkout_and_nothing_else(
+        server, tmp_path, monkeypatch):
+    opened = []
+    monkeypatch.setattr(srv, "open_editor", opened.append)
+    monkeypatch.setattr(srv, "ROOT", tmp_path)
+
+    # A folder in the body is ignored: the page cannot point the server at another one.
+    status, payload = _call(server, "POST", srv.EDITOR_OPEN, {"root": "/etc"})
+
+    assert status == 200 and json.loads(payload) == {"opened": str(tmp_path)}
+    assert opened == [tmp_path]
+
+
+def test_the_badge_cannot_be_pressed_from_another_page(server, tmp_path, monkeypatch):
+    opened = []
+    monkeypatch.setattr(srv, "open_editor", opened.append)
+    monkeypatch.setattr(srv, "ROOT", tmp_path)
+
+    status, _ = _call(server, "POST", srv.EDITOR_OPEN, {}, {"X-Human-Review-Token": "guess"})
+
+    assert status == 403 and opened == []

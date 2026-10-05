@@ -328,7 +328,7 @@ button.chip-rerun-ai .rr-ico { font-size:1em; vertical-align:-.05em; }
 .titlerow .chip-vsc[hidden], .titlerow .chip-mode[hidden], .titlerow .chip-serve[hidden], .titlerow .chip-rerun[hidden] { display:none; }
 /* Can a click on a file:line reach VS Code at the reviewed commit? Green: a window is on it.
    Amber: the branch is open at another commit, so only unchanged files open. Red: no window. */
-.chip-vsc { font-weight:600; letter-spacing:.04em; cursor:default; }
+.chip-vsc { font-weight:600; letter-spacing:.04em; cursor:pointer; }
 .chip-vsc.vsc-on { color:#2e7d32; border-color:#2e7d32; }
 .chip-vsc.vsc-near { color:#b26a00; border-color:#b26a00; }
 .chip-vsc.vsc-off { color:#c62828; border-color:#c62828; }

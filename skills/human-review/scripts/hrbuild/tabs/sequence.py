@@ -953,6 +953,10 @@ TRACE_SHOT_META = "assets/sequence.trace.json"
 #: The three steps from a test to the picture of it, for a reader who has never met a
 #: trace. Tiny on purpose, and free of the machinery — no script, no file, no command: the
 #: reviewer is busy, and what they lack is the two words, not the plumbing.
+# The answer, inside the summary: a <details> shows nothing outside its <summary> while
+# shut, and Victor wants the subtitle to say where the pictures come from without a click.
+TRACE_ANSWER = ('From <a href="https://opentelemetry.io/" target="_blank" rel="noopener">'
+                "OpenTelemetry</a> recordings of end-to-end tests.")
 TRACE_HOW = (
     "The tests ran against the real app, with OpenTelemetry tracing switched on.",
     "Each HTTP call and database query was recorded as a <dfn>span</dfn>: who called whom, "
@@ -991,7 +995,7 @@ def _trace_shot_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
     else:
         said = "A trace of this run, in Grafana Tempo."
     alt = f"A trace in Grafana Tempo{': ' + name if name else ''}"
-    # No fold of its own: one inside "How were these produced?" was a second click for a
+    # No fold of its own: one inside "How were these captured?" was a second click for a
     # reader who had already asked how — the picture is the answer's last line.
     return ('<div class="seqhow-shot">'
             f'<p class="seqhow-cap">{said}</p>'
@@ -1002,7 +1006,8 @@ def _trace_shot_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
 
 
 def trace_how_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
-    """"How were these produced?" — shut, as the subtitle under the tab's title.
+    """"How were these captured?" — shut, as the subtitle under the tab's title, with its
+    one-line answer beside it so the subtitle reads without being opened.
 
     The diagrams on this tab are drawn from OpenTelemetry traces, and nothing on the page
     said so: a reader who does not know what a trace is met a column of arrows with no
@@ -1011,7 +1016,8 @@ def trace_how_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
     height for it; the picture of a real trace right under them, for whoever wants to see
     the thing the three lines describe."""
     steps = "".join(f"<li>{s}</li>" for s in TRACE_HOW)
-    return ('<details class="seqhow tabsub"><summary>How were these produced?</summary>'
+    return ('<details class="seqhow tabsub"><summary>How were these captured?'
+            f'<span class="seqhow-ans">{TRACE_ANSWER}</span></summary>'
             f"<ol>{steps}</ol>" + _trace_shot_html(out_dir, root, shown) + "</details>")
 
 

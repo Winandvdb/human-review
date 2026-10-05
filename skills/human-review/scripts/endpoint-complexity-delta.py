@@ -198,6 +198,10 @@ def _split(key: str) -> tuple[str, str]:
 
 
 SONAR_COGNITIVE = "https://www.sonarsource.com/resources/cognitive-complexity/"
+# The extractor both snapshots come from, on GitHub: the repository is public, and a
+# reader forwarded the page has no checkout of this skill to open it in.
+EXTRACTOR_URL = ("https://github.com/victorrentea/human-review/blob/main/"
+                 "skills/human-review/scripts/endpoint-complexity.py")
 
 
 def _graph(nodes, groups=()) -> tuple[str, set[str]]:
@@ -535,7 +539,15 @@ def render(rows, base="main") -> str:
         # size and dress as every other tab that opens on a title.
         f'<h2 class="tabtitle cx-title"><a href="{SONAR_COGNITIVE}" target="_blank" '
         'rel="noopener">Cognitive Complexity</a> per Entry Point</h2>'
-        '<p class="tabsub cx-lede">Computed by traversing the syntax of the Java source files.</p>',
+        # Victor, 5 Oct 2026: name what computes it. Nothing parses Java here: the
+        # extractor is this skill's own script, regular expressions over the sources with
+        # comments and literals blanked and nesting counted by braces — so the line says
+        # that, rather than the syntax tree the old wording implied.
+        f'<p class="tabsub cx-lede">Computed by <a href="{EXTRACTOR_URL}" target="_blank" '
+        'rel="noopener">endpoint-complexity.py</a> from regular expressions over the Java '
+        "sources (no parser, no syntax tree), scored as "
+        f'<a href="{SONAR_COGNITIVE}" target="_blank" rel="noopener">SonarSource</a> '
+        "defines it.</p>",
     ]
     known = {kind for kind, _ in KIND_TITLES}
     groups = KIND_TITLES + [
@@ -625,6 +637,8 @@ CSS = """
     the colour names the author of the change, it is not a verdict — and a simpler flow
     painted in alarm red read as an alarm. */
 .cx-title a { color:var(--link); }
+.cx-lede a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.cx-lede a:hover { color:var(--link); }
 .cx-lede { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; }
 .cx-group { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; }
 .cx-group + .cx-group { margin-top:1.1rem; }

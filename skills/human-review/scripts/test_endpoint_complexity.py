@@ -596,8 +596,16 @@ def test_a_node_folds_open_onto_its_own_lines_and_only_the_arrow_navigates():
     assert re.search(r'<h2 class="tabtitle cx-title"><a href="[^"]*sonarsource'
                      r'\.com/resources/cognitive-complexity[^"]*"[^>]*>Cognitive Complexity</a>'
                      r' per Entry Point</h2>', page)
-    assert ('<p class="tabsub cx-lede">Computed by traversing the syntax of the Java source '
-            'files.</p>') in page
+    # The subtitle names what actually computes the number, linked, and says it is no parser.
+    lede = page[page.index('<p class="tabsub cx-lede">'):]
+    lede = lede[:lede.index("</p>")]
+    assert lede.startswith('<p class="tabsub cx-lede">Computed by <a href="https://github.com/'
+                           'victorrentea/human-review/blob/main/skills/human-review/scripts/'
+                           'endpoint-complexity.py" target="_blank" rel="noopener">'
+                           'endpoint-complexity.py</a>')
+    assert "regular expressions over the Java sources (no parser, no syntax tree)" in lede
+    assert re.search(r'scored as <a href="[^"]*sonarsource\.com[^"]*"[^>]*>SonarSource</a> '
+                     r'defines it\.$', lede)
     assert "Click ▸" not in page
     assert re.search(r"\.cg-open > \.cg-lines \{[^}]*display:block", delta.CSS)
     assert "border-left:6px solid var(--cg-arrow)" in delta.CSS, "edges end in arrowheads"

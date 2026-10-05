@@ -4642,7 +4642,7 @@ def _git(cwd, *args):
                    check=True, capture_output=True)
 
 
-# ── "How were these produced?" ──────────────────────────────────────────────────────
+# ── "How were these captured?" ──────────────────────────────────────────────────────
 # Victor, 4 Oct 2026: the page's readers do not know what an OpenTelemetry trace is, and
 # even he, looking at the Sequence tab, could not tell how its diagrams had been made.
 
@@ -4689,7 +4689,11 @@ def test_the_tab_opens_on_how_its_pictures_were_made_shut_and_without_a_shot_off
                              '</h2><details class="seqhow tabsub">'), \
         "with one, the title's subtitle: right under it"
     how = _how(out)
-    assert "<summary>How were these produced?</summary>" in how
+    summary = how[how.index("<summary>"):how.index("</summary>")]
+    assert summary.startswith("<summary>How were these captured?"), "the question is the handle"
+    # Victor, 5 Oct 2026: the answer reads without opening the fold, on the question's line.
+    assert ('<span class="seqhow-ans">From <a href="https://opentelemetry.io/" target="_blank"'
+            ' rel="noopener">OpenTelemetry</a> recordings of end-to-end tests.</span>') in summary
     assert how.count("<li>") == 3, "three steps, no more"
     assert "OpenTelemetry" in how and "<dfn>span</dfn>" in how and "<dfn>trace</dfn>" in how
     # No machinery in it: the reviewer is busy, and the two words are what they lack.

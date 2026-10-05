@@ -196,7 +196,8 @@ from hrbuild.tabs.sequence import (
     SEQ_SELECTION, SEQ_WHY, sequence_selection, _slug, picked_for, _why_chip, _names,
     selection_note_html, SEQ_ALSO, ledger_status, SEL_INLINE, _sel_item, _sel_name,
     SEQ_TOUCHED, touched_via, _branch_changed, _direct_imports, _TS_IMPORT, _JAVA_IMPORT,
-    TRACE_SHOT, TRACE_SHOT_META, TRACE_HOW, trace_how_html, _trace_shot_html
+    TRACE_SHOT, TRACE_SHOT_META, TRACE_ANSWER, TRACE_HOW, trace_how_html,
+    _trace_shot_html
 )
 from hrbuild.tabs.tests import (
     LEDGER_TAB, render_requirements, render_test_ledger, render_tests, render_traces,

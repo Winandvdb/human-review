@@ -141,7 +141,7 @@ details.seqsel-k > ul { margin:.3rem 0 .2rem; padding:.4rem .6rem .4rem 1.6rem; 
 details.seqsel-k > ul > li { break-inside:avoid; }
 .seqsel code { font-size:.92em; overflow-wrap:anywhere; }
 .seqsel-f { color:var(--muted); font-size:.92em; }
-/* "How were these produced?" — the subtitle under the tab's title, shut (`.tabsub`, core.css,
+/* "How were these captured?" — the subtitle under the tab's title, shut (`.tabsub`, core.css,
    gives it the size, the colour and the air under it). Set as a quiet control, not a
    heading: a reader who knows what a trace is pays one muted line for it, and the fold's ▸
    says there is more without saying it loudly. Opened, what it explains reads in the
@@ -153,6 +153,13 @@ details.seqhow > summary::-webkit-details-marker { display:none; }
 details.seqhow > summary::before { content:"\25B8\FE0E"; font-size:.75rem; }
 details.seqhow[open] > summary::before { content:"\25BE\FE0E"; }
 details.seqhow > summary:hover { color:var(--link); }
+/* Its answer, on the same line and in the same grey: inside the summary, because a shut
+   <details> shows nothing else, but not part of the control — hovering it does not light
+   the question up, and its one link is underlined in the subtitle's own ink, as the
+   CODEOWNERS subtitle's is. */
+details.seqhow > summary > .seqhow-ans { color:var(--muted); }
+.seqhow-ans a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.seqhow-ans a:hover { color:var(--link); }
 details.seqhow > ol { margin:.35rem 0 .45rem; padding-left:1.5rem; color:var(--fg); }
 details.seqhow > ol > li { margin:.1rem 0; }
 /* The two words the fold exists to define, set as what they are: a definition, in the

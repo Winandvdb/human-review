@@ -3850,6 +3850,7 @@ def test_a_trace_row_is_addressed_by_its_test_and_the_header_says_which_page_thi
     line = html.unescape(m.group(1))
     assert line.startswith("cd ") and "serve-review.py" in line and "--page review.html" in line
     assert 'u="$(' in line and 'open "$u"' in line and "7654" not in line
+    assert line.endswith(' && exit'), "the server is detached: the terminal closes behind it"
     assert "if (serveChip) serveChip.hidden = true;" in page, "served: nothing left to copy"
     assert "chip.textContent = 'Served'" in page
     # And in the tab strip, where a reader picks between several of these — one per

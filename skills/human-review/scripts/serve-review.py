@@ -78,6 +78,9 @@ EDITOR = "/__editor__"
 # that already has it. The folder is the server's own ROOT, never one the page names, and
 # nothing in git is touched — no checkout, no branch switch, whatever commit it is on.
 EDITOR_OPEN = "/__editor_open__"
+# The red ■ beside `Served`: shut this server down now instead of waiting out
+# `--idle-minutes`. The page that pressed it stays on screen, and falls back to static.
+STOP = "/__stop__"
 
 # The page asks "is there a review server here?" and a *wrong* yes is expensive: the demo
 # published on GitHub Pages is https, so the protocol check this replaced said yes, and
@@ -1326,7 +1329,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         Handler.last_seen = time.time()
         route = self.path.split("?")[0]
-        if route not in (RUN, RERUN, RERUN_AI, EDITOR_OPEN):
+        if route not in (RUN, RERUN, RERUN_AI, EDITOR_OPEN, STOP):
             self.reply_text("no", 404)
             return
         problem = refuse_reason(self.headers)
@@ -1350,6 +1353,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             raw = self.rfile.read(length) or b"{}"
         except Exception:
             self.reply_text("could not read the request body", 400)
+            return
+        if route == STOP:
+            # Not under a run: `start-docker.sh up` is a child of this process, and the
+            # reaper refuses to orphan it for the same reason.
+            if runs_in_flight():
+                self.reply_text("a run is still going — stop it after it finishes", 409)
+                return
+            self.reply_json({"stopping": os.getpid()})
+            # From another thread: shutdown() waits for serve_forever, which is waiting
+            # for this very handler to return.
+            threading.Thread(target=Handler.httpd.shutdown, daemon=True).start()
             return
         if route == EDITOR_OPEN:
             if ROOT is None or not Path(ROOT).is_dir():
@@ -1452,6 +1466,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                              "pid": os.getpid(), "hits": Handler.hits,
                              "opens": Handler.opens, "runs": Handler.runs,
                              "token": Handler.token,
+                             "stop": True,
                              # The baseline the page was served against. Empty when
                              # nothing is watching, which is how the page knows not to
                              # poll — a build that stopped watching takes the reload
@@ -1665,6 +1680,7 @@ def serve(directory, port, idle_minutes, watch=True):
     handler = functools.partial(Handler, directory=directory)
     socketserver.TCPServer.allow_reuse_address = True
     httpd = socketserver.ThreadingTCPServer(("127.0.0.1", port), handler)
+    Handler.httpd = httpd
     # Recorded once the port is ours, and before the watcher takes its baseline — so the
     # write is part of the tree it starts from rather than a "change" that reloads the page.
     write_identity(Path(directory), port)

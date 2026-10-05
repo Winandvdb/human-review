@@ -326,6 +326,15 @@ button.chip-rerun-ai .rr-ico { font-size:1em; vertical-align:-.05em; }
    pills beside the title take no more of its width than they must. */
 .titlerow .chip-rerun { padding-left:.5rem; padding-right:.5rem; }
 .titlerow .chip-vsc[hidden], .titlerow .chip-mode[hidden], .titlerow .chip-serve[hidden], .titlerow .chip-rerun[hidden] { display:none; }
+/* Stop: the small red ■ beside `Served`. Square and quiet, a control and not a verdict. */
+.titlerow .chip-stop { flex:0 0 auto; align-self:center; box-sizing:border-box;
+            width:1.75rem; height:1.75rem; padding:0; border-radius:999px; border:1px solid #c62828;
+            background:none; color:#c62828; font-size:.7rem; line-height:1; cursor:pointer;
+            margin-left:-.25rem; }
+.titlerow .chip-stop:hover:not(:disabled) { background:#c62828; color:#fff; }
+.titlerow .chip-stop:disabled { opacity:.5; cursor:progress; }
+@media (prefers-color-scheme:dark) {
+  .titlerow .chip-stop { color:#ef6b6b; border-color:#a33; } }
 /* Can a click on a file:line reach VS Code at the reviewed commit? Green: a window is on it.
    Amber: the branch is open at another commit, so only unchanged files open. Red: no window. */
 .chip-vsc { font-weight:600; letter-spacing:.04em; cursor:pointer; }

@@ -313,6 +313,41 @@ window.HR = (function () {
     chip.setAttribute('data-tip', 'Served by the review server (serve-review.py): the '
       + 'buttons on this page run their action here instead of copying a command, '
       + 'recordings play in the page, and \u21BA regenerates it.');
+    // A small red \u25A0 beside the badge: stop the server now rather than wait out its idle
+    // timeout. The page stays on screen as it was, and says so.
+    if (j.stop && !document.getElementById('hr-stop')) {
+      var stop = document.createElement('button');
+      stop.type = 'button';
+      stop.id = 'hr-stop';
+      stop.className = 'chip chip-stop';
+      stop.textContent = '\u25A0';
+      stop.setAttribute('aria-label', 'Stop the review server');
+      stop.setAttribute('data-tip', 'Stop the review server now. It stops by itself after '
+        + 'a few idle hours anyway; this page stays open, as a static copy.');
+      chip.parentNode.insertBefore(stop, chip.nextSibling);
+      stop.addEventListener('click', function () {
+        stop.disabled = true;
+        fetch('/__stop__', {
+          method: 'POST', cache: 'no-store',
+          headers: {'Content-Type': 'application/json',
+                    'X-Human-Review-Token': j.token || ''},
+          body: '{}'
+        }).then(function (r) {
+          if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
+          stop.remove();
+          chip.hidden = false;
+          chip.textContent = 'Stopped';
+          chip.classList.remove('chip-served');
+          chip.setAttribute('data-tip', 'The review server was stopped. Buttons on this page '
+            + 'no longer run anything; start it again with the Serve command.');
+          document.title = document.title.replace(/^\u25B6\uFE0F /, '');
+          if (window.HR.flash) window.HR.flash('Review server stopped');
+        }).catch(function (e) {
+          stop.disabled = false;
+          if (window.HR.flash) window.HR.flash(e.message || 'Could not stop the server');
+        });
+      });
+    }
     // …and where the rerun chip can really run, *it* is this badge and this one goes: the
     // two were one fact written twice. The word stays for the served page whose server
     // cannot rebuild it — rarer than it sounds, and the only case where `served` has

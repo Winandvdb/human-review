@@ -1255,7 +1255,10 @@ def _main(argv=None) -> int:
                      ' || xdg-open "$u")')
         # Two chips, not one. `static` only says what this copy is, so it has no hover;
         # `Serve` is the thing to do about it, and it is the one that explains why.
+        # VSC first, hidden: only the served page can ask the editor bridges whether a
+        # window is on the reviewed commit, so editor.js raises it there and colours it.
         mode_html = (
+            '<span class="chip chip-vsc" id="hr-vsc" hidden>VSC</span>'
             '<span class="chip chip-mode" id="hr-mode">Static</span>'
             '<button type="button" class="chip chip-serve copycmd" id="hr-serve" '
             f'data-copy="{html.escape(serve_cmd, quote=True)}" '

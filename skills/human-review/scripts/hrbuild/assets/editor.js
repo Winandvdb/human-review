@@ -321,6 +321,30 @@
     copy(ref).then(function () { flash('Copied ' + ref + ' — paste into Quick Open (\u2318P)'); });
   });
 
+  // The VSC badge beside `Served`: will a file:line click reach a VS Code window on the
+  // reviewed commit? Asked again every few seconds while the tab is visible, because the
+  // answer changes under the page — a window opened, a branch switched, a commit made.
+  window.HR.onready(function (caps) {
+    var chip = document.getElementById('hr-vsc');
+    if (!caps || !chip || !STAMP.hrHead) return;
+    function ask() {
+      if (document.hidden) return;
+      fetch('/__editor__?' + commitQuery(), {cache: 'no-store'})
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j) return;
+          chip.classList.remove('vsc-on', 'vsc-near', 'vsc-off');
+          chip.classList.add('vsc-' + j.state);
+          chip.setAttribute('data-tip', j.tip);
+          chip.hidden = false;
+        })
+        .catch(function () { chip.hidden = true; });
+    }
+    ask();
+    setInterval(ask, 5000);
+    document.addEventListener('visibilitychange', ask);
+  });
+
   // The banner is the consolation prize, so it must not be printed until we know there
   // is nothing better on offer — which is now something we learn after the page has
   // painted rather than from the URL. Waiting for the probe also means it is never shown

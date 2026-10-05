@@ -1,0 +1,125 @@
+"""The VSC badge beside `Served`: green when a VS Code window is on the reviewed commit,
+amber when the reviewed branch is open at another commit, red otherwise."""
+from __future__ import annotations
+
+import http.server
+import json
+import subprocess
+import threading
+from pathlib import Path
+
+import pytest
+
+from test_action_server import _call, server, srv  # noqa: F401  (fixture)
+
+
+def _git(cwd: Path, *args: str) -> str:
+    return subprocess.run(["git", "-C", str(cwd), *args], check=True, capture_output=True,
+                          text=True).stdout.strip()
+
+
+@pytest.fixture
+def repo(tmp_path):
+    """A checkout on `feature` two commits deep, and a worktree of it on the first commit."""
+    r = tmp_path / "repo"
+    r.mkdir()
+    _git(r, "init", "-q", "-b", "feature")
+    _git(r, "config", "user.email", "t@t")
+    _git(r, "config", "user.name", "t")
+    (r / "a.txt").write_text("1\n")
+    _git(r, "add", ".")
+    _git(r, "commit", "-qm", "one")
+    first = _git(r, "rev-parse", "HEAD")
+    (r / "a.txt").write_text("2\n")
+    _git(r, "commit", "-qam", "two")
+    return r, first, _git(r, "rev-parse", "HEAD")
+
+
+def _windows(tmp_path, monkeypatch, *folders: Path):
+    """One fake VS Code bridge per folder, registered where the server looks for them."""
+    registry = tmp_path / "home" / ".walkie-talkie" / "ide"
+    registry.mkdir(parents=True)
+    servers = []
+    for i, folder in enumerate(folders):
+        body = json.dumps({"ok": True, "app": "vscode", "folders": [
+            {"name": folder.name, "path": str(folder), "realPath": str(folder.resolve())}]}).encode()
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self, body=body):
+                assert self.path == "/ping" and self.headers["x-relay-token"] == "t"
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *a):
+                pass
+
+        httpd = http.server.HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        servers.append(httpd)
+        (registry / f"vscode-{i}.json").write_text(
+            json.dumps({"port": httpd.server_address[1], "token": "t"}))
+    monkeypatch.setattr(srv.Path, "home", classmethod(lambda cls: tmp_path / "home"))
+    return servers
+
+
+def test_green_when_a_window_is_on_the_reviewed_commit(repo, tmp_path, monkeypatch):
+    r, _, head = repo
+    servers = _windows(tmp_path, monkeypatch, r)
+    try:
+        assert srv.editor_state(head, str(r), "feature")["state"] == "on"
+    finally:
+        [s.shutdown() for s in servers]
+
+
+def test_amber_when_the_branch_is_open_at_another_commit(repo, tmp_path, monkeypatch):
+    r, first, _ = repo
+    servers = _windows(tmp_path, monkeypatch, r)
+    try:
+        got = srv.editor_state(first, str(r), "feature")
+        assert got["state"] == "near" and first[:8] in got["tip"]
+    finally:
+        [s.shutdown() for s in servers]
+
+
+def test_red_when_the_window_is_on_another_branch(repo, tmp_path, monkeypatch):
+    r, first, _ = repo
+    wt = tmp_path / "wt"
+    _git(r, "worktree", "add", "-q", "-b", "other", str(wt), first)
+    (wt / "a.txt").write_text("3\n")
+    _git(wt, "commit", "-qam", "three")
+    servers = _windows(tmp_path, monkeypatch, wt)
+    try:
+        got = srv.editor_state(_git(r, "rev-parse", "HEAD"), str(r), "feature")
+        assert got["state"] == "off" and "wt (other @" in got["tip"]
+    finally:
+        [s.shutdown() for s in servers]
+
+
+def test_a_window_on_a_folder_above_the_checkout_counts(repo, tmp_path, monkeypatch):
+    r, _, head = repo
+    servers = _windows(tmp_path, monkeypatch, tmp_path)
+    try:
+        assert srv.editor_state(head, str(r), "feature")["state"] == "on"
+    finally:
+        [s.shutdown() for s in servers]
+
+
+def test_red_when_no_window_answers(tmp_path, monkeypatch):
+    monkeypatch.setattr(srv.Path, "home", classmethod(lambda cls: tmp_path))
+    got = srv.editor_state("a" * 40, str(tmp_path), "feature")
+    assert got["state"] == "off" and "victor-vsc" in got["tip"]
+
+
+def test_the_endpoint_answers_the_page_and_is_not_use(server, monkeypatch):
+    asked = []
+    monkeypatch.setattr(srv, "editor_state", lambda *a: asked.append(a) or {"state": "on", "tip": "x"})
+    before = srv.Handler.last_seen
+
+    status, payload = _call(server, "GET", f"{srv.EDITOR}?sha=abc&root=/r&branch=b")
+
+    assert status == 200 and json.loads(payload) == {"state": "on", "tip": "x"}
+    assert asked == [("abc", "/r", "b")]
+    # Polled every few seconds by an open tab: like the watch poll, it keeps no server alive.
+    assert srv.Handler.last_seen == before

@@ -312,7 +312,7 @@ button.chip-rerun-ai .rr-ico { font-size:1em; vertical-align:-.05em; }
 #copy-toast.asks { pointer-events:auto; display:flex; align-items:center; gap:.7rem; }
 #copy-toast.asks button { font:inherit; font-weight:600; cursor:pointer; border:0; border-radius:999px;
               padding:.15rem .7rem; background:var(--card); color:var(--fg); }
-.titlerow .chip-mode, .titlerow .chip-serve, .titlerow .chip-rerun, .titlerow .titlescore {
+.titlerow .chip-vsc, .titlerow .chip-mode, .titlerow .chip-serve, .titlerow .chip-rerun, .titlerow .titlescore {
             flex:0 0 auto; align-self:center;
             padding:.15rem .7rem; border-radius:999px; border-width:1px;
             border-style:solid; font-size:.82rem; line-height:1.6;
@@ -325,7 +325,17 @@ button.chip-rerun-ai .rr-ico { font-size:1em; vertical-align:-.05em; }
 /* The three presses are glyphs, not words: a narrower side padding than the badge's, so four
    pills beside the title take no more of its width than they must. */
 .titlerow .chip-rerun { padding-left:.5rem; padding-right:.5rem; }
-.titlerow .chip-mode[hidden], .titlerow .chip-serve[hidden], .titlerow .chip-rerun[hidden] { display:none; }
+.titlerow .chip-vsc[hidden], .titlerow .chip-mode[hidden], .titlerow .chip-serve[hidden], .titlerow .chip-rerun[hidden] { display:none; }
+/* Can a click on a file:line reach VS Code at the reviewed commit? Green: a window is on it.
+   Amber: the branch is open at another commit, so only unchanged files open. Red: no window. */
+.chip-vsc { font-weight:600; letter-spacing:.04em; cursor:default; }
+.chip-vsc.vsc-on { color:#2e7d32; border-color:#2e7d32; }
+.chip-vsc.vsc-near { color:#b26a00; border-color:#b26a00; }
+.chip-vsc.vsc-off { color:#c62828; border-color:#c62828; }
+@media (prefers-color-scheme:dark) {
+  .chip-vsc.vsc-on { color:#6bd48a; border-color:#3f7f52; }
+  .chip-vsc.vsc-near { color:#e0a44a; border-color:#8a6420; }
+  .chip-vsc.vsc-off { color:#f0757f; border-color:#8f3a40; } }
 @media (prefers-color-scheme:dark) {
   .titlescore.v-good { color:#6fce93; } .titlescore.v-mid { color:#e0a44a; }
   .titlescore.v-bad { color:#f0757f; } }

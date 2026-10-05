@@ -71,6 +71,9 @@ RERUN = "/__rerun__"
 # something. They share the lock and nothing else.
 RERUN_AI = "/__rerun_ai__"
 WATCH = "/__watch__"
+# Polled by the VSC badge beside `Served`: is any VS Code window on the commit this guide
+# quotes? A poll, so — like WATCH — it does not count as somebody using the server.
+EDITOR = "/__editor__"
 
 # The page asks "is there a review server here?" and a *wrong* yes is expensive: the demo
 # published on GitHub Pages is https, so the protocol check this replaced said yes, and
@@ -409,6 +412,77 @@ def review_open(path, line, sha, root, branch):
         except Exception:
             continue
     return None
+
+
+def _git(cwd, *args) -> str:
+    try:
+        r = subprocess.run(["git", "-C", str(cwd), *args], capture_output=True, text=True,
+                           timeout=5)
+    except Exception:
+        return ""
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def editor_state(sha, root, branch) -> dict:
+    """Which VS Code windows could take a click on this guide, as one of three colours.
+
+    `on`: a window's checkout has HEAD at the reviewed commit — every link opens.
+    `near`: this repository is open on the reviewed branch, at another commit — a link opens
+    only where the file has not changed since, the rest refuse with a prompt.
+    `off`: neither, or no window answers at all — clicks will refuse.
+
+    Asks the same bridges `review_open` does, but only `/ping` (which folders each window
+    shows), and reads the rest from git here: a badge that polls must not cost a window
+    a round of git calls every few seconds."""
+    pings = []
+    for f in sorted((Path.home() / ".walkie-talkie" / "ide").glob("vscode-*.json")):
+        try:
+            entry = json.loads(f.read_text())
+            req = urllib.request.Request(f"http://127.0.0.1:{entry['port']}/ping",
+                                         headers={"x-relay-token": entry["token"]})
+            with urllib.request.urlopen(req, timeout=1.5) as r:
+                ping = json.loads(r.read())
+        except Exception:
+            continue
+        if ping.get("ok") and ping.get("app") == "vscode":
+            pings.append(ping.get("folders") or [])
+    if not pings:
+        return {"state": "off", "tip": "No VS Code window answers: is the victor-vsc "
+                "extension installed and a window open?"}
+    root_top = _git(root, "rev-parse", "--show-toplevel") if root else ""
+    origin = _git(root, "remote", "get-url", "origin") if root else ""
+    # Every checkout a window shows: the one each folder sits in, and the reviewed checkout
+    # itself when a window is opened on a directory above it (~/workspace).
+    tops = {}
+    for folders in pings:
+        for f in folders:
+            d = f.get("realPath") or f.get("path") or ""
+            top = d and _git(d, "rev-parse", "--show-toplevel")
+            if top:
+                tops.setdefault(top, f.get("name") or Path(top).name)
+            if root_top and any(p and (root_top + "/").startswith(p.rstrip("/") + "/")
+                                for p in (f.get("path"), f.get("realPath"))):
+                tops.setdefault(root_top, f.get("name") or Path(root_top).name)
+    near, seen = [], []
+    for top, name in sorted(tops.items()):
+        head = _git(top, "rev-parse", "HEAD")
+        on = _git(top, "branch", "--show-current") or "detached"
+        seen.append(f"{name} ({on} @ {head[:8] or '?'})")
+        if head and sha and head.startswith(sha):
+            return {"state": "on", "tip": f"VS Code window {name} is on this commit "
+                    f"({on} @ {head[:8]}): every link opens there."}
+        # Same repository: one checkout of it (worktrees and the reviewed checkout itself
+        # share objects), or a clone of the same origin. A `main` in another repo is not it.
+        same = (origin and _git(top, "remote", "get-url", "origin") == origin) \
+            or (sha and subprocess.run(["git", "-C", top, "cat-file", "-e", f"{sha}^{{commit}}"],
+                                       capture_output=True).returncode == 0)
+        if same and branch and on == branch:
+            near.append(f"{name} ({on} @ {head[:8]})")
+    if near:
+        return {"state": "near", "tip": f"VS Code has {branch} open at another commit: "
+                f"{', '.join(near)}, not {sha[:8]}. Links open only files unchanged since."}
+    return {"state": "off", "tip": f"No VS Code window is on {branch or 'this commit'} @ {sha[:8]}. "
+            f"Open: {', '.join(seen) if seen else 'nothing in a git checkout'}."}
 
 
 def bridge_diff(target: Path, sha: str, line: int) -> bool:
@@ -1315,9 +1389,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         # anybody is in front of it. Counting that as use would mean a page left open on
         # a second monitor keeps a server alive until the machine reboots, which is the
         # exact artifact `--idle-minutes` exists to prevent.
-        watching = self.path.split("?")[0] == WATCH
+        watching = self.path.split("?")[0] in (WATCH, EDITOR)
         if not watching:
             Handler.last_seen = time.time()
+        if self.path.split("?")[0] == EDITOR:
+            problem = refuse_reason(self.headers)
+            if problem:
+                self.reply_text(problem, 403)
+                return
+            q = urllib.parse.parse_qs(self.path.partition("?")[2])
+            self.reply_json(editor_state(q.get("sha", [""])[0], q.get("root", [""])[0],
+                                         q.get("branch", [""])[0]))
+            return
         if watching:
             # Guarded like the rest: the answer is a fact about the reader's disk, and
             # a stamp that moves is a side channel onto when they are building.

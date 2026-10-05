@@ -100,6 +100,19 @@ def test_the_surface_key_moves_onto_the_title_row_as_a_filter(tmp_path):
     assert ".reqmap .rm-t[data-catoff=yes]{display:none}" in out
 
 
+def test_each_filter_is_its_chip_alone_with_the_words_on_its_hover():
+    """The filter shares the title row with the tab's "Prompt to get this" (Victor, 5 Oct
+    2026), so each kind shows its chip only; what it means moves to the chip's tooltip."""
+    cats = T.cats_filter('<p class="rm-cats"><span><span class="rm-cat" data-cat="e2e">UI'
+                         '</span>clicks the screen</span><span><span class="rm-cat" '
+                         'data-cat="api">API</span>REST/MCP</span></p>')
+    assert cats == ('<p class="rm-cats"><label class="rm-catf"><input type="checkbox" checked '
+                    'data-cat="e2e"><span class="rm-cat" data-tip="clicks the screen" '
+                    'data-cat="e2e">UI</span></label><label class="rm-catf"><input '
+                    'type="checkbox" checked data-cat="api"><span class="rm-cat" '
+                    'data-tip="REST/MCP" data-cat="api">API</span></label></p>')
+
+
 def test_the_ticket_title_is_a_link_over_the_ticket(tmp_path):
     """The one thing the page never said. The masthead carries the PR's title, which on
     this branch is not the issue's, and the frame opened straight into `opened on Jun 13,

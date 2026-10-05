@@ -1,8 +1,8 @@
 /* "Prompt to get this": a prompt for the reader's own agent, one per piece. A piece that is
-   one card has it in that card's bottom-right corner; a piece that is the whole tab has it
-   in a row closing the panel (`.adopt-end`), under the last card and outside all of them --
-   where the eye lands once that piece is read. A small pill either way, never a band of its
-   own: the row is as tall as the pill and no taller.
+   one card has it in that card's bottom-right corner; a tab that is one piece (one
+   generation) has it at the right end of the tab's title row (`.adopthead`), where the
+   tab says what it is. A small pill either way, never a band of its own: a row with the
+   pill is as tall as it was without it.
    Purple, to stand out from the page's own controls (blue links, grey pills): those are
    commands for this page, this one is a message for someone else's agent. The pair is
    defined here rather than in core.css because this module is the only one that paints
@@ -31,10 +31,38 @@ button.adopt:focus-visible { outline:2px solid var(--adopt); outline-offset:1px;
    free space under the cues, level with the voice switch under the film. */
 .adoptcol { display:flex; flex-direction:column; align-self:stretch; min-width:0; }
 .adoptcol > .adoptline { margin-top:auto; padding-top:.45rem; }
-/* The Tests panes fill the viewport and have no height to give: the pill floats over their
-   bottom-right corner instead, and the right pane's scroller gets that much room at its end
-   so nothing stays hidden under it. */
-.reqmap .rm-body:has(> .adopt-float) { position:relative; }
-.reqmap .rm-body:has(> .adopt-float) > .rm-side { padding-bottom:2rem; }
-.adopt-float { position:absolute; right:.7rem; bottom:.55rem; margin:0; z-index:2; }
-.adopt-float button.adopt { box-shadow:0 1px 4px rgba(0,0,0,.18); }
+/* The title row: the tab's first row on the left, the pill on the right, centred on it.
+   The row's own margins move onto the wrapper, so it sits exactly where the bare row sat
+   and its margins still collapse with the blocks around it: a flex item's never would.
+   A row too long to share its line wraps its own text beside the pill (the API band and
+   the UX count line, at 1728px); only once it would be narrower than 20rem does the pill
+   wrap under it instead, still at the right. */
+.adopthead { display:flex; align-items:center; flex-wrap:wrap; column-gap:1rem;
+             row-gap:.2rem; }
+.adopthead > :first-child { flex:1 1 20rem; min-width:0; }
+.adopthead > .adoptline { margin:0 0 0 auto; flex:none; }
+.adopthead:has(> h2.tabtitle) { margin:.2rem 0 .15rem; }
+.adopthead > h2.tabtitle { margin:0; }
+/* UX: the audit's count line is a plain `p`. */
+.adopthead:has(> .dsa-hdr) { margin:.6rem 0; }
+.adopthead > .dsa-hdr { margin:0; }
+/* API: the verdict band is the first row, full width; it gives the pill its right end. */
+.adopthead:has(> .apiverdict) { margin:.2rem 0 .6rem; }
+.adopthead > .apiverdict { width:auto; margin:0; }
+/* Tests: the title row is a grid row, the ticket's title over the left pane and the
+   UI/API/unit filter over the right one. The filter and the pill share the right cell;
+   the filter keeps the margins it had there. */
+.reqmap .rm-body > .adopthead { grid-column:2; grid-row:1; align-self:center; }
+/* Stacked, the filter's 46px gap from the ticket above it moves onto the row, or the pill
+   would centre on that gap rather than on the filter. */
+@media (max-width:900px) {
+  .reqmap .rm-body > .adopthead { grid-column:1; grid-row:auto; margin:46px 2px 10px; }
+  .reqmap .rm-body > .adopthead > .rm-cats { margin:0; }
+}
+/* Cost: no title, its table's header row opens the tab. The pill hangs off the left of
+   the row's last label, `cost`, from a zero-size anchor in front of it: it widens no
+   column and, taller than the header's small caps, does not make the row taller. */
+.adopt-th { display:inline-block; position:relative; width:0; height:0; margin:0;
+            vertical-align:middle; }
+.adopt-th > button.adopt { position:absolute; right:.9rem; top:-.08rem;
+                            transform:translateY(-50%); }

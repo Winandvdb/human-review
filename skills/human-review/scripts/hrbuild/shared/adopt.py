@@ -5,7 +5,7 @@ mechanism — the Data tab's domain model is drawn by reflection over the classe
 from the migration scripts, its conceptual model by hand. A reader who likes one of them
 wants that one in their own repository, so each piece offers a prompt they paste into
 their own coding agent, from the corner of the card that shows it — or, when the piece is
-the whole tab, from under the tab's last card.
+the whole tab, from the right end of the tab's title row.
 
 Minimal on purpose (5 Oct 2026, Victor): the agent on the other end is a smart model with
 the repository at hand. It needs to know which piece, where it starts, and that it should
@@ -17,7 +17,6 @@ and a button that needed a producer change would also need every cached fragment
 regenerated — the DS audit through Docker, the Tests matrix through a model. Here the
 producers stay unaware of the button; the cost is that `PLACES` names the classes of the
 cards that carry one, and `test_adopt.py` fails the day one of those stops being emitted.
-A whole-tab button names nothing: it closes the panel.
 """
 from __future__ import annotations
 
@@ -119,33 +118,36 @@ DIAGRAM_KINDS = (
 
 #: tab → where its buttons go: (piece, how, the opening tag it anchors on, which match).
 #: The rule (5 Oct 2026, Victor): a prompt about ONE card sits inside that card, in its
-#: bottom-right; a prompt about the WHOLE tab sits under the tab's content, outside every
-#: card. So: `in` — a row at the end of that card, inside its border; `end` — a row closing
-#: the panel, after everything in it (no anchor: whatever the producer's last card is
-#: called, the button cannot land inside it, nor inside the first of several); `col` —
-#: under it in a column of its own (the Demo's transcript, beside the player); `float` —
-#: over the bottom-right corner of the Tests panes, which fill the viewport and have no
-#: height to give; `upto` — a row closing the region that starts at the anchor and runs to
-#: the next Round kicker (the Review tab's three piles). Piece None is a diagram card, whose
-#: piece is read off its head. A tab whose anchor is missing gets one row at the end of the
-#: panel, so a renamed class costs placement, never the button.
+#: bottom-right; a tab that holds one piece of knowledge, one generation, has its prompt
+#: on the right of that tab's title. So: `in` — a row at the end of that card, inside its
+#: border; `title` — the anchor is the tab's first row (its `h2.tabtitle`, or whatever row
+#: opens a tab that has none: the API verdict band, the UX audit's count line, the Tests
+#: key over the card), and it becomes a flex row with that row on the left and the pill on
+#: the right (a row too long to share its line wraps its own text beside the pill); `th` —
+#: the Cost tab, which opens on its table's header row, gets the pill in that row's last
+#: cell, just left of its `cost` label and without widening the column; `col` — under it
+#: in a column of its own (the Demo's transcript, beside the player); `upto` — a row
+#: closing the region that starts at the anchor and runs to the next Round kicker (the
+#: Review tab's three piles). Piece None is a diagram card, whose piece is read off its
+#: head. A tab whose anchor is missing gets one row at the end of the panel, so a renamed
+#: class costs placement, never the button.
 DIAGRAM_CARD = r'<div class="diagram(?![^"]*\bdgm-bare\b)[^"]*"'
 PLACES: dict[str, tuple[tuple[str | None, str, str | None, str | None], ...]] = {
     "review": (("review.assumed", "upto", r'<h2 id="assumed"', "first"),
                ("review.open", "upto", r'<h2 id="first"', "first"),
                ("review.fixed", "upto", r'<h2 id="fixed"', "first")),
     "behaviour": (("behaviour", "col", r'<ol class="transcript"', "first"),),
-    "api": (("api", "end", None, None),),
+    "api": (("api", "title", r'<div class="apiverdict\b', "first"),),
     "data": ((None, "in", DIAGRAM_CARD, "all"),),
     "packages": ((None, "in", DIAGRAM_CARD, "all"),),
-    "requirements": (("requirements", "float", r'<div class="rm-side"', "first"),),
-    "sequence": (("sequence", "end", None, None),),
-    "city": (("city", "end", None, None),),
-    "dsaudit": (("dsaudit", "end", None, None),),
-    "complexity": (("complexity", "end", None, None),),
-    "logging": (("logging", "end", None, None),),
-    "owners": (("owners", "end", None, None),),
-    "cost": (("cost", "end", None, None),),
+    "requirements": (("requirements", "title", r'<p class="rm-cats"', "first"),),
+    "sequence": (("sequence", "title", r'<h2 class="tabtitle\b', "first"),),
+    "city": (("city", "title", r'<h2 class="tabtitle\b', "first"),),
+    "dsaudit": (("dsaudit", "title", r'<p class="dsa-hdr"', "first"),),
+    "complexity": (("complexity", "title", r'<h2 class="tabtitle\b', "first"),),
+    "logging": (("logging", "title", r'<h2 class="tabtitle\b', "first"),),
+    "owners": (("owners", "title", r'<h2 class="tabtitle\b', "first"),),
+    "cost": (("cost", "th", r'<table class="costtab costledger\b', "first"),),
 }
 
 # One token of markup: a comment, a whole script/style element (whose text may say `<div`
@@ -201,9 +203,6 @@ def place_prompts(tid: str, body: str) -> str:
         return body
     edits = []                      # (at, cut_to, text): applied back to front
     for piece, how, anchor, which in places:
-        if how == "end":
-            edits.append((len(body), len(body), adopt_html(piece, how="end")))
-            continue
         hits = list(re.finditer(anchor, body))
         hits = hits if which == "all" else hits[-1:] if which == "last" else hits[:1]
         taken = []                  # a card inside a card already given its button
@@ -214,6 +213,14 @@ def place_prompts(tid: str, body: str) -> str:
                 nxt = re.compile(r'<p class="pileround"').search(body, hit.end())
                 at = nxt.start() if nxt else len(body)
                 edits.append((at, at, adopt_html(piece, how="after")))
+                continue
+            if how == "th":
+                row_end = body.find("</tr>", hit.end())
+                cells = list(re.compile(r"<th\b[^>]*>").finditer(body, hit.end(),
+                                                                  max(row_end, 0)))
+                if cells:
+                    at = cells[-1].end()
+                    edits.append((at, at, adopt_html(piece, how="th")))
                 continue
             span = _close(body, hit.start())
             if not span:
@@ -229,6 +236,9 @@ def place_prompts(tid: str, body: str) -> str:
                 name = next((k for k, rx in DIAGRAM_KINDS if rx.search(text)), "diagram")
             if how == "in":
                 edits.append((span[0], span[0], adopt_html(name, title, "in")))
+            elif how == "title":
+                edits.append((hit.start(), hit.start(), '<div class="adopthead">'))
+                edits.append((span[1], span[1], adopt_html(name, title, "title") + "</div>"))
             elif how == "col":
                 edits.append((hit.start(), hit.start(), '<div class="adoptcol">'))
                 edits.append((span[1], span[1], adopt_html(name, title, "after") + "</div>"))

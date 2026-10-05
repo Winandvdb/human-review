@@ -1,5 +1,5 @@
-"""The "Prompt to get this" buttons: one per piece — inside the card it is about, or under
-the whole tab when the piece is the tab."""
+"""The "Prompt to get this" buttons: one per piece — inside the card it is about, or at the
+right end of the tab's title row when the piece is the whole tab."""
 import html
 import re
 from pathlib import Path
@@ -103,12 +103,30 @@ def test_each_review_round_gets_a_button_at_its_own_end():
     assert all(r.endswith("</button></div>") for r in rounds)
 
 
-def test_the_tests_button_floats_over_the_panes_and_adds_no_height():
-    body = ('<div class="reqmap"><div class="rm-body"><div class="rm-text"></div>'
-            '<div class="rm-side"><aside class="rm-code"><div>x</div></aside></div>'
+def test_the_tests_button_shares_the_filter_cell_on_the_title_row():
+    """The panes fill the window, so the button used to float over their corner; now it
+    sits on the title row, after the UI/API/unit filter, in the cell over the card."""
+    body = ('<div class="reqmap"><div class="rm-body"><h2 class="tabtitle rm-head">Issue</h2>'
+            '<div class="rm-text"></div><p class="rm-cats"><label class="rm-catf">UI</label>'
+            '</p><div class="rm-side"><aside class="rm-code"><div>x</div></aside></div>'
             '</div></div>')
     out = place_prompts("requirements", body)
-    assert '</aside></div><div class="adoptline adopt-float">' in out
+    assert re.search(r'<div class="adopthead"><p class="rm-cats">.*?</p>'
+                     r'<div class="adoptline adopt-title">.*?</button></div></div>'
+                     r'<div class="rm-side">', out)
+    assert out.count("Prompt to get this") == 1
+
+
+def test_the_cost_button_sits_in_the_header_row_beside_its_last_label():
+    """Cost opens on its table, not a title: the header row is its first row, and the
+    button goes in that row's last cell, before `cost`, on a zero-size anchor."""
+    body = ('<table class="costtab costledger costfour"><thead><tr><th scope="col">component'
+            '</th><th scope="col">cost</th></tr></thead><tbody><tr><th>x</th></tr></tbody>'
+            '</table>')
+    out = place_prompts("cost", body)
+    assert re.search(r'<th scope="col">component</th><th scope="col">'
+                     r'<div class="adoptline adopt-th">.*?</button></div>cost</th>', out)
+    assert out.count("Prompt to get this") == 1
 
 
 def test_a_script_inside_a_card_cannot_close_it_early():
@@ -125,29 +143,52 @@ def test_a_tab_whose_anchor_moved_still_offers_its_button_at_the_end():
     assert out.startswith("<p>renamed markup</p>") and out.count("Prompt to get this") == 1
 
 
-#: The tabs whose prompt is about the whole tab, not one card of it (5 Oct 2026, Victor).
-WHOLE_TAB = ("api", "sequence", "city", "dsaudit", "complexity", "logging", "owners", "cost")
+#: The tabs whose prompt is about the whole tab, not one card of it (5 Oct 2026, Victor),
+#: each with the first row its button joins: the tab's title wherever it has one.
+WHOLE_TAB = {"sequence": '<h2 class="tabtitle" id="sequences">Sequence diagrams</h2>',
+             "city": '<h2 class="tabtitle" id="codecity">Impact on code size</h2>',
+             "complexity": '<h2 class="tabtitle cx-title"><a href="#">Cognitive</a> per</h2>',
+             "logging": '<h2 class="tabtitle" id="logging-added">Uses of logging</h2>',
+             "owners": '<h2 class="tabtitle cow-title">Needs approval by</h2>',
+             "api": '<div class="apiverdict red"><span class="dot"></span>Breaking</div>',
+             "dsaudit": '<p class="dsa-hdr">5 of 19 screens changed</p>'}
 
 
-@pytest.mark.parametrize("tid", WHOLE_TAB)
-def test_a_whole_tab_prompt_closes_the_panel_outside_every_card(tid):
-    """UX had it after the first of its screens, Complexity inside its last list's card,
-    CODEOWNERS inside the approval card: each anchored on a card, and a card is the one
-    place a prompt about the whole tab must not be."""
-    body = ('<div class="dsa"><details>Book A Visit</details></div>'
-            '<div class="dsa"><details>Edit A Visit</details></div>'
+@pytest.mark.parametrize("tid", sorted(WHOLE_TAB))
+def test_a_whole_tab_prompt_sits_at_the_right_end_of_the_tabs_title_row(tid):
+    """If the tab holds one consistent piece of knowledge, one generation, its prompt goes on
+    the right side of that tab's title (Victor, 5 Oct 2026): the first row and the button
+    become one flex row, outside every card — never the first card, never the last."""
+    first = WHOLE_TAB[tid]
+    rest = ('<p class="tabsub">from where</p>'
+            '<div class="dsa"><details>Book A Visit</details></div>'
             '<div class="cx-group"><div class="cx-list">JOBS</div></div>'
             '<div class="cow"><div class="cow-row">approval</div></div>'
             '<script>var s = "</div>";</script>')
-    out = place_prompts(tid, body)
-    assert out.startswith(body) and out.count("Prompt to get this") == 1
-    assert out[len(body):].startswith('<div class="adoptline adopt-end">')
-    assert all(how == "end" for _, how, _, _ in PLACES[tid])
+    out = place_prompts(tid, '<p class="paneltag">X</p>' + first + rest)
+    assert out.count("Prompt to get this") == 1
+    head = re.escape('<p class="paneltag">X</p><div class="adopthead">' + first)
+    assert re.match(head + r'<div class="adoptline adopt-title">.*?</button></div></div>'
+                    + re.escape(rest) + "$", out, re.S)
+    assert all(how == "title" for _, how, _, _ in PLACES[tid])
+
+
+def test_only_the_first_title_takes_the_button():
+    body = ('<h2 class="tabtitle">One</h2><p>x</p><h2 class="tabtitle">Two</h2>')
+    out = place_prompts("logging", body)
+    assert out.startswith('<div class="adopthead"><h2 class="tabtitle">One</h2>')
+    assert out.count("Prompt to get this") == 1
+
+
+def test_a_whole_tab_without_its_title_row_still_closes_the_panel_with_its_button():
+    out = place_prompts("city", '<a class="city"><img></a>')
+    assert out.startswith('<a class="city"><img></a><div class="adoptline adopt-end">')
 
 
 def test_every_tab_is_either_per_card_or_whole_tab_or_one_of_the_agreed_exceptions():
     per_card = {"data", "packages", "review"}
-    agreed = {"requirements": "float", "behaviour": "col"}   # the Tests panes, the Demo
+    # The Tests filter row, the Cost header row, the Demo's transcript column.
+    agreed = {"requirements": "title", "cost": "th", "behaviour": "col"}
     assert set(PLACES) == per_card | set(WHOLE_TAB) | set(agreed)
     for tid, how in agreed.items():
         assert [h for _, h, _, _ in PLACES[tid]] == [how]

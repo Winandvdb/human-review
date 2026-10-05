@@ -64,6 +64,8 @@ def title_ticket_ref(pr: dict, title: str) -> str:
     change without saying which request it answers. Nothing when the content file names
     no ticket, or when the title already carries its number."""
     t = (pr or {}).get("ticket") or {}
+    if not isinstance(t, dict):          # `"ticket": 37`, the short form the schema allows
+        t = {"number": t}
     num = t.get("number")
     if not num or f"#{num}" in (title or ""):
         return ""

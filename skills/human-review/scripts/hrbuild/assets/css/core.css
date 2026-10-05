@@ -120,6 +120,13 @@ body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.6 -apple-sys
 h1 { font-size:1.5rem; margin:0 0 .15rem; letter-spacing:-.02em; }
 h2 { font-size:1.3rem; margin:2.8rem 0 .8rem; padding-bottom:.4rem; border-bottom:1px solid var(--line); }
 h3 { font-size:1.02rem; margin:1.8rem 0 .5rem; }
+/* The title on a tab's first line, and the muted line under it saying where what follows
+   comes from. One block, so no `h2` underline between them, and one size on every tab that
+   opens on a title — Logging's, promoted here once Sequence, Code City, Complexity and
+   CODEOWNERS opened the same way. The top margin is set, not left to frame.css's
+   `.paneltag + h2`: a producer's fragment puts its title one element further in. */
+h2.tabtitle { margin:.2rem 0 .15rem; padding-bottom:0; border-bottom:0; }
+.tabsub { margin:0 0 .9rem; color:var(--muted); font-size:.92rem; }
 p { margin:.6rem 0; }
 a { color:var(--link); }
 .sub { color:var(--muted); margin:0 0 .55rem; font-size:.93rem; }

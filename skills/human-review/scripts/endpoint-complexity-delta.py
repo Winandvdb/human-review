@@ -530,10 +530,12 @@ def render(rows, base="main") -> str:
         # hover what its colour and its number mean, and a reader counting moved rows is
         # reading the bars, not this line.
         # A heading naming the measure, then how it is taken — Victor's wording. The
-        # measure's name is the link to what it means.
-        f'<h3 class="cx-title"><a href="{SONAR_COGNITIVE}" target="_blank" '
-        'rel="noopener">Cognitive Complexity</a> per Entry Point</h3>'
-        '<p class="cx-lede">Computed by traversing the syntax of the Java source files.</p>',
+        # measure's name is the link to what it means. The page's tab title and subtitle
+        # (`tabtitle` / `tabsub`, the review page's core.css), so this tab opens in the same
+        # size and dress as every other tab that opens on a title.
+        f'<h2 class="tabtitle cx-title"><a href="{SONAR_COGNITIVE}" target="_blank" '
+        'rel="noopener">Cognitive Complexity</a> per Entry Point</h2>'
+        '<p class="tabsub cx-lede">Computed by traversing the syntax of the Java source files.</p>',
     ]
     known = {kind for kind, _ in KIND_TITLES}
     groups = KIND_TITLES + [
@@ -622,9 +624,8 @@ CSS = """
 /* Green = complexity this branch ADDED; what it REMOVED is a neutral slate ghost, never red:
     the colour names the author of the change, it is not a verdict — and a simpler flow
     painted in alarm red read as an alarm. */
-.cx-title { margin:0 0 .15rem; font-size:1.15rem; font-weight:600; }
 .cx-title a { color:var(--link); }
-.cx-lede { color:var(--muted); font-size:.92rem; --cx-added:#2e9e5b; --cx-removed:#5b6b8c; }
+.cx-lede { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; }
 .cx-group { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; }
 .cx-group + .cx-group { margin-top:1.1rem; }
 .cx-kind { font:600 11px/1 system-ui,sans-serif; text-transform:uppercase; letter-spacing:.07em;

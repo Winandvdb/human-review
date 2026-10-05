@@ -720,9 +720,9 @@ def test_the_logging_tab_opens_on_one_computed_heading(tmp_path, monkeypatch):
         repo)
     # The one heading is the computed line itself, formatted as Code City's is — never
     # the authored "Logging added/updated", which is the tab's label said twice.
-    assert frag.count("<h2") == 1 and '<h2 class="lg-head" id="logging-added">Uses of <span' in frag
+    assert frag.count("<h2") == 1 and '<h2 class="tabtitle" id="logging-added">Uses of <span' in frag
     # Under it, how the uses were found, and no underline between the two.
-    assert ('</h2><p class="lg-sub">Found by syntax-aware search over Java sources</p>') in frag
+    assert ('</h2><p class="tabsub">Found by syntax-aware search over Java sources</p>') in frag
     assert "Logging added/updated" not in frag and "not by grepping" not in frag, \
         "title and body on the logging block are the renderer's now, not the author's"
     assert 'id="logging-added"' in frag, "the deep link the heading carried still lands"
@@ -4631,7 +4631,13 @@ def test_the_tab_opens_on_how_its_pictures_were_made_shut_and_without_a_shot_off
     review = _one_traced_pair(tmp_path)
     out, weight, _ = build.render_testpairs(TESTPAIRS, {}, [], tmp_path, review)
 
-    assert out.startswith('<details class="seqhow">'), "first thing on the tab, and shut"
+    assert out.startswith('<details class="seqhow tabsub">'), \
+        "with no title, first thing on the tab, and shut"
+    titled = build.render_testpairs(dict(TESTPAIRS, title="Sequence diagrams of tests"), {}, [],
+                                    tmp_path, review)[0]
+    assert titled.startswith('<h2 class="tabtitle" id="sequences">Sequence diagrams of tests'
+                             '</h2><details class="seqhow tabsub">'), \
+        "with one, the title's subtitle: right under it"
     how = _how(out)
     assert "<summary>How were these produced?</summary>" in how
     assert how.count("<li>") == 3, "three steps, no more"
@@ -4643,15 +4649,14 @@ def test_the_tab_opens_on_how_its_pictures_were_made_shut_and_without_a_shot_off
     assert weight == 1, "an explanation is not an exhibit"
 
 
-def test_the_trace_is_one_fold_further_in_full_size_and_names_the_pair_it_was_drawn_as(
+def test_the_trace_closes_the_fold_full_size_and_names_the_pair_it_was_drawn_as(
         tmp_path):
     review = _one_traced_pair(tmp_path)
     _shot(review, diagram=SEARCH_PUML, traces=1, test="owner-search.feature")
     how = _how(build.render_testpairs(TESTPAIRS, {}, [], tmp_path, review)[0])
 
-    shot = how[how.index('<details class="seqhow-shot">'):]
-    assert shot.startswith('<details class="seqhow-shot"><summary>What does a trace look '
-                           'like?</summary>'), "nested, and shut too"
+    shot = how[how.index('<div class="seqhow-shot">'):]
+    assert how.count("<details") == 1, "no fold inside the fold: opened, the picture shows"
     assert how.index("</ol>") < how.index("seqhow-shot"), "at the END of the explanation"
     assert '<img src="assets/sequence.trace.png"' in shot
     assert 'href="assets/sequence.trace.png" target="_blank"' in shot, \
@@ -5181,8 +5186,8 @@ def test_the_shot_is_headed_by_what_it_is_for(tmp_path):
     deliberate: the three named axes are the ones the panel inside the shot switches
     between, and they are not all of them."""
     page, _ = _build(tmp_path, _city(tmp_path))
-    assert ('<h2 id="codecity">Impact on code size, complexity, coupling, …</h2>'
-            in page)
+    assert ('<h2 class="tabtitle" id="codecity">Impact on code size, complexity, coupling, …</h2>'
+            in page), "the tab title every tab opens on, with no underline over the card"
     assert build.CITY_HEADING.endswith("…")
     # The anchor is on the heading, so `#codecity` still lands at the top of the picture.
     assert 'class="city" href=' in page and 'class="city" id=' not in page
@@ -5200,7 +5205,7 @@ def test_the_shot_carries_no_lede(tmp_path):
 
 def test_a_page_that_means_something_else_by_the_picture_can_say_so(tmp_path):
     page, _ = _build(tmp_path, _city(tmp_path, title="Where the weight moved"))
-    assert '<h2 id="codecity">Where the weight moved</h2>' in page
+    assert '<h2 class="tabtitle" id="codecity">Where the weight moved</h2>' in page
     assert build.CITY_HEADING not in page
 
 

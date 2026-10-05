@@ -395,12 +395,12 @@ def logging_fragment(block, root: Path, base: str | None = None):
     # not the tab's label repeated either: the pill says "Logging", this says *which* uses.
     # Under it, how the uses were found — Victor's wording — and no rule between the two:
     # the heading and its subtitle are one block, and the page's `h2` underline split them.
-    head = (f'<h2 class="lg-head" id="{html.escape(block.get("id", "logging-added"))}">'
+    head = (f'<h2 class="tabtitle" id="{html.escape(block.get("id", "logging-added"))}">'
             f'Uses of '
             f'<span class="dfn" data-tip-side="right"'
             f' data-tip-html="{html.escape(logging_libraries_tip(), quote=True)}">'
             f'common Java logging libraries</span></h2>'
-            '<p class="lg-sub">Found by syntax-aware search over Java sources</p>')
+            '<p class="tabsub">Found by syntax-aware search over Java sources</p>')
     body = ""
     # No header bar and no surrounding card any more: no heading repeating "logging", no
     # count pill, no `path, base…HEAD` provenance line — the tab's own title already says

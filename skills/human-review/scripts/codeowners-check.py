@@ -346,24 +346,30 @@ def render(root: Path, data: dict) -> str:
 
     severity = data["severity"]
     sev_class = f" cow-severity-{severity}" if severity else ""
-    parts = [f'<div class="cow cow-{state}{sev_class}">']
-    # The file every row below is read against, named once above them. Without it the
-    # reader met rule links (`claimed by /petclinic-backend/...`) before learning which
-    # file they point into, and had no way into the file as a whole. It opens on GitHub,
-    # where the rule is enforced and where a reviewer forwarding the page can follow it —
-    # an editor link to one machine's checkout is nobody else's link. Off GitHub, the
-    # editor link is the only one there is.
+    parts = []
+    # The tab's title and subtitle (`tabtitle` / `tabsub`, the review page's core.css), in
+    # the dress every tab's first line wears, and outside the box so they sit where every
+    # other tab's do. The title says what the reader has to do; the subtitle names the file
+    # every row below is read against. Without it the reader met rule links (`claimed by
+    # /petclinic-backend/...`) before learning which file they point into, and had no way
+    # into the file as a whole. It opens on GitHub, where the rule is enforced and where a
+    # reviewer forwarding the page can follow it — an editor link to one machine's checkout
+    # is nobody else's link. Off GitHub, the editor link is the only one there is. The file
+    # reads as part of the sentence, underlined, not as a monospace link shouting over it.
     if data["codeowners"]:
         rel = html.escape(data["codeowners"])
         hub = github_file_url(root, data["codeowners"])
         if hub:
-            parts.append(f'<h3 class="cow-title"><a data-tip="Open on GitHub: {rel}"'
-                         f' href="{html.escape(hub, quote=True)}" target="_blank"'
-                         f' rel="noopener">{rel}</a></h3>')
+            link = (f'<a data-tip="Open on GitHub: {rel}" href="{html.escape(hub, quote=True)}"'
+                    f' target="_blank" rel="noopener">{rel}</a>')
         else:
-            parts.append(f'<h3 class="cow-title"><a data-tip="Open in VS Code: {rel}"'
-                         f' href="vscode://file/{(root / data["codeowners"]).resolve()}:1:1">'
-                         f"{rel}</a></h3>")
+            link = (f'<a data-tip="Open in VS Code: {rel}"'
+                    f' href="vscode://file/{(root / data["codeowners"]).resolve()}:1:1">{rel}</a>')
+        title = ("This PR must be approved by" if state == APPROVAL_REQUIRED
+                 else "No code owner must approve this PR")
+        parts.append(f'<h2 class="tabtitle cow-title">{title}</h2>'
+                     f'<p class="tabsub cow-src">as required by {link}</p>')
+    parts.append(f'<div class="cow cow-{state}{sev_class}">')
     # The "APPROVAL REQUIRED" verdict used to be a banner of its own, above every row,
     # saying the same word for every owner even when their severities differ. Now each
     # row carries its own flag and its own "APPROVAL REQUIRED" — true per owner, not
@@ -437,9 +443,8 @@ CSS = """
        --cow-mark-a:rgba(19,120,58,.85); --cow-mark-m:rgba(190,105,0,.9);
        --cow-mark-d:rgba(168,22,22,.9);
        margin:.4rem 0 1rem; }
-.cow-title { font:600 1rem/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; margin:0 0 .7rem; }
-.cow-title a { color:var(--link); text-decoration:none; }
-.cow-title a:hover { text-decoration:underline; }
+.cow-src a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.cow-src a:hover { color:var(--link); }
 .cow-verdict { display:flex; align-items:center; gap:.9rem; border:1px solid var(--line);
                border-left:4px solid var(--cow-flat); border-radius:10px; padding:.8rem 1rem;
                background:var(--card); }

@@ -198,7 +198,7 @@ def test_an_empty_title_drops_the_heading_instead_of_printing_a_blank_one(tmp_pa
     block = {"type": "testpairs", "id": "sequences", "kind": "sequence", "title": ""}
     out, _, _ = build.render_testpairs(block, {"manifest": "MANIFEST.tsv"}, rows,
                                        tmp_path, tmp_path)
-    assert "<h3" not in out, out
+    assert 'class="tabtitle"' not in out, out
     assert "dgmviews" in out                     # the pairs themselves are untouched
 
     # An absent title is not an empty one: it still gets the default heading.
@@ -206,7 +206,7 @@ def test_an_empty_title_drops_the_heading_instead_of_printing_a_blank_one(tmp_pa
                                          "kind": "sequence"},
                                         {"manifest": "MANIFEST.tsv"}, rows,
                                         tmp_path, tmp_path)
-    assert "<h3" in kept and "Sequence diagrams of tests" in kept
+    assert 'class="tabtitle"' in kept and "Sequence diagrams of tests" in kept
 
 
 # ── the frame that says which picture you are on ──────────────────────────────────
@@ -1620,7 +1620,7 @@ def test_the_sequence_tab_quotes_what_the_tags_and_the_pictures_say(tmp_path, mo
              "unpaired": {"id": "tests-nosequence",
                           "title": "Tagged for tracing, and no diagram came back"}}
     out, weight, _ = seq.render_testpairs(block, {}, [], root, root / ".human-review")
-    assert '<h3 id="sequences">Sequence diagrams of tests</h3>' in out
+    assert '<h2 class="tabtitle" id="sequences">Sequence diagrams of tests</h2>' in out
     assert out.count('class="testpair" open') == 2
     assert "Searching shows the first page" in out and "Add a visit" in out
     tail = out[out.index("Tagged for tracing, and no diagram came back"):]

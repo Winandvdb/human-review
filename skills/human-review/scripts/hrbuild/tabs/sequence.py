@@ -962,7 +962,7 @@ TRACE_HOW = (
 
 
 def _trace_shot_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
-    """The nested fold with the trace itself, or "" when this run shot none.
+    """The trace itself, closing the "How" fold, or "" when this run shot none.
 
     It names the test the trace belongs to and links to that test's pair when the pair is
     on this tab (`shown`: diagram path -> test file), so the waterfall and the sequence can
@@ -991,25 +991,27 @@ def _trace_shot_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
     else:
         said = "A trace of this run, in Grafana Tempo."
     alt = f"A trace in Grafana Tempo{': ' + name if name else ''}"
-    return ('<details class="seqhow-shot"><summary>What does a trace look like?</summary>'
+    # No fold of its own: one inside "How were these produced?" was a second click for a
+    # reader who had already asked how — the picture is the answer's last line.
+    return ('<div class="seqhow-shot">'
             f'<p class="seqhow-cap">{said}</p>'
             f'<a class="seqhow-img" href="{TRACE_SHOT}" target="_blank" rel="noopener"'
             ' data-tip="Open full size">'
             f'<img src="{TRACE_SHOT}" alt="{html.escape(alt, quote=True)}" loading="lazy">'
-            "</a></details>")
+            "</a></div>")
 
 
 def trace_how_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
-    """"How were these produced?" — shut, at the top of the tab, over every picture on it.
+    """"How were these produced?" — shut, as the subtitle under the tab's title.
 
     The diagrams on this tab are drawn from OpenTelemetry traces, and nothing on the page
     said so: a reader who does not know what a trace is met a column of arrows with no
     account of where they came from, and even the person who set the pipeline up could not
     tell from the page. Three lines, folded, so the reader who knows pays one line of
-    height for it; the picture of a real trace one fold further in, for whoever wants to
-    see the thing the three lines describe."""
+    height for it; the picture of a real trace right under them, for whoever wants to see
+    the thing the three lines describe."""
     steps = "".join(f"<li>{s}</li>" for s in TRACE_HOW)
-    return ('<details class="seqhow"><summary>How were these produced?</summary>'
+    return ('<details class="seqhow tabsub"><summary>How were these produced?</summary>'
             f"<ol>{steps}</ol>" + _trace_shot_html(out_dir, root, shown) + "</details>")
 
 
@@ -1164,8 +1166,14 @@ def render_testpairs(block, dspec, manifest_rows, root: Path, out_dir: Path,
     # typed an empty one is asking for the space back. The default names what the tab is —
     # the label says *Sequence*, and the heading says of what: the tests' own runs.
     title = block.get("title", "Sequence diagrams of tests")
-    head = ((f'<h3 id="{html.escape(block.get("id", "sequences"))}">'
-             f'{html.escape(title)}</h3>') if title else "")
+    head = ((f'<h2 class="tabtitle" id="{html.escape(block.get("id", "sequences"))}">'
+             f'{html.escape(title)}</h2>') if title else "")
+    # Its subtitle: about every picture on the tab, the committed ones a band may be warning
+    # about included. Only over pictures — a tab with none has nothing for it to explain,
+    # and returned above. With no title it is simply the head's first line.
+    if plan:
+        head += trace_how_html(out_dir, root, {rel: test_rel for test_rel, entries in plan.items()
+                                               for rel, _ in entries})
     head += f'<p>{block["body"]}</p>' if block.get("body") else ""
     head += selection_note_html(selection, drew)
     # Invisible, and last: nothing to look at, only the map's way back in. `</` cannot
@@ -1173,16 +1181,11 @@ def render_testpairs(block, dspec, manifest_rows, root: Path, out_dir: Path,
     if index:
         parts.append('<script type="application/json" id="hr-genseq">'
                      + json.dumps(index).replace("</", "<\\/") + "</script>")
-    # First, above even the band: it is about every picture on the tab, the committed ones
-    # a band may be warning about included. Only over pictures — a tab with none has
-    # nothing for it to explain, and returned above.
-    how = trace_how_html(out_dir, root, {rel: test_rel for test_rel, entries in plan.items()
-                                         for rel, _ in entries}) if plan else ""
     # Weight counts every exhibit; changes count only the manifest's rows. An unchanged
     # pair is context, exactly as a `puml` block is, and must not un-strike the tab —
     # unless the suites were not re-traced: a strike says "this branch left the sequences
     # alone", and a run that drew nothing cannot know that.
-    return (how + band + "\n".join(([head] if head else []) + parts) + "\n",
+    return (band + "\n".join(([head] if head else []) + parts) + "\n",
             len(rows) + unchanged + stale + len(orphaned),
             len(rows) or int(sequence_verdict_alarm(out_dir) is not None))
 

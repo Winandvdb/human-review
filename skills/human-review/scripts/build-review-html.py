@@ -549,13 +549,16 @@ def _main(argv=None) -> int:
         # skill's own writing rule forbids — so it went stale silently the first time a
         # class was added.
         #
-        # The anchor sits on the heading, so `#codecity` still lands here.
+        # The anchor sits on the heading, so `#codecity` still lands here. The tab's title,
+        # in the one dress every tab's first line wears (`tabtitle`, core.css): it also drops
+        # the `h2` underline, which ran full width just above the card's own border and
+        # separated nothing.
         if city.get("body"):
             print("[review] codecity.body is no longer rendered — the picture starts under "
                   "the tab strip. Delete it from the content file; every sentence it can "
                   "hold is either in the shot or a number that goes stale.", file=sys.stderr)
         city_html = (
-            f'<h2 id="codecity">{html.escape(heading)}</h2>\n'
+            f'<h2 class="tabtitle" id="codecity">{html.escape(heading)}</h2>\n'
             f'<a class="city" href="{html.escape(city["href"])}"'
             f' target="_blank" rel="noopener"'
             f' data-tip="Open interactive">'

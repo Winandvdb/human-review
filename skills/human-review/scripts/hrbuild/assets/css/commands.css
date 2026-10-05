@@ -11,26 +11,22 @@
 button.chip-rerun { font:inherit; cursor:pointer; }
 button.chip-rerun:hover:not(:disabled) { border-color:var(--link); background:var(--accent-soft); }
 button.chip-rerun:disabled { cursor:progress; color:var(--muted); }
-/* The chip's face is its glyph, so the glyph is what turns: a borrowed ring drawn beside
-   it would be a second circular mark saying the same thing, and a word in its place would
-   reflow the masthead the instant the button is pressed. `.rr-ico` is the run mark alone,
-   so the robot and the banknote on the paid chip stay still while it spins.
-
-   Set larger than the type around it and given a line box of its own: `↻` is one thin
-   stroke, and at the chip's .82rem it reads as punctuation rather than as a control. The
-   `line-height:1` is what lets it grow without the pill growing with it — the three pills
-   on that row share one height, and a glyph that pushed its own line box open would be the
-   one that broke it. */
-.rr-ico { display:inline-block; font-size:1.3em; line-height:1; vertical-align:-.12em; }
-/* The `+` that makes the paid chip readable as an equation rather than a row of marks.
-   Dimmed and set small: it is the joint between the two halves, not a third thing in the
-   label, and at full weight it competed with the marks it is there to separate. */
-.rr-plus { margin:0 .22em; opacity:.6; font-size:.9em; }
-/* Counter-clockwise, the way ↺ points; the ⏳ and 🤖 marks turn the same way, so all three
-   read as one kind of "working". */
-button.chip-rerun.running .rr-ico { animation:hrspin .7s linear infinite reverse; }
+/* One face for every rerun press (`rerun_face`, shared/commands.py): a round button, a ↻
+   ring in the button's own colour, one emoji centred inside it (font-size half the button,
+   which an emoji draws a little wider: ~55%, clear of the ring) — ⚙️ scripts, ⏳ the slow steps, 🤖 a model. `--rr-size` is the button's outer
+   size and the only thing a context sets: the masthead's 1.75rem, the strip's smaller one.
+   The ring is what turns while it runs, clockwise, the way ↻ points; the emoji holds
+   still, so the kind of rerun stays readable mid-run. */
+button.chip-rerun { --rr-size:1.75rem; width:var(--rr-size); height:var(--rr-size);
+            box-sizing:border-box; padding:0; border-radius:50%;
+            display:inline-flex; align-items:center; justify-content:center; }
+.rr-ico { position:relative; display:inline-flex; align-items:center; justify-content:center;
+          width:100%; height:100%; line-height:1; }
+.rr-ring { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.rr-mark { position:relative; font-size:calc(var(--rr-size) * .5); line-height:1; }
+button.chip-rerun.running .rr-ring { animation:hrspin .9s linear infinite; }
 @media (prefers-reduced-motion:reduce) {
-  button.chip-rerun.running .rr-ico { animation:none; } }
+  button.chip-rerun.running .rr-ring { animation:none; } }
 /* The paid one, beside the free one. Amber and not red: red on this page means a failure
    or a regression, and a control that is merely expensive is not either of those — it is
    the page's one "are you sure", and amber is what every other "look before you press"
@@ -47,11 +43,6 @@ button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#2e7d32;
 @media (prefers-color-scheme:dark) {
   button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#6bd48a;
             background:#6bd48a; color:#10261a; } }
-/* The second mark on a two-mark chip — the robot on the paid one, the test tube on the
-   Tests tab's run-the-suites one: the arrow first, then what this press adds to it.
-   (`.rr-bot` is the name it had while the robot was the only one.) */
-.rr-add, .rr-bot { display:inline-block; font-size:1.05em; line-height:1; margin-left:.12em;
-          vertical-align:-.05em; }
 /* The same pair, narrowed to one tab, beside the selected pill on the strip. Shown only
    while its tab is the selected one: the strip is navigation, and thirteen glyphs on it
    would make every pill read as a control with two halves. `[hidden]` still wins on a
@@ -74,11 +65,12 @@ button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#2e7d32;
 /* One term per kind of button — its fixed width (below) plus the pair's gap — so the room
    is the sum of what the probe raised: the Tests tab's third press is one more term, not a
    hand-measured total for every combination. */
-.tabstrip { --tabre-w1:0px; --tabre-w2:0px; --tabre-w3:0px;
+/* `--tabre-rr` is the size of one round press on the strip, so the sum below follows it. */
+.tabstrip { --tabre-rr:1.2rem; --tabre-w1:0px; --tabre-w2:0px; --tabre-w3:0px;
             --tabre-w:calc(var(--tabre-w1) + var(--tabre-w2) + var(--tabre-w3)); }
-.tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun__"]:not([hidden])) { --tabre-w1:1.45rem; }
-.tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun_ai__"]:not([hidden])) { --tabre-w2:calc(1.45rem + .2rem); }
-.tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun_tests__"]:not([hidden])) { --tabre-w3:calc(2.2rem + .2rem); }
+.tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun__"]:not([hidden])) { --tabre-w1:var(--tabre-rr); }
+.tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun_ai__"]:not([hidden])) { --tabre-w2:calc(var(--tabre-rr) + .2rem); }
+.tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun_tests__"]:not([hidden])) { --tabre-w3:calc(var(--tabre-rr) + .2rem); }
 .tabstrip .tab[aria-selected="true"]:has(+ .tabre > .tabrerun:not([hidden])) {
             padding-right:calc(var(--tabre-w) + .55rem); }
 .tabstrip .tab[aria-selected="true"] + .tabre:has(> .tabrerun:not([hidden])) {
@@ -88,21 +80,10 @@ button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#2e7d32;
    (frame.css), and a box shorter than the tab would otherwise sink to that line too and
    sit low in the pill it is drawn over. */
 .tabstrip .tabre { align-self:stretch; }
-/* Fixed widths, so the sum above is exact, and an opaque ground, so the glyph never sits
-   on whatever the tab behind it is painted with. */
-.tabre .tabrerun { padding:0; border-radius:999px; border:1px solid;
-            font-size:.72rem; line-height:1.3; background:var(--card);
-            display:inline-flex; align-items:center; justify-content:center;
-            width:1.45rem; box-sizing:border-box;
-            /* A fixed height, not one taken from the glyph: the ↺ at 1.3em and an emoji at
-               1em gave line boxes 3–4px apart, and the three chips stood at three heights. */
-            height:1.1rem; }
-/* ↺⏳ is two marks: wider, the same height. */
-.tabre .tabrerun-tests { width:2.2rem; }
-/* 🤖 is a colour emoji, already heavier than the one-stroke ↺: set at the type's own size
-   rather than the arrow's 1.3em, or it overflows the round chip. (The ⏳ of ↺⏳ is
-   `.rr-add`, sized on its own; its ↺ stays the arrow's size.) */
-button.chip-rerun-ai .rr-ico { font-size:1em; vertical-align:-.05em; }
+/* Round and all one size, so the sum above is exact, and an opaque ground, so the ring
+   never sits on whatever the tab behind it is painted with. */
+.tabre .tabrerun { --rr-size:var(--tabre-rr); border:1px solid; background:var(--card);
+            font-size:.72rem; }
 .tabre .tabrerun[hidden] { display:none; }
 /* The page's own confirmation, over the page. Fixed and full-viewport because the click it
    guards costs money and a panel the reader can scroll away from is a panel they can
@@ -322,9 +303,9 @@ button.chip-rerun-ai .rr-ico { font-size:1em; vertical-align:-.05em; }
             height:1.75rem; box-sizing:border-box; }
 /* `[hidden]` is spelled out because the `display` these carry would otherwise beat the
    attribute. */
-/* The three presses are glyphs, not words: a narrower side padding than the badge's, so four
-   pills beside the title take no more of its width than they must. */
-.titlerow .chip-rerun { padding-left:.5rem; padding-right:.5rem; }
+/* The three presses are round (`rerun_face`): the row's padding, set for the word badges
+   beside them, would stretch them back into pills. */
+.titlerow .chip-rerun { padding:0; width:var(--rr-size); }
 .titlerow .chip-vsc[hidden], .titlerow .chip-mode[hidden], .titlerow .chip-serve[hidden], .titlerow .chip-rerun[hidden] { display:none; }
 /* Stop: the ⏹️ after the word `Served`, inside its pill. A bare glyph with no ring of its
    own — the pill's border is the only border — at about the text's cap height, and its own

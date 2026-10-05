@@ -107,8 +107,8 @@ def test_the_run_mark_is_a_play_and_never_the_rerun_arrow():
     block = css[css.index(".cmd { display:inline-flex"):css.index(".rerun a,")]
     assert "#2e7d32" not in block and "#6bd48a" not in block, \
         "the greens are gone from the command pill; they belong to a passing check"
-    # The masthead keeps it, and that is the one place it means what it draws.
-    assert build.CMD_RUN in build.RERUN_CHIP
+    # The masthead's rerun draws its own ring (`rerun_face`), not this arrow.
+    assert "rr-ring" in build.RERUN_CHIP
 
 
 def test_the_run_glyph_ships_hidden_and_is_raised_by_the_probe():

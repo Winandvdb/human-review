@@ -47,6 +47,27 @@ CMD_RUN = "\u21BA"        # ↺
 CMD_PLAY = "\u25B6\uFE0E"  # ▶
 CMD_STOP = "\u25A0"         # ■
 
+#: The three rerun presses — masthead, tab strip, and the Tests tab's own — wear one face:
+#: a round button, a ↻ ring drawn in the button's colour, and one emoji inside it saying
+#: which kind of rerun it is. Victor's mapping (5 Oct 2026), and it is what each one does:
+#: ⚙️ regenerates from scripts (free, seconds), ⏳ runs the slow steps first (free,
+#: minutes), 🤖 asks a model (paid). One face, so a reader learns the ring once and reads
+#: only the emoji. The ring is SVG rather than ↺ because a text arrow cannot hold a second
+#: glyph inside it; it is `currentColor`, so it still takes the green or the amber.
+RERUN_MARK_SCRIPT = "\u2699\uFE0F"   # ⚙️
+RERUN_MARK_SLOW = "\u23F3"            # ⏳
+RERUN_MARK_AI = "\U0001F916"          # 🤖
+_RERUN_RING = ('<svg class="rr-ring" viewBox="0 0 24 24" aria-hidden="true">'
+               '<path d="M18.1 4.7A9.5 9.5 0 1 1 5.9 4.7" fill="none" stroke="currentColor" '
+               'stroke-width="2" stroke-linecap="round"/>'
+               '<path d="M8.0 2.9L7.0 6.8L4.0 3.3Z" fill="currentColor"/></svg>')
+
+
+def rerun_face(mark: str) -> str:
+    """The face of every rerun press: the ring, which is what turns while it runs, and the
+    emoji, which holds still inside it."""
+    return f'<span class="rr-ico">{_RERUN_RING}<span class="rr-mark">{mark}</span></span>'
+
 # The masthead's Rerun — which is also the served badge, because they are one fact.
 #
 # Not to be confused with `rerun_html` further down, which is the offer under a *diagram*
@@ -74,7 +95,7 @@ RERUN_CHIP = ('<button type="button" class="chip chip-rerun chip-served" id="hr-
               # Brief, since the `Served` badge beside it now carries what serving means:
               # what the press does, what it leaves alone, and the price.
               'data-tip="Rebuild the page. Free. Not the findings, not the film.">'
-              f'<span class="rr-ico">{CMD_RUN}</span></button>')
+              f'{rerun_face(RERUN_MARK_SCRIPT)}</button>')
 
 # The same button with the model's half in front of it, and the only control on this page
 # that spends money.
@@ -112,13 +133,11 @@ RERUN_AI_CHIP = ('<button type="button" class="chip chip-rerun chip-rerun-ai" '
                  # at-a-glance "this one is different" (solid: Victor did not want it dashed). No words on the face, because
                  # a label reading `Rerun + AI` cost the masthead two words to say
                  # `rerun` a second time.
-                 '<span class="rr-ico">\U0001F916</span></button>')
+                 f'{rerun_face(RERUN_MARK_AI)}</button>')
 
-#: The face of a run-the-tests press, masthead and Tests tab alike: the regenerate mark and
-#: the hourglass in one button — "regenerate, and wait for what takes long". The arrow is
-#: `.rr-ico`, the part that turns while it runs; the hourglass holds still beside it.
-RUN_TESTS_FACE = (f'<span class="rr-ico">{CMD_RUN}</span>'
-                  '<span class="rr-add">\u23F3</span>')
+#: The face of a run-the-tests press, masthead and Tests tab alike: the ring around the
+#: hourglass — "regenerate, and wait for what takes long".
+RUN_TESTS_FACE = rerun_face(RERUN_MARK_SLOW)
 
 
 def rerun_tests_chip(info: dict | None) -> str:
@@ -166,7 +185,7 @@ def tab_rerun_html(tab_id: str, label: str, info: dict | None) -> str:
            f'aria-disabled="true" data-rerun="__rerun__" data-tab="{tid}" '
            f'data-steps="{steps}" aria-label="Rerun the {name} tab" '
            f'data-tip="{tip}">'
-           f'<span class="rr-ico">{CMD_RUN}</span></button>')
+           f'{rerun_face(RERUN_MARK_SCRIPT)}</button>')
     # A tab's own further presses (the Tests tab's ↺⏳, which runs the suites first), drawn
     # by the tab that owns them and placed here, inside the span: the strip shows `.tabre`
     # only as the selected pill's next sibling, so a second span beside it would never show.
@@ -190,7 +209,7 @@ def tab_rerun_html(tab_id: str, label: str, info: dict | None) -> str:
                    if info.get("priced") and info.get("price") not in (None, "model")
                    else "") +
                 f'data-tip="costs money. {tip}">'
-                '<span class="rr-ico">\U0001F916</span></button>')
+                f'{rerun_face(RERUN_MARK_AI)}</button>')
     return out + "</span>"
 
 

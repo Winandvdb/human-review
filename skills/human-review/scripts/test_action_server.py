@@ -856,7 +856,7 @@ def test_the_button_says_what_it_will_not_do():
 def test_the_served_badge_replaces_static_and_the_rerun_chip_keeps_a_brief_hover():
     """Victor: a `Served` badge replaces `Static` and carries what serving means; the ↺
     beside it says only what the press does."""
-    assert build.CMD_RUN in build.RERUN_CHIP
+    assert build.rerun_face(build.RERUN_MARK_SCRIPT) in build.RERUN_CHIP
     assert "chip-served" in build.RERUN_CHIP
     tip = re.search(r'data-tip="([^"]*)"', build.RERUN_CHIP).group(1)
     assert tip.startswith("Rebuild the page")
@@ -872,9 +872,9 @@ def test_a_running_chip_turns_its_glyph_rather_than_growing_a_word():
     down the page spin, so a reader who has seen one knows this one is working."""
     assert "btn.textContent" not in build.RERUN_JS
     assert "data-face" not in build.RERUN_JS
-    assert "button.chip-rerun.running .rr-ico { animation:hrspin" in build.CSS
-    # The robot and the banknote stay still: only the run mark is inside `.rr-ico`.
-    assert build.RERUN_AI_CHIP.index("rr-ico") < build.RERUN_AI_CHIP.index("\U0001F916")
+    assert "button.chip-rerun.running .rr-ring { animation:hrspin" in build.CSS
+    # The emoji stays still inside the ring: only `.rr-ring` turns.
+    assert build.RERUN_AI_CHIP.index("rr-ring") < build.RERUN_AI_CHIP.index("\U0001F916")
 
 
 def test_where_the_reader_was_survives_the_rebuild():
@@ -1444,7 +1444,7 @@ def test_the_paid_button_says_the_price_before_it_is_pressed(tmp_path):
     # banknote made a four-glyph rebus nobody could read at chip size. The money is in the
     # hover and the dialog, in words. No words on the face either: `Rerun + AI` said
     # neither the price nor anything the free chip beside it had not already said.
-    assert build.RERUN_AI_CHIP.endswith('<span class="rr-ico">\U0001F916</span></button>')
+    assert build.RERUN_AI_CHIP.endswith(build.rerun_face("\U0001F916") + "</button>")
     assert "\U0001F4B8" not in build.RERUN_AI_CHIP and "rr-plus" not in build.RERUN_AI_CHIP
     assert build.CMD_RUN not in build.RERUN_AI_CHIP
     assert "Rerun" not in build.RERUN_AI_CHIP[build.RERUN_AI_CHIP.index('data-tip'):]
@@ -1644,7 +1644,7 @@ def test_the_masthead_run_the_tests_chip_names_the_slow_steps(tmp_path):
     chip = build.rerun_tests_chip(info)
     assert 'id="hr-rerun-tests" hidden' in chip and 'data-rerun="__rerun_tests__"' in chip
     assert "data-tab" not in chip
-    assert build.RUN_TESTS_FACE in chip and "\u21BA" in chip and "\u23F3" in chip
+    assert build.RUN_TESTS_FACE in chip and "rr-ring" in chip and "\u23F3" in chip
     assert build.rerun_tests_chip(None) == ""
     build.ACTIONS.clear()
 
@@ -1958,3 +1958,17 @@ def test_the_probe_prices_the_film_out_of_its_own_ledger(server, tmp_path):
     assert caps["prices"]["film"]["text"] == "~$1.50" and caps["prices"]["film"]["last"] == 2.0
     assert caps["price"]["text"] == "~$9.50", "the matrix's figure is untouched"
     assert srv.FILM_RUNS_FILE == film.RUNS_LEDGER and srv.FILM_RUNS_FILE.startswith(".")
+
+
+def test_every_rerun_press_wears_one_face_the_ring_around_one_emoji():
+    """Victor, 5 Oct 2026: masthead, tab strip and the Tests tab's own press are one round
+    button — a ↻ ring around a single emoji naming the kind of rerun: ⚙️ scripts, ⏳ the
+    slow steps, 🤖 a model. One helper draws all of them."""
+    out = build.tab_rerun_html("requirements", "Tests", {"steps": ["tests"], "ai": True,
+                                                         "aiTip": "x"})
+    faces = [build.RERUN_CHIP, build.RUN_TESTS_FACE, build.RERUN_AI_CHIP, out]
+    for face in faces:
+        assert "rr-ring" in face and build.CMD_RUN not in face
+    assert build.rerun_face(build.RERUN_MARK_SCRIPT) in build.RERUN_CHIP
+    assert build.RUN_TESTS_FACE == build.rerun_face(build.RERUN_MARK_SLOW)
+    assert out.count('class="rr-ring"') == 2 and build.RERUN_MARK_AI in out

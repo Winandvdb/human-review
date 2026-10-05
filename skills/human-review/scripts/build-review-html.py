@@ -72,6 +72,7 @@ from hrbuild.shared.commands import (
     drawio_open_html,
     regenerate_html, RERUN_AI_CHIP, RERUN_AI_CONFIRM, RERUN_CHIP, RERUN_DONE, RERUN_FAIL,
     PROGRESS_BUILD_SECONDS, PROGRESS_STEP_DEFAULT, rerun_progress_html, step_expectations,
+    rerun_face, RERUN_MARK_AI, RERUN_MARK_SCRIPT, RERUN_MARK_SLOW, _RERUN_RING,
     rerun_html, rerun_tests_chip, RUN_TESTS_FACE, tab_rerun_html, TAB_RERUN_TIP,
     reveal_html, runtime_html, STATIC_RUN_TIP, _app_anchor
 )

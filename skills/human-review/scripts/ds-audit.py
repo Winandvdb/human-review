@@ -1793,6 +1793,9 @@ def _source_links(rel: str, root: Path, line: int, base: str) -> str:
     import contextlib
     import io
     s = _snippets_module()
+    if not all(hasattr(s, n) for n in ("diff_link_html", "_github_compare_link",
+                                       "_shown_in_compare", "_icon")):
+        return ""
     with contextlib.redirect_stderr(io.StringIO()):
         vsc = s.diff_link_html(rel, base, root, face=s._icon("VSC"), line=line)
         at = line if s._shown_in_compare(rel, base, str(root), line) else None
@@ -1822,11 +1825,16 @@ def source_bar(f: dict, root: Path | None, base: str | None) -> str:
                 f'equally; this is the first">1 of {src["matches"]} '
                 f'&lt;{html.escape(f["element"]["tag"])}&gt;</span>')
     path = Path(root or ".") / rel
+    # Whatever bar every other quoted block wears. The page's builder has carried the two
+    # handles as `links`, and is dropping them for a bar whose file name is the one link;
+    # this follows whichever it is rather than keeping a second opinion about it.
+    import inspect
+    build_bar = _snippets_module()._extract_module().srcbar_html
+    takes_links = "links" in inspect.signature(build_bar).parameters
     links = (_source_links(rel, Path(root), line, base)
-             if root and base and path.is_file() else "")
-    bar = _snippets_module()._extract_module().srcbar_html(
-        f"vscode://file/{path.resolve()}:{line}:1", rel, str(line), badge + note, links)
-    return bar
+             if takes_links and root and base and path.is_file() else "")
+    return build_bar(f"vscode://file/{path.resolve()}:{line}:1", rel, str(line),
+                     badge + note, *([links] if takes_links else []))
 
 
 def detail_html(f: dict, registry: dict, screen: str, root: Path | None,

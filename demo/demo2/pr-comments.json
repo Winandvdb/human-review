@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "commit_id": "44c8da18a26129ea683df492beed502b1a54b285",
+  "commit_id": "810678122004a60220d5aefbcb5249793a33057a",
   "event": "COMMENT",
-  "body": "**Review record** from `review-points.md` (4 read-only Sonnet subagents (correctness, security, ticket-fit, tests) on the RR briefs): 4 auto-fixed · 10 declined and still open · 6 assumptions. Each is pinned on the line it is about.",
+  "body": "**Review record** from `review-points.md` (4 read-only Sonnet subagents (correctness, security, ticket-fit, tests) on the RR briefs): 4 auto-fixed · 10 declined and still open · 6 assumptions. Each is on the line it is about, or quoted below with its lines when that line is not in the diff.",
   "comments": [
     {
       "hr_id": "F:line-over-119-chars-blocked-the-push",
@@ -11,8 +11,8 @@
       "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
       "line": 67,
       "side": "RIGHT",
-      "anchor": "",
-      "body": "🛠 **Auto-fixed** in 44c8da18 — Line over 119 chars blocked the push\n\n<sub>raised by pre-push hook</sub>"
+      "anchor": "private static final String SORT_MESSAGE = \"must be one of name,asc / name,desc / city,asc / city,desc\";",
+      "body": "🛠 **Auto-fixed** in 81067812 — Line over 119 chars blocked the push\n\n<sub>raised by pre-push hook</sub>"
     },
     {
       "hr_id": "F:add-visit-fixtures-searched-only-the-first-page",
@@ -23,7 +23,7 @@
       "side": "RIGHT",
       "start_line": 106,
       "anchor": "}",
-      "body": "🛠 **Auto-fixed** in 44c8da18 — Add-visit fixtures searched only the first page of owners\n\n<sub>raised by correctness, ticket-fit, tests reviewers</sub>"
+      "body": "🛠 **Auto-fixed** in 81067812 — Add-visit fixtures searched only the first page of owners\n\n<sub>raised by correctness, ticket-fit, tests reviewers</sub>"
     },
     {
       "hr_id": "F:a-failed-load-dropped-the-user-s-place-with-no",
@@ -33,8 +33,8 @@
       "line": 69,
       "side": "RIGHT",
       "start_line": 67,
-      "anchor": "",
-      "body": "🛠 **Auto-fixed** in 44c8da18 — A failed load dropped the user's place with no retry\n\n<sub>raised by correctness, tests reviewers</sub>"
+      "anchor": "}",
+      "body": "🛠 **Auto-fixed** in 81067812 — A failed load dropped the user's place with no retry\n\n<sub>raised by correctness, tests reviewers</sub>"
     },
     {
       "hr_id": "F:query-budget-not-pinned-for-default-size-or",
@@ -44,7 +44,8 @@
       "line": 82,
       "side": "RIGHT",
       "start_line": 80,
-      "body": "🛠 **Auto-fixed** in 44c8da18 — Query budget not pinned for default size or City sort\n\n<sub>raised by tests reviewer</sub>"
+      "anchor": "JsonNode page = list(\"/api/owners?lastName=Qbudget&size=\" + size + \"&sort=\" + sortKey + \",\" + direction);",
+      "body": "🛠 **Auto-fixed** in 81067812 — Query budget not pinned for default size or City sort\n\n<sub>raised by tests reviewer</sub>"
     },
     {
       "hr_id": "I:angular-httpparams-leaves-unencoded-so-it-is",
@@ -54,7 +55,7 @@
       "line": 93,
       "side": "RIGHT",
       "start_line": 89,
-      "anchor": "it('getOwnerPage sends an empty prefix, which matches every owner', () => {",
+      "anchor": ".toBe(ownerService.entityUrl + \"?lastName=O'Br%20%26%20Co%25%2B%23\");",
       "body": "🔴 **Open issue** · info · declined by the author — Angular HttpParams leaves '+' unencoded, so it is read as a space\n\n**Why declined:** Refuted: this spec asserts '+' goes out as %2B, and it passes on Angular 16.\n\n<sub>raised by security, correctness reviewers</sub>"
     },
     {
@@ -64,7 +65,7 @@
       "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
       "line": 147,
       "side": "RIGHT",
-      "anchor": "@Operation(operationId = \"getOwner\", summary = \"Get an owner by ID\")",
+      "anchor": ".orElseThrow(() -> new IllegalStateException(\"Owner \" + owner.getId() + \" vanished mid-request\")))",
       "body": "🔴 **Open issue** · low · declined by the author — Owner deleted between the page and graph queries yields a 500\n\n**Why declined:** openspec/changes/paginate-sort-owners/design.md:44 mandates surfacing it; cross-request snapshot is out of scope (design.md:92).\n\n<sub>raised by correctness, security reviewers</sub>"
     },
     {
@@ -74,7 +75,7 @@
       "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
       "line": 118,
       "side": "RIGHT",
-      "anchor": "@Schema(allowableValues = {\"name,asc\", \"name,desc\", \"city,asc\", \"city,desc\"}) String sort) {",
+      "anchor": "defaultValue = \"0\") @Min(0) @Max(MAX_PAGE) int page,",
       "body": "🔴 **Open issue** · low · declined by the author — Deep page numbers allow costly OFFSET scans\n\n**Why declined:** Numbered offset paging chosen (design.md:62); OWNER_ADMIN-only endpoint; load tests deferred.\n\n<sub>raised by security reviewer</sub>"
     },
     {
@@ -84,7 +85,7 @@
       "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
       "line": 116,
       "side": "RIGHT",
-      "anchor": "+ \" The direction applies to every field.\")",
+      "anchor": "@RequestParam(defaultValue = \"\") String lastName,",
       "body": "🔴 **Open issue** · low · declined by the author — lastName has no length bound\n\n**Why declined:** Same as before this change; Tomcat's request-size limits cap it; bound literal, no injection.\n\n<sub>raised by security reviewer</sub>"
     },
     {
@@ -94,7 +95,7 @@
       "path": "openspec/changes/paginate-sort-owners/tasks.md",
       "line": 34,
       "side": "RIGHT",
-      "anchor": "",
+      "anchor": "- [ ] 4.4 Comment on #25 with the verified implementation state, breaking coordinated rollout, and Name/City-only sorting; notify Bizu through the available issue channel without guessing an identity. Verify the published update is accurate and references the narrower accepted scope.",
       "body": "🔴 **Open issue** · medium · declined by the author — Issue #25 comment and Bizu notification not done\n\n**Why declined:** The human forbade posting anything on GitHub in this run; left open in tasks.md.\n\n<sub>raised by ticket-fit reviewer</sub>"
     },
     {
@@ -124,7 +125,7 @@
       "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/error/ExceptionControllerAdvice.java",
       "line": 79,
       "side": "RIGHT",
-      "anchor": "log.warn(\"Validation failed: {}\", ex.getMessage());",
+      "anchor": "public ResponseEntity<ProblemDetail> handleHandlerMethodValidation(HandlerMethodValidationException ex,",
       "body": "🔴 **Open issue** · info · declined by the author — First/last paginator buttons and a global validation handler were not asked for\n\n**Why declined:** Buttons are in proposal.md:69; no other endpoint has parameter constraints, these were 500s before.\n\n<sub>raised by ticket-fit reviewer</sub>"
     },
     {
@@ -134,7 +135,7 @@
       "path": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java",
       "line": 49,
       "side": "RIGHT",
-      "anchor": "assertThat(fieldNames(page)).containsExactlyInAnyOrder(\"content\", \"totalElements\");",
+      "anchor": "private static final Comparator<Owner> BY_NAME = Comparator.comparing(Owner::getLastName)",
       "body": "🔴 **Open issue** · low · declined by the author — Expected order computed by Java comparators, not DB collation\n\n**Why declined:** The fixtures are same-case ASCII on purpose, so both orders agree; collation is not under test.\n\n<sub>raised by tests reviewer</sub>"
     },
     {
@@ -144,7 +145,7 @@
       "path": "petclinic-backend/src/test/java/victor/training/petclinic/repository/OwnerListIndexesMigrationTest.java",
       "line": 55,
       "side": "RIGHT",
-      "anchor": "&& index.contains(\"(last_name text_pattern_ops)\"))",
+      "anchor": "assertThat(indexes.get(\"owners_last_name_prefix_idx\")).contains(\"(last_name text_pattern_ops)\");",
       "body": "🔴 **Open issue** · low · declined by the author — Migration test checks index definitions, not query plans\n\n**Why declined:** The planner ignores indexes on tiny tables; EXPLAIN on 100k rows is deferred (design.md:60).\n\n<sub>raised by tests reviewer</sub>"
     },
     {
@@ -154,7 +155,7 @@
       "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
       "line": 65,
       "side": "RIGHT",
-      "anchor": "private final VisitRepository visitRepository;",
+      "anchor": "private static final int MAX_PAGE = Integer.MAX_VALUE / 20;",
       "body": "💭 **Assumption** · confidence 0.70 — \"Unrepresentable\" page means its offset overflows Hibernate's int\n\n**Not taken:** Accept any int page and let a huge offset fail at query time\n\n**Why:** The spec (specs/owner-list/spec.md:23) demands a 400 for unrepresentable pages without defining the term. Capping at MAX_INT/20 is the tightest bound that holds at every allowed size, but a lower business cap would be equally defensible."
     },
     {
@@ -164,7 +165,7 @@
       "path": "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java",
       "line": 120,
       "side": "RIGHT",
-      "anchor": "Pageable pageable = OwnerPageRequest.of(page, size, sort);",
+      "anchor": "defaultValue = \"10\") @OneOf({5, 10, 20}) int size,",
       "body": "💭 **Assumption** · confidence 0.75 — Invalid parameters rejected by bean validation plus a @OneOf constraint\n\n**Not taken:** A custom exception that rest throws and rest.error maps\n\n**Why:** packages.puml forbids rest → rest.error, so a custom exception would need an architecture change. Spring's own HandlerMethodValidationException keeps both packages independent; the cost is one small constraint annotation."
     },
     {
@@ -175,7 +176,7 @@
       "line": 96,
       "side": "RIGHT",
       "start_line": 92,
-      "anchor": "@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)",
+      "anchor": "log.warn(\"Invalid request parameters: {}\", errors);",
       "body": "💭 **Assumption** · confidence 0.60 — Type-mismatch 400 applies to every REST endpoint, not only the list\n\n**Not taken:** Scope the 400 to listOwners and keep 500 elsewhere\n\n**Why:** The spec needs page=abc to return 400, and a 500 for malformed input is wrong everywhere. Still, /api/owners/abc changing from 500 to 400 is a contract change nobody asked for."
     },
     {
@@ -186,7 +187,7 @@
       "line": 122,
       "side": "RIGHT",
       "start_line": 119,
-      "anchor": "List<Owner> owners = fetchPetsAndVisitsInPageOrder(ownerPage.getContent());",
+      "anchor": "+ \"The direction applies to every field. Defaults to name,asc.\",",
       "body": "💭 **Assumption** · confidence 0.60 — Allowed sizes and the sort default stated in OpenAPI descriptions\n\n**Not taken:** A custom OpenAPI customizer emitting an integer enum and default\n\n**Why:** springdoc renders allowableValues as strings, which Spectral rejects, and drops a default that contains a comma. Prose keeps the lint green, but machines cannot read the 5/10/20 rule from the schema."
     },
     {
@@ -197,7 +198,7 @@
       "line": 97,
       "side": "RIGHT",
       "start_line": 96,
-      "anchor": "size: this.pageSize,",
+      "anchor": "this.failed = true;",
       "body": "💭 **Assumption** · confidence 0.55 — A failure hides the grid instead of keeping stale rows\n\n**Not taken:** Keep the last rows visible under the error banner\n\n**Why:** The spec says a failure must not look like a result, and stale rows under a new query would. Showing the previous rows greyed out is a reasonable UX that the spec does not exclude."
     },
     {
@@ -207,7 +208,7 @@
       "path": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.html",
       "line": 48,
       "side": "RIGHT",
-      "anchor": "<td>",
+      "anchor": "<td colspan=\"5\">This page is empty — go back to an earlier page.</td>",
       "body": "💭 **Assumption** · confidence 0.65 — An empty page within a non-empty result shows a \"go back\" row\n\n**Not taken:** Jump to the last valid page automatically\n\n**Why:** The spec only forbids claiming \"no matches\" and requires navigation to stay available. Auto-jumping would send an extra request nobody triggered."
     }
   ],

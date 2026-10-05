@@ -119,7 +119,10 @@ from hrbuild.shared.masthead import (
     title_ticket_ref, OUTSIDE_ID, outside_badge, _outside_where, _split_outside,
     _picked_outside
 )
-from hrbuild.shared.adopt import ADOPT, adopt_html, adopt_prompt
+from hrbuild.shared.adopt import (
+    DIAGRAM_CARD, DIAGRAM_KINDS, PETCLINIC, PIECES, PLACES, ROBOT, _TAG, _close, adopt_html,
+    adopt_prompt, place_prompts
+)
 from hrbuild.shared.footer import (
     DEMO_DOCKER_URL, DEMO_PAGES_URL, DEMO_ZIP_URL, FOOTER_BOILERPLATE, HOME_URL, INVITATION,
     ISSUES_URL, PAST_INVITATIONS, PROVENANCE, RUNNING_STACK, TAKEAWAY, _link_home
@@ -1169,8 +1172,7 @@ def _main(argv=None) -> int:
                 f'aria-labelledby="tabbtn-{tid}">'
                 f'<p class="paneltag">{html.escape(tab["label"])}</p>'
                 + (QUIET_LINE if still else "")
-                + f'{tab.get("intro", "")}{body}'
-                + adopt_html(tab["id"], tab["label"]) + '</section>'
+                + place_prompts(tab["id"], f'{tab.get("intro", "")}{body}') + '</section>'
             )
             emitted.append(tab)
         # A diagram in the manifest that no tab claimed would vanish without a word —
@@ -1218,7 +1220,7 @@ def _main(argv=None) -> int:
                 f'<section class="panel" id="{COST_TAB_ID}" role="tabpanel" '
                 f'aria-labelledby="tabbtn-{COST_TAB_ID}">'
                 '<p class="paneltag">Cost</p>'
-                f'{cost_tab_body}{adopt_html(COST_TAB_ID, "Cost")}</section>')
+                f'{place_prompts(COST_TAB_ID, cost_tab_body)}</section>')
 
         # The strip leaves the body: it belongs to the masthead now, and the masthead is
         # assembled around it below. `body_html` is the panels alone, which is what every

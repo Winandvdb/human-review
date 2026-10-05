@@ -1,0 +1,23 @@
+/* "Prompt to get this": a prompt for the reader's own agent, one per piece, in the bottom-right
+   of the card it is about -- where the eye lands once that card is read, and quiet until
+   then. A small pill, never a row of its own under the panel: that row was a band of
+   nothing between every tab and the footer. */
+.adoptline { display:flex; justify-content:flex-end; margin-top:.45rem; }
+button.adopt { border:1px solid var(--line); background:var(--card); color:var(--muted);
+               cursor:pointer; border-radius:999px; font:600 .72rem/1.6 inherit;
+               padding:0 .6rem; white-space:nowrap; }
+button.adopt:hover { color:var(--fg); border-color:var(--link); }
+/* Inside a card: the card's own bottom padding is most of the room the row needs. */
+.diagram:has(> .adopt-in) { padding-bottom:.6rem; }
+.cx-list > .adopt-in { margin:0; padding:.35rem .6rem; }
+/* The Demo's transcript column stretches to the player's height, so the pill sits in the
+   free space under the cues, level with the voice switch under the film. */
+.adoptcol { display:flex; flex-direction:column; align-self:stretch; min-width:0; }
+.adoptcol > .adoptline { margin-top:auto; padding-top:.45rem; }
+/* The Tests panes fill the viewport and have no height to give: the pill floats over their
+   bottom-right corner instead, and the right pane's scroller gets that much room at its end
+   so nothing stays hidden under it. */
+.reqmap .rm-body:has(> .adopt-float) { position:relative; }
+.reqmap .rm-body:has(> .adopt-float) > .rm-side { padding-bottom:2rem; }
+.adopt-float { position:absolute; right:.7rem; bottom:.55rem; margin:0; z-index:2; }
+.adopt-float button.adopt { box-shadow:0 1px 4px rgba(0,0,0,.18); }

@@ -120,77 +120,28 @@ def stylesheet() -> str:
         # recede answers "what do I look at" better than making one line among twenty
         # shout. Not done when the whole window is new - there is nothing to recede from.
         "pre.code.diff-changed .ln-row:not(.added) { opacity:.55; }\n"
-        ".code-badge { display:inline-block; font:600 10.5px/1.6 ui-monospace,\n"
-        "  SFMono-Regular,Menlo,monospace; letter-spacing:.06em; text-transform:uppercase;\n"
-        "  padding:0 7px; border-radius:999px; border:1px solid currentColor;\n"
-        "  color:#1a7f37; background:rgba(45,164,78,.09); }\n"
-        ".code-badge[data-diff=unchanged] { color:var(--muted,#6b6b6b);\n"
-        "  background:transparent; }\n"
         # --- the source bar -----------------------------------------------------------
-        # The one header a quoted block gets, wherever it is quoted: the two ways to open
-        # the change, the file they open, and what changed in it — one group at the right
-        # end, read left to right. It was three different headers before — the Tests tab's
-        # own bar in a per-review asset, the Review tab's diff corner, the Logging tab's
-        # bottom-right marker — which meant a reader learned the vocabulary three times and
-        # a fix to one of them left the other two alone. Defined here, in the stylesheet
+        # The one header a quoted block gets, wherever it is quoted: the file, and what
+        # changed in it — one group at the right end, read left to right. It was three
+        # different headers before — the Tests tab's own bar in a per-review asset, the
+        # Review tab's diff corner, the Logging tab's bottom-right marker — which meant a
+        # reader learned the vocabulary three times and a fix to one of them left the
+        # other two alone. Defined here, in the stylesheet
         # the snippets already share, so a hand-authored fragment gets it by using the
         # class name.
-        # The three parts are one phrase, so none of them is pushed away from the others
+        # The parts are one phrase, so none of them is pushed away from the others
         # with an auto margin: the row is aligned as a whole against the right edge, and
         # the gap between its parts is the same everywhere the bar appears.
         ".srcbar { display:flex; align-items:center; flex-wrap:wrap; gap:7px;\n"
         "  justify-content:flex-end; margin:0 0 .5rem; }\n"
         ".srcbar .srcbar-path { text-align:right; }\n"
-        # It trails the name now, and a smaller gap ties it to the word it is a fact about
-        # rather than letting it float between the file and the edge.
-        ".srcbar .code-badge { flex:0 0 auto; font-size:9px; padding:1px 6px;\n"
-        "  margin-left:-2px; }\n"
-        # The two handles open the file named immediately after them. Each is emitted only
-        # where that side can really show it, so a missing one is an honest absence. They
-        # are stripped of the standalone handle's skin: `a.srcref.diffref` boxes the pill
-        # that floats under a snippet with nothing around it, and carrying that into the
-        # bar bought a second vocabulary for a link in a row of three. It also outranked
-        # this rule, so its -.35rem/1.15rem pull-up came along and lifted both handles off
-        # the baseline the badge and the path share. The selector keeps its type so it
-        # outranks that one; margin:0 puts them back on the line.
-        ".srcbar a.srcref.diffref { flex:0 0 auto; padding:0; margin:0; background:none;\n"
-        "  border:0; border-bottom:1px dotted currentColor; border-radius:0;\n"
-        "  letter-spacing:0; white-space:nowrap; }\n"
-        ".srcbar a.srcref.diffref:hover { background:var(--accent-soft,#eef2fb); }\n"
-        # A logo needs no dotted underline to say it is a link — the underline was there to
-        # mark three letters that could otherwise be read as a label, and under a mark it
-        # is just a line. What is left is a hit area big enough to click at 14px.
-        # ...and they sit closer than the row's own 7px: a mark is a smaller thing than
-        # the words around it, and given the same air it floats off the name it belongs
-        # to. Two thirds of the gap, taken back with a negative margin so the hover box
-        # keeps its full hit area.
-        ".srcbar a.srcref.srcbar-diff { border-bottom:0; padding:1px 3px;\n"
-        "  border-radius:5px; line-height:0; margin-right:-2.33px; }\n"
-        # The marks themselves, wherever a `.srcref` carries one: at the size of the text
-        # beside them, sitting on its baseline rather than on the box's.
-        # Grey at rest, lit on hover — and never the link colour it would otherwise
-        # inherit, because a blue octocat reads as a decorated arrow. Two logos in full
-        # colour beside a file name are the brightest thing in the row and the least of
-        # what it says; grey, they sit at the weight of furniture and the name reads
-        # first. Under the cursor each comes up in the colour it is recognised by: the
-        # octocat in the page's own ink (its mark is monochrome by its own brand) and the
-        # ribbon in its blue, which is the only thing that makes it VS Code.
-        ".srcref svg.ico { display:inline-block; width:14px; height:14px;\n"
-        "  vertical-align:-.2em; fill:var(--muted,#6b6b6b);\n"
-        "  transition:fill .12s ease; }\n"
-        "a.srcref:hover svg.ico, a.srcref:focus-visible svg.ico { fill:var(--fg,#1c1c1c); }\n"
-        "a.srcref:hover svg.ico-vsc, a.srcref:focus-visible svg.ico-vsc { fill:#0098ff; }\n"
         # A Java test path is longer than this column is wide. `anywhere` lets it wrap, and
         # the <wbr> after each slash keeps every fragment a readable path segment;
         # `break-word` alone would split `victor` down the middle.
         ".srcbar .srcref { margin-bottom:0; overflow-wrap:anywhere; }\n"
         "@media (prefers-color-scheme: dark) {\n"
-        "  a.srcref:hover svg.ico, a.srcref:focus-visible svg.ico { fill:var(--fg,#e6e6e6); }\n"
         "  pre.code .ln-row.added .dm { border-left-color:#3fb950; color:#3fb950; }\n"
         "  pre.code.diff-changed .ln-row:not(.added) { opacity:.5; }\n"
-        "  .code-badge { color:#56d364; background:rgba(63,185,80,.12); }\n"
-        "  .code-badge[data-diff=unchanged] { color:var(--muted,#9a9aa2);\n"
-        "    background:transparent; }\n"
         "}\n"
     )
 
@@ -315,45 +266,19 @@ def block_status(rel: str, root: Path, spans, lines: list[str], noun: str = "cod
             "tip": f"{len(hit)} of {len(real)} lines"}
 
 
-# The marks of the two places a handle can take you, drawn rather than abbreviated.
-# `GH` and `VSC` were initials: three monospace letters the width of a short file name,
-# which made the bar read as three words of equal weight when only one of them answers
-# "which file is this?". A logo is recognised without being read, so it can sit right up
-# against the name it belongs to without competing with it. The tooltips are unchanged and
-# still carry the sentence — they were already doing that work, because "GH" did not say
-# github.com either.
-# Octicon `mark-github`, which is the octocat already inside its own circle.
-ICON_GH = ('<svg class="ico ico-gh" viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
-           '<path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38'
-           ' 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95'
-           ' 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27'
-           's-1.36.09-2 .27c-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.27-.82 2.15'
-           ' 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82'
-           '-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49'
-           ' 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>')
-# The VS Code ribbon. Kept in its own blue instead of `currentColor`: the octocat is
-# monochrome by its own brand and reads as itself in either theme, but the ribbon is only
-# recognisable as VS Code while it is that blue.
-ICON_VSC = ('<svg class="ico ico-vsc" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
-            '<path d="M23.15 2.587 18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128'
-            'a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26'
-            'a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63'
-            'a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352z'
-            'm-5.146 14.861L10.826 12l7.178-5.448v10.896z"/></svg>')
-
-
 def diff_badge(status) -> str:
+    """What the branch did to the quoted file, as the page's one file glyph
+    (`hrbuild/shared/filemark.py`): a `+` for a new file, a pencil for new or changed lines
+    in an existing one, a bare page for an untouched window. Not the `NEW FILE` / `NEW
+    CODE` pill it used to be (Victor, 5 Oct 2026: "the text badges are distracting") — the
+    words are on its hover."""
     if not status:
         return ""
-    # The badge's words are its own explanation; a hover only where it adds a count.
-    tip = (f' data-tip="{html.escape(status["tip"], quote=True)}"' if status.get("tip")
-           else "")
-    return (f'<span class="code-badge" data-diff="{status["diff"]}"{tip}>'
-            f'{html.escape(status["label"])}</span>')
+    from hrbuild.shared.filemark import filemark
+    return filemark(status["label"], status.get("tip") or "")
 
 
-def srcbar_html(href: str, rel: str, lineref: str = "", badge: str = "",
-                links: str = "") -> str:
+def srcbar_html(href: str, rel: str, lineref: str = "", badge: str = "") -> str:
     """The header every quoted block on this page wears: *what* it is, *how* to open the
     change, and *which file* it came from.
 
@@ -363,15 +288,13 @@ def srcbar_html(href: str, rel: str, lineref: str = "", badge: str = "",
     the face was the path or the name. A reader crossing tabs had to relearn it each time,
     and a fix to one never reached the other two.
 
-    The row reads as one sentence about one file: **where you can open it, what it is, and
-    what changed in it** — handles, name, badge, in that order and in that order only.
-    `links` are the two ways in (the editor and github.com) and they lead, pressed right up
-    against the name, because the name is what each of them opens; each caller passes only
-    the ones its side can really show, so a missing handle is an honest absence rather than
-    a link that 404s. `badge` is what the block *is* (`new file`, `2 lines changed`, a
-    diff's `+8 -4`) and it trails, because it is a fact *about* the file and can only be
-    read once the file has been named — a badge that leads makes the reader hold "new file"
-    in mind across the whole bar before finding out which file is new.
+    The row reads as one sentence about one file: **which file it is, and what changed in
+    it** — name, badge, in that order. The name is the link; the VS Code and github.com
+    icons that used to lead it are gone (Victor, 5 Oct 2026). `badge` is what the block
+    *is* (the file glyph for `new file` / `new code`, a diff's `+8 -4`) and it trails,
+    because it is a fact *about* the file and can only be read once the file has been
+    named — a badge that leads makes the reader hold "new file" in mind across the whole
+    bar before finding out which file is new.
 
     The face is the file's **name** and the full path is on hover. A repo-relative Java
     path spends five segments on module, `src/main/java` and the org package before it
@@ -388,7 +311,7 @@ def srcbar_html(href: str, rel: str, lineref: str = "", badge: str = "",
     # place to wrap, so a long name folds into readable pieces instead of snapping wherever
     # the box happens to end.
     face = html.escape(label).replace("/", "/<wbr>")
-    return (f'<div class="srcbar">{links}'
+    return (f'<div class="srcbar">'
             f'<a class="srcref srcbar-path" href="{html.escape(href)}"'
             f' data-tip="{html.escape(tip, quote=True)}">{face}</a>{badge}</div>')
 
@@ -530,21 +453,8 @@ def _gap_row(hidden: int) -> str:
 
 
 def render(ref: str, caption: str | None, root: Path, exact: bool = False,
-           links="", link_at: tuple[int, int] | None = None) -> str:
-    """`links` is the pre-rendered VSC/GH handles for the source bar, when the caller knows
-    what this snippet is being compared against. The CLI does not — a snippet lifted by
-    hand has no base ref in the argument list — so it renders the bar without them, which
-    is the same bar minus two buttons rather than a different header.
-
-    It may also be a **callable**, and that is how the report passes it: the two handles
-    have to open where the bar's own link opens, and only this function knows where that
-    is. The window a caller asks for is not the line the bar lands on — `--exact` off
-    snaps past a leading comment, `link_at` overrides the window entirely — so a caller
-    that built the handles from the reference it typed would aim them somewhere the face
-    beside them does not say. Given a callable, it is called with the resolved line, once
-    that line is settled, and all three parts of the bar answer the same question.
-
-    `link_at` re-aims the bar at one (line, column) instead of at the window. The logging
+           link_at: tuple[int, int] | None = None) -> str:
+    """`link_at` re-aims the bar at one (line, column) instead of at the window. The logging
     tab needs it: its windows pull in the lines a logged value came *from*, so the window
     is `9-11` while the statement the box is about is line 9 alone. Both halves move
     together — the face says `:9` and the link lands on `:9` — because a bar that reads
@@ -585,8 +495,6 @@ def render(ref: str, caption: str | None, root: Path, exact: bool = False,
         lineref = str(link_at[0])
     else:
         link = f"vscode://file/{path}:{start}:1"
-    if callable(links):
-        links = links(link_at[0] if link_at else start)
     lang = LANG_BY_SUFFIX.get(path.suffix, "")
 
     dedented = [l[shift:] if l.strip() else "" for l in body]
@@ -644,7 +552,7 @@ def render(ref: str, caption: str | None, root: Path, exact: bool = False,
     return (
         f'<figure class="snippet">\n'
         f"{cap}"
-        f'{srcbar_html(link, rel, lineref, diff_badge(status), links)}\n'
+        f'{srcbar_html(link, rel, lineref, diff_badge(status))}\n'
         f'<pre class="code lang-{lang}'
         f'{" diff-changed" if status and status["diff"] == "changed" else ""}">'
         f'<code>{numbered}</code></pre>\n'

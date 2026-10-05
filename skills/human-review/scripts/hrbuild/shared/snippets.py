@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import functools
-import hashlib
 import html
 import json
 import os
@@ -66,79 +65,6 @@ def github_blob_base(root: Path) -> str | None:
     return f"https://github.com/{m['slug']}" if m else None
 
 
-def _github_compare_link(rel: str, base: str, root: Path, head: str | None = None,
-                         line: int | None = None, side: str = "R",
-                         face: str | None = None) -> str:
-    """The same comparison on github.com — the link a reviewer forwards to somebody else.
-
-    `face` shortens the label for somewhere there is no room for a sentence — a diff
-    header, beside the editor link that opens the same comparison. It moves what the label
-    stops saying into the tooltip rather than dropping it.
-
-    Only emitted when the *after* side is something GitHub can be expected to have. A fix
-    still sitting uncommitted in the working tree has no URL there at all, and inventing
-    one that 404s is worse than the editor link rendered beside it."""
-    host = github_blob_base(root)
-    if not host:
-        return ""
-    if head is None:
-        # The right side is the working tree. That has a URL on github.com only if the
-        # file is clean at HEAD; otherwise the page is showing something github.com has
-        # never seen, and inventing a link to it would be a confident lie.
-        rev = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
-                             capture_output=True, text=True)
-        if rev.returncode != 0:
-            return ""
-        if subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", rel],
-                          capture_output=True, text=True).stdout.strip():
-            return ""
-        head = rev.stdout.strip()
-    url = f"{host}/compare/{base}...{head}"
-    # A compare page can be forty files long, and landing at its top makes the reader hunt
-    # for the one file the finding is about. GitHub anchors each file by the sha-256 of its
-    # path exactly as the diff header spells it — no `a/`/`b/` prefix — so jump straight
-    # there. Without a path there is nothing to hash, and the bare compare URL stands.
-    if rel:
-        url += "#diff-" + hashlib.sha256(rel.encode()).hexdigest()
-        # And then the line. A file in a compare page opens at its own first line, which
-        # for a five-hundred-line class is nowhere near the four lines the review is
-        # about — so the reader arrives on github.com and starts hunting a second time,
-        # having already been sent there to stop hunting. GitHub numbers the two sides
-        # separately inside the file anchor: `R<n>` is the right side, `L<n>` the left,
-        # which is the only landing a pure deletion has.
-        if line:
-            url += f"{side}{line}"
-    # The face already says "on GitHub" and the arrow already says it opens elsewhere, so
-    # a tooltip repeating either is a sentence the reader can see. What it cannot see is
-    # where in a forty-file compare page it lands.
-    tip = ("This change, in the compare page" if line else
-           "Just this file, inside the compare page") if rel else "The whole compare page"
-    # Short-faced in a bar, the tip is short too. The prose link can afford a sentence
-    # about where in a forty-file compare page it lands; a mark in a row of three is
-    # hovered to answer "what is this?", and a sentence there is a paragraph in a corner.
-    if face:
-        tip = "GitHub"
-    return (f'<a class="srcref{" diffref srcbar-diff" if face else ""}" target="_blank"'
-            f' rel="noopener" href="{html.escape(url)}"'
-            f' data-tip="{tip}">{face or (_icon("GH") + " on GitHub")}</a>')
-
-
-def _first_changed(rows) -> tuple[int | None, str]:
-    """The line a reader of this diff is actually looking at, and which side it is on.
-
-    The first added line, because that is what the change *did*; a pure deletion has no
-    right side to land on, so it falls back to the first removed line on the left. Context
-    lines are never it — landing three lines above the change is the same hunt in miniature.
-    """
-    for kind, old_no, new_no, _ in rows:
-        if kind == "add":
-            return new_no, "R"
-    for kind, old_no, new_no, _ in rows:
-        if kind == "del":
-            return old_no, "L"
-    return None, "R"
-
-
 def _parse_unified(diff_text: str):
     """Unified diff text -> rows of `(kind, old_no, new_no, text)`, one per rendered line.
 
@@ -193,18 +119,6 @@ def review_step_rev(out_dir: Path) -> str | None:
         if "review" in (rec.get("tabs") or []) and rec.get("rev"):
             return rec["rev"]
     return None
-
-
-def _unmoved_since(rel: str, rev: str, root: Path) -> bool:
-    """Is the working tree's copy of `rel` still byte-for-byte the one at `rev`?
-
-    The question a pinned diff has to answer before it may also offer an editor link: the
-    editor can only compare a ref against the file on disk, so `base -> rev` and
-    `base -> disk` are the same comparison exactly while the file has not moved since
-    `rev`. Asked of git rather than of the clock, because "the fix was the last commit" is
-    not the same claim as "nobody has touched it since"."""
-    proc = subprocess.run(["git", "-C", str(root), "diff", "--quiet", rev, "--", rel])
-    return proc.returncode == 0
 
 
 def diff_html(rel: str, base: str, root: Path, caption: str | None = None,
@@ -269,21 +183,6 @@ def diff_html(rel: str, base: str, root: Path, caption: str | None = None,
             f'<tr class="{kind}">'
             f'<td class="gln">{old_no or ""}</td><td class="gln">{new_no or ""}</td>'
             f'<td class="code">{html.escape(marker + code)}</td></tr>')
-    # Two ways out of this block, in the header's own corner rather than in a footer under
-    # it: the reader who wants the diff somewhere they can scroll it wants that *before*
-    # reading the excerpt, not after, and a link below a forty-line diff is a link they
-    # have to come back up from. Each wears the mark of what it opens — VS Code, and
-    # github.com — rather than initials for it, because the corner is shared with the
-    # file's stat and a logo is recognised in less room than a word is read.
-    # The editor link diffs against the working tree, so it is the same comparison when
-    # `head` is the working tree — and also when `head` is a commit the file has not moved
-    # off since, which is the ordinary state of a fix applied and left alone. Checked
-    # rather than assumed: a file edited after the commit it is pinned to would open in the
-    # editor showing that later edit too, which is a different diff wearing this one's
-    # label. Then, and only then, the GitHub link stands alone.
-    link = ("" if head and not _unmoved_since(rel, head, root)
-            else diff_link_html(rel, base, root, face=_icon("VSC")))
-    gh = _github_compare_link(rel, base, root, head, *_first_changed(rows), face=_icon("GH"))
     # The name, and the path on hover. A repo-relative Java path spends five segments on
     # ceremony -- module, `src/main/java`, the org package -- before it reaches the one
     # word that says which file this is, and the header is where a reader looks to answer
@@ -291,13 +190,14 @@ def diff_html(rel: str, base: str, root: Path, caption: str | None = None,
     # it, which is what this page's tooltips are for. A file at the repo root has no path
     # to move, and a tooltip repeating the name is a tooltip saying nothing.
     # The same source bar every other quoted block on this page wears, built by the same
-    # function: the two handles, the file they open, then the stat as this block's badge —
-    # `+8 -4 vs 5acf2472` is exactly the "what changed in it" a snippet's `new code` answers.
+    # function: the file, then the stat as this block's badge — `+8 -4 vs 5acf2472` is
+    # exactly the "what changed in it" a snippet's file mark answers. No VS Code / GitHub
+    # icons in front of the name any more (Victor, 5 Oct 2026): the name is the link.
     stat = (f'<span class="stat"><span class="added">+{adds}</span> '
             f'<span class="removed">&minus;{dels}</span> vs '
             f'<code>{html.escape(base[:8])}</code></span>')
     bar = _extract_module().srcbar_html(
-        f"vscode://file/{src.resolve()}", rel, "", stat, link + gh)
+        f"vscode://file/{src.resolve()}", rel, "", stat)
     return (
         '<div class="ghdiff">'
         f'{bar}'
@@ -431,7 +331,7 @@ def diff_link_html(rel: str, base: str, root: Path, face: str | None = None,
         f' href="vscode://file/{src.resolve()}:{line}:1"{uri}'
         f' data-diff-path="{html.escape(rel)}" data-diff-base="{html.escape(base)}"'
         f' data-tip="{"Diff in VS Code" if face else html.escape(f"Open this fix as a diff in VS Code — {short} on the left, the working tree on the right")}"'
-        f'>{face or _icon("VSC") + f" diff vs {html.escape(short)}"}</a>'
+        f'>{face or f"diff vs {html.escape(short)}"}</a>'
     )
 
 
@@ -488,12 +388,10 @@ def set_diff_base(base: str) -> str:
 def _extract_module():
     """`extract-snippet.py` is hyphenated, so it is not importable by name.
 
-    Loaded rather than shelled out to, which it used to be, because the source bar needs
-    something a command line cannot carry: the two diff handles are built here — only this
-    side knows the review's base ref and whether github.com can be expected to have the
-    file — and they have to arrive *inside* the bar, not be glued onto its markup
-    afterwards. The interpreter is the same one either way, so the Pygments requirement is
-    unchanged."""
+    Loaded rather than shelled out to, which it used to be: `set_diff_base` moves its
+    `DIFF_BASE` once per build, and `diff_html` borrows its `srcbar_html`, neither of which
+    a command line can carry. The interpreter is the same one either way, so the Pygments
+    requirement is unchanged."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("extract_snippet", str(EXTRACT))
     mod = importlib.util.module_from_spec(spec)
@@ -501,74 +399,6 @@ def _extract_module():
     return mod
 
 
-def _icon(which: str) -> str:
-    """The github.com / VS Code mark, from the module that also ships the CSS sizing it.
-
-    Both halves of an icon are a unit — the `<svg>` and the rule that gives it 14px and a
-    baseline — and the rule lives in the snippet stylesheet, because that is the sheet
-    every page carrying a source bar already loads. Keeping the markup next to it means
-    the two cannot drift into a mark rendered at whatever the browser guesses."""
-    return getattr(_extract_module(), f"ICON_{which}")
-
-
-@functools.lru_cache(maxsize=None)
-def _shown_in_compare(rel: str, base: str, root: str, line: int) -> bool:
-    """Would github.com's compare page have a row — and therefore an `R<line>` anchor — here?
-
-    Asked because an anchor is a promise, and a fragment that matches no id does not fall
-    back to the file anchor it was appended to: the browser simply does not scroll, and the
-    reader lands at the top of a forty-file compare page. A snippet quotes whatever window
-    its author chose, most of whose lines are untouched context nowhere near the change, so
-    unlike the diff blocks — which aim at a line they just rendered as added — this one has
-    to be checked before it is offered.
-
-    `-U3` and three dots, because that is exactly what the compare page renders unexpanded
-    and exactly what a compare URL compares. Anything wider vouches for a row that is
-    behind an "expand" button over there. A base this checkout cannot resolve answers no,
-    which costs the line and keeps the file."""
-    proc = subprocess.run(["git", "-C", root, "diff", "-U3", "--no-color",
-                           f"{base}...HEAD", "--", rel], capture_output=True, text=True)
-    if proc.returncode != 0:
-        return False
-    return any(new_no == line for _, _, new_no, _ in _parse_unified(proc.stdout))
-
-
-def _snippet_links(rel: str, root: Path, line: int | None = None) -> str:
-    """The VS Code and github.com handles for a quoted block, against the review's own base.
-
-    Both are optional and for the same reason: each is emitted only where that side can
-    really open what it promises. `diff_link_html` drops itself when the base does not
-    resolve, when the file did not exist in it, or when the two sides are identical;
-    `_github_compare_link` drops itself when the file is dirty in the working tree, which
-    is precisely when github.com has never seen what the snippet is showing. A bar with
-    one handle, or none, is the honest rendering — a dead button is worse than no button.
-
-    `origin/` is stripped for github.com only: it is a name for a ref in *this* checkout,
-    and a compare URL spelling it 404s.
-
-    `line` is the line the bar's own face names, and both handles are aimed at it. Without
-    it each side picked its own landing — the editor the file's first changed line, github
-    the top of the file inside the compare page — so a bar reading `:102` carried three
-    buttons that went to three different places, and the two that were there to open the
-    change went nowhere near the statement the box was about."""
-    vsc = diff_link_html(rel, SNIPPET_BASE, root, face=_icon("VSC"), line=line)
-    # The editor can open any line of the file; github.com can only anchor one it draws.
-    # Checked against the ref as *this* checkout spells it (`origin/main`), which is the
-    # thing github calls `main` — the stripped spelling below is for the URL alone, and
-    # asking git about it would compare against a local branch that may be days behind.
-    at = line if line and _shown_in_compare(rel, SNIPPET_BASE, str(root), line) else None
-    gh = _github_compare_link(rel, SNIPPET_BASE.removeprefix("origin/"), root,
-                              line=at, face=_icon("GH"))
-    return vsc + gh
-
-
 def snippet_html(ref: str, caption: str | None, root: Path, exact: bool = False,
                  link_at: tuple[int, int] | None = None) -> str:
-    rel = ref.rsplit(":", 1)[0] if ":" in ref else ref
-    # Deferred, not built here: the line this snippet actually opens at is settled inside
-    # `render` — the window may snap past a leading comment, and `link_at` replaces it
-    # outright — so the handles are built once that answer exists rather than from the
-    # reference as it was typed.
-    return _extract_module().render(
-        ref, caption, root, exact,
-        links=functools.partial(_snippet_links, rel, root), link_at=link_at)
+    return _extract_module().render(ref, caption, root, exact, link_at=link_at)

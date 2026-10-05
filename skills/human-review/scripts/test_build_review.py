@@ -835,7 +835,7 @@ def test_a_logging_box_does_not_badge_what_its_own_gutter_already_marks(tmp_path
     repo, src = _tiny_java_repo(tmp_path, FOO_BASE)
     src.write_text(FOO_WITH_WARN, encoding="utf-8")
     frag, _, _ = build.logging_fragment({"paths": ["."], "base": "base"}, repo)
-    assert "code-badge" not in frag
+    assert "filemark" not in frag
     assert "new code" not in frag
     assert '<figure class="snippet">' in frag  # and the snippet itself is untouched
 
@@ -1638,7 +1638,7 @@ def test_rendered_lines_carry_the_marker_and_the_badge(tmp_path):
     out = es.render("a.ts:1,3", None, tmp_path, exact=True)
     assert '<span class="ln-row added">' in out
     assert '<span class="dm">+</span>' in out
-    assert 'class="code-badge" data-diff="changed"' in out
+    assert 'class="filemark" data-kind="edited"' in out
     assert "diff-changed" in out                      # unchanged lines recede
     # the marker never becomes a background on the code itself
     assert 'class="ln-row added" style' not in out
@@ -1670,7 +1670,7 @@ def test_an_untracked_file_is_new_rather_than_untouched(tmp_path):
 
     assert es.added_lines("b.ts", tmp_path) == frozenset({1, 2})
     out = es.render("b.ts:1-2", None, tmp_path, exact=True)
-    assert 'data-diff="new"' in out, out
+    assert 'class="filemark" data-kind="new"' in out, out
 
 
 def test_a_file_the_branch_really_did_not_touch_still_reads_unchanged(tmp_path):
@@ -1700,7 +1700,7 @@ def test_a_snippet_git_cannot_be_asked_about_is_unmarked(tmp_path):
     es._diff_state.cache_clear()
     (tmp_path / "a.ts").write_text("const a = 1;\nconst b = 2;\n")
     out = es.render("a.ts:1-2", None, tmp_path, exact=True)
-    assert "code-badge" not in out
+    assert "filemark" not in out
     assert 'class="dm"' not in out
     assert '<span class="ln">1</span>' in out          # everything else unchanged
 
@@ -3500,20 +3500,6 @@ def test_a_count_with_no_chapter_to_jump_to_is_not_a_link(tmp_path):
     assert "1 auto-fixed" in page and '<a href="#fixed">' not in page
 
 
-def test_the_github_link_tooltip_says_only_what_its_label_cannot():
-    """The face is `\u2197 on GitHub`. A tooltip that opens with "Open" and closes with
-    "on github.com" spends its whole width restating that, and the one thing a reader
-    cannot see — that the link lands on a single file of a compare page that can be forty
-    long — was the clause in the middle."""
-    root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=HERE,
-                               capture_output=True, text=True).stdout.strip())
-    link = build._github_compare_link("README.md", "HEAD~1", root, head="HEAD")
-    tip = re.search(r'data-tip="([^"]*)"', link).group(1)
-    assert "github" not in tip.lower(), "the label already says where it goes"
-    assert not tip.startswith("Open"), "every link opens something"
-    assert "compare page" in tip
-
-
 def _repo_with_a_buried_file(tmp_path):
     """One commit deep inside a Java-shaped path, which is where the ceremony lives."""
     import subprocess as sp
@@ -3564,11 +3550,10 @@ def test_a_file_at_the_repo_root_gets_no_tooltip_repeating_its_own_name(tmp_path
     assert 'data-tip="Open in VS Code"' in head, "no bubble restating the name"
 
 
-def test_a_diff_carries_both_ways_out_in_its_own_header(tmp_path):
-    """The reader who wants this diff somewhere they can scroll it wants it before reading
-    the excerpt, not after — a link under forty lines of diff is one they have to come
-    back up from. Both destinations named, in the header's corner, and nothing left in a
-    footer row underneath."""
+def test_a_diffs_header_is_the_shared_bar_with_no_icons_before_the_name(tmp_path):
+    """The VS Code and github.com marks that led the bar are gone (Victor, 5 Oct 2026):
+    the file name is the link. The header is still the page's one source bar, and nothing
+    links from a footer under the diff."""
     import subprocess as sp
     r = _repo_with_a_buried_file(tmp_path)
     sp.run(["git", "-C", str(r), "remote", "add", "origin",
@@ -3576,11 +3561,9 @@ def test_a_diff_carries_both_ways_out_in_its_own_header(tmp_path):
     rel = "petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java"
     out = build.diff_html(rel, "HEAD^", r, head="HEAD")
     corner = out.split('<div class="ghdiff-scroll">')[0]
-    assert "ico-vsc" in corner and "ico-gh" in corner
-    # And it is the page's one source bar doing it, not a header private to this block.
-    assert corner.startswith('<div class="ghdiff"><div class="srcbar">')
-    assert "srcref" not in out.split('</table></div>')[-1], \
-        "the links moved into the header; nothing links from a footer under the diff"
+    assert "<svg" not in corner and "github.com" not in corner and "diffref" not in corner
+    assert corner.startswith('<div class="ghdiff"><div class="srcbar"><a class="srcref srcbar-path"')
+    assert "srcref" not in out.split('</table></div>')[-1]
 
 
 def test_the_three_tabs_head_a_quoted_block_with_the_same_bar(tmp_path, monkeypatch):
@@ -3627,15 +3610,12 @@ def test_an_excerpt_short_of_its_own_label_is_called_out(capsys):
     assert capsys.readouterr().err == "", "a excerpt that adds up says nothing"
 
 
-def test_the_bar_reads_handles_then_file_then_badge(tmp_path, monkeypatch):
-    """One order, top to bottom of the page: how to open it, which file, what changed.
-
-    The handles sit against the name because the name is what they open — parked at the
-    other end of the row they were a bar's width from the only word saying what they would
-    open. The badge trails for the opposite reason: "new file" is a fact *about* a file,
-    and leading with it makes the reader hold it in mind until the bar finally says which
-    file is new. Asserted on both producers, because a bar that only the Tests tab obeys
-    is the three-headers problem coming back."""
+def test_the_bar_reads_file_then_badge(tmp_path, monkeypatch):
+    """One order, top to bottom of the page: which file, then what changed. The badge
+    trails because "new file" is a fact *about* a file, and leading with it makes the
+    reader hold it in mind until the bar finally says which file is new. Asserted on both
+    producers, because a bar that only the Tests tab obeys is the three-headers problem
+    coming back."""
     r = _repo_with_a_buried_file(tmp_path)
     rel = "petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java"
     monkeypatch.setattr(snippets, "SNIPPET_BASE", "HEAD^")
@@ -3645,23 +3625,18 @@ def test_the_bar_reads_handles_then_file_then_badge(tmp_path, monkeypatch):
     for out in (build.diff_html(rel, "HEAD^", r, head="HEAD"),
                 build.snippet_html(f"{rel}:1-2", None, r, exact=True)):
         bar = out[out.index('<div class="srcbar">'):out.index("</div>", out.index('<div class="srcbar">'))]
-        handles, name = bar.index("ico-vsc"), bar.index("srcbar-path")
-        assert handles < name, bar
-        # A bar without a badge is a legal bar — the block is simply not claiming to be
-        # new or changed. Where there is one, it trails; and one of the two producers here
-        # always has one, so the assertion cannot pass by never running.
-        mark = next((m for m in ("code-badge", 'class="stat"') if m in bar), None)
+        assert bar.startswith('<div class="srcbar"><a class="srcref srcbar-path"'), bar
+        name = bar.index("srcbar-path")
+        mark = next((m for m in ('class="filemark"', 'class="stat"') if m in bar), None)
         if mark:
             badged += 1
             assert name < bar.index(mark), bar
     assert badged, "neither producer emitted a badge — the order went untested"
 
 
-def test_a_quoted_snippet_offers_the_same_two_ways_out_a_diff_does(tmp_path, monkeypatch):
-    """A snippet used to be a dead end: it showed what the code says now and left "what
-    changed?" to the reader's imagination. It carries the same two handles the Review
-    tab's diffs carry — the editor, and github.com — because it is quoting the same
-    change, and the badge beside them already claims the lines are new."""
+def test_a_quoted_snippet_has_no_icons_before_its_file_name(tmp_path, monkeypatch):
+    """The VS Code and github.com marks in front of the name are gone; the name itself is
+    the link, and it is the bar's only one."""
     import subprocess as sp
     r = _repo_with_a_buried_file(tmp_path)
     sp.run(["git", "-C", str(r), "remote", "add", "origin",
@@ -3670,8 +3645,8 @@ def test_a_quoted_snippet_offers_the_same_two_ways_out_a_diff_does(tmp_path, mon
     monkeypatch.setattr(snippets, "SNIPPET_BASE", "HEAD^")
     out = build.snippet_html(f"{rel}:1-2", None, r, exact=True)
     bar = out[out.index('<div class="srcbar">'):out.index("</div>", out.index('<div class="srcbar">'))]
-    assert "ico-vsc" in bar and "ico-gh" in bar
-    assert 'class="srcref diffref srcbar-diff"' in bar   # the pill face, not the prose one
+    assert "ico-vsc" not in bar and "ico-gh" not in bar and "diffref" not in bar
+    assert bar.count("<a ") == 1 and 'class="srcref srcbar-path"' in bar
 
 
 def _repo_whose_change_is_far_from_the_quote(tmp_path):
@@ -3699,62 +3674,29 @@ def _repo_whose_change_is_far_from_the_quote(tmp_path):
     return r
 
 
-def test_a_snippets_handles_open_where_its_own_face_says(tmp_path, monkeypatch):
-    """The bug this fixes: a bar reading `A.java:10` whose two buttons went to line 2.
-
-    Each handle used to pick its own landing — the editor "the first line that differs",
-    which in a real class is an import fifty lines above the finding; github.com the top
-    of the file inside a compare page. Both are now the line the face names, because the
-    three parts of one bar may not be three answers to one question."""
+def test_a_snippets_link_opens_where_its_own_face_says(tmp_path, monkeypatch):
+    """A bar reading `A.java:10` opens line 10 — not the first line that differs, which in
+    a real class is an import fifty lines above the finding."""
     r = _repo_whose_change_is_far_from_the_quote(tmp_path)
     monkeypatch.setattr(snippets, "SNIPPET_BASE", "HEAD^")
-    monkeypatch.setenv("HUMAN_REVIEW_DIFF_URI_HANDLER", "victorrentea.victor-vsc")
-    build.diff_uri_handler.cache_clear()
     out = build.snippet_html("A.java:10", None, r, exact=True)
     bar = out[out.index('<div class="srcbar">'):out.index("</div>", out.index('<div class="srcbar">'))]
     assert ">A.java:10</a>" in bar
-    assert "/A.java:2:1" not in bar, "the decoy import, which is where this used to land"
-    assert bar.count("/A.java:10:1") == 2, "the editor handle and the bar's own link"
-    assert "line=10" in bar, "and the URI the extension gets, for the diff itself"
-    assert re.search(r"#diff-[0-9a-f]{64}R10", bar), "github.com anchors the same line"
-    build.diff_uri_handler.cache_clear()
+    assert "/A.java:2:1" not in bar, "the decoy import"
+    assert bar.count("/A.java:10:1") == 1, "the bar's own link, and nothing in front of it"
 
 
-def test_a_quoted_line_the_compare_page_never_draws_keeps_the_file_anchor(tmp_path,
-                                                                          monkeypatch):
-    """`#diff-<sha>R7` on a line github.com does not render is worse than no line at all.
-
-    A fragment that matches no id does not fall back to the file anchor it was appended
-    to — the browser simply does not scroll, and the reader lands at the top of a compare
-    page that can be forty files long. So an untouched line far from any hunk keeps the
-    file anchor and gives up the line."""
+def test_the_logging_boxs_link_follows_it_to_the_statement(tmp_path, monkeypatch):
+    """`link_at` moves the whole bar, not just its face. A logging window pulls in the
+    lines a logged value came *from*, so the window opens above the statement the box is
+    about."""
     r = _repo_whose_change_is_far_from_the_quote(tmp_path)
     monkeypatch.setattr(snippets, "SNIPPET_BASE", "HEAD^")
-    build._shown_in_compare.cache_clear()
-    out = build.snippet_html("A.java:6", None, r, exact=True)
-    href = re.search(r'href="(https://[^"]*/compare/[^"]*)"', out).group(1)
-    assert re.search(r"#diff-[0-9a-f]{64}$", href), href
-    # …and the editor, which can open any line of a file, still goes to the quoted one.
-    assert "/A.java:6:1" in out
-    build._shown_in_compare.cache_clear()
-
-
-def test_the_logging_boxs_handles_follow_it_to_the_statement(tmp_path, monkeypatch):
-    """`link_at` moves the whole bar, not just its face.
-
-    A logging window pulls in the lines a logged value came *from*, so the window opens
-    above the statement the box is about. The face already said `:10`; the two handles
-    beside it were still aiming at the file's first change."""
-    r = _repo_whose_change_is_far_from_the_quote(tmp_path)
-    monkeypatch.setattr(snippets, "SNIPPET_BASE", "HEAD^")
-    build._shown_in_compare.cache_clear()
     out = build.snippet_html("A.java:8-11", None, r, exact=True, link_at=(10, 5))
     bar = out[out.index('<div class="srcbar">'):out.index("</div>", out.index('<div class="srcbar">'))]
     assert ">A.java:10</a>" in bar
     assert "/A.java:8:1" not in bar, "the window's first line is not what the box is about"
-    assert "/A.java:10:1" in bar and "/A.java:10:5" in bar
-    assert re.search(r"#diff-[0-9a-f]{64}R10", bar)
-    build._shown_in_compare.cache_clear()
+    assert "/A.java:10:5" in bar
 
 
 def test_a_snippet_whose_base_is_not_there_still_gets_its_bar(tmp_path, monkeypatch):
@@ -3766,64 +3708,8 @@ def test_a_snippet_whose_base_is_not_there_still_gets_its_bar(tmp_path, monkeypa
     monkeypatch.setattr(snippets, "SNIPPET_BASE", "no/such/ref")
     out = build.snippet_html("README.md:1-2", None, r, exact=True)
     assert '<div class="srcbar">' in out
-    assert "ico-vsc" not in out and "ico-gh" not in out
+    assert "<svg" not in out.split("</div>")[0]
     assert ">README.md:1-2</a>" in out
-
-
-def test_a_pinned_fix_the_file_has_moved_off_gets_no_editor_link(tmp_path):
-    """The editor can only compare a ref against the file on disk. Pinned to a commit the
-    file has since moved off, `base -> disk` is a different comparison than the one the
-    block is showing — so that link is dropped rather than pointed at it, and github.com,
-    which can show the pinned pair, is left to stand alone."""
-    import subprocess as sp
-    r = _repo_with_a_buried_file(tmp_path)
-    sp.run(["git", "-C", str(r), "remote", "add", "origin",
-            "https://github.com/victorrentea/petclinic.git"], check=True)
-    rel = "petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java"
-    (r / rel).write_text("one\nTWO\nand something later\n")
-    out = build.diff_html(rel, "HEAD^", r, head="HEAD")
-    assert "ico-vsc" not in out
-    assert "ico-gh" in out
-
-
-def test_the_github_link_lands_on_the_line_the_change_is_on(tmp_path):
-    """A file in a compare page opens at its own first line, which for a long class is
-    nowhere near the four lines the review is about — so the reader arrives on github.com
-    and starts hunting a second time, having been sent there to stop hunting."""
-    r = _repo_with_a_buried_file(tmp_path)
-    subprocess.run(["git", "-C", str(r), "remote", "add", "origin",
-                    "https://github.com/victorrentea/petclinic.git"], check=True)
-    rel = "petclinic-backend/src/main/java/victor/training/petclinic/repository/VetRepository.java"
-    out = build.diff_html(rel, "HEAD^", r, head="HEAD")
-    href = re.search(r'href="([^"]*compare[^"]*)"', out).group(1)
-    assert re.search(r"#diff-[0-9a-f]{64}R2$", href), href
-    # Short-faced in a diff header, the tip is short too: the mark is hovered to ask what
-    # it is, not for a sentence about where in a forty-file compare page it lands. That
-    # sentence still stands on the prose link, which has room for it.
-    assert 'data-tip="GitHub"' in out
-    prose = build._github_compare_link(rel, "HEAD^", r, "HEAD", 2, "R")
-    assert "This change, in the compare page" in prose
-
-
-def test_a_pure_deletion_lands_on_the_left_side(tmp_path):
-    """The one case with no right side to land on."""
-    import subprocess as sp
-    r = tmp_path / "repo"
-    r.mkdir()
-    sp.run(["git", "init", "-q", "-b", "main", str(r)], check=True)
-    sp.run(["git", "-C", str(r), "config", "user.email", "t@t"], check=True)
-    sp.run(["git", "-C", str(r), "config", "user.name", "t"], check=True)
-    sp.run(["git", "-C", str(r), "remote", "add", "origin",
-            "https://github.com/victorrentea/petclinic.git"], check=True)
-    (r / "a.txt").write_text("one\ntwo\nthree\n")
-    sp.run(["git", "-C", str(r), "add", "-A"], check=True)
-    sp.run(["git", "-C", str(r), "commit", "-qm", "base"], check=True)
-    (r / "a.txt").write_text("one\nthree\n")
-    sp.run(["git", "-C", str(r), "add", "-A"], check=True)
-    sp.run(["git", "-C", str(r), "commit", "-qm", "drop a line"], check=True)
-    out = build.diff_html("a.txt", "HEAD^", r, head="HEAD")
-    href = re.search(r'href="([^"]*compare[^"]*)"', out).group(1)
-    assert href.endswith("L2"), href
 
 
 def test_the_review_tab_label_is_the_word_alone():
@@ -4098,7 +3984,7 @@ def test_the_fold_over_a_quoted_test_is_the_blocks_own_source_bar(tmp_path):
     carry — whether the test is open — so the control and the bar are one line."""
     rel, puml = _genseq_fixture(tmp_path)
     fig = ('<figure class="snippet"><div class="srcbar"><a>x.feature:4</a>'
-           '<span class="code-badge">2 lines changed</span></div><pre>code</pre></figure>')
+           + build.filemark("2 lines changed") + '</div><pre>code</pre></figure>')
     out = build._folded_pair(puml, rel, ["<p>picture</p>"], [fig],
                              scenarios=[(4, "remembers the vet")])
     assert '<summary><span class="foldlbl"></span><div class="srcbar">' in out
@@ -4112,29 +3998,31 @@ def test_the_fold_over_a_quoted_test_is_the_blocks_own_source_bar(tmp_path):
     assert two.count('<div class="srcbar">') == 2
 
 
-def test_the_fold_row_draws_what_happened_to_the_file_instead_of_shouting_it(tmp_path):
-    """`NEW FILE` in caps beside a file name is read before the name it is a fact about.
-    The Tests tab settled this already, one level down, with a page glyph marked in its
-    corner — so the row uses that same drawing, and the words move to the hover."""
-    rel, puml = _genseq_fixture(tmp_path)
+def test_a_source_bar_draws_what_happened_to_the_file_instead_of_shouting_it():
+    """`NEW FILE` / `NEW CODE` in caps beside a file name are read before the name they are
+    a fact about (Victor: "the text badges are distracting"). Every source bar on the page
+    — not only the Sequence tab's — wears the one file glyph instead, right after the
+    name, with the words moved to the hover."""
+    es = _extract_snippet()
 
-    def row(label, diff="new"):
-        fig = ('<figure class="snippet"><div class="srcbar"><a>x.feature:4</a>'
-               f'<span class="code-badge" data-diff="{diff}" data-tip="since origin/main">'
-               f'{label}</span></div><pre>code</pre></figure>')
-        return build._folded_pair(puml, rel, [""], [fig])
+    def badge(label, diff="new"):
+        return es.diff_badge({"diff": diff, "label": label, "tip": "since origin/main"})
 
-    new = row("new file")
+    new = badge("new file")
     assert "code-badge" not in new and 'class="filemark" data-kind="new"' in new
     assert build.FILE_PLUS in new and build.FILE_PAGE in new
     assert 'aria-label="new file"' in new, "the word is kept for a screen reader"
     assert "New file &mdash; since origin/main" in new, "…and for the hover"
     # `new file` and `new code` are both `new` to git and are not the same fact.
-    assert 'data-kind="edited"' in row("new code") and build.FILE_PENCIL in row("new code")
-    assert 'data-kind="edited"' in row("2 lines changed", "changed")
-    assert 'data-kind="unchanged"' in row("unchanged", "unchanged")
-    assert build.FILE_PLUS not in row("unchanged", "unchanged")
-    assert ".filemark" in build.CSS
+    assert 'data-kind="edited"' in badge("new code") and build.FILE_PENCIL in badge("new code")
+    assert 'data-tip="New code' in badge("new code")
+    assert 'data-kind="edited"' in badge("2 lines changed", "changed")
+    assert 'data-kind="unchanged"' in badge("unchanged", "unchanged")
+    assert build.FILE_PLUS not in badge("unchanged", "unchanged")
+    assert ".srcbar .filemark" in build.CSS
+    # The glyph trails the name, as the Sequence tab always drew it.
+    bar = es.srcbar_html("vscode://file/x/A.java:1:1", "A.java", "1", new)
+    assert bar.index("srcbar-path") < bar.index("filemark")
 
 
 def test_which_pair_is_open_is_in_the_url(tmp_path):
@@ -5099,7 +4987,7 @@ def test_the_scope_chip_says_the_same_thing_as_the_counts_line(tmp_path):
     declined` beside `6 open, 3 fixed` used to ask the reader which of them to
     believe; both now read `pile_numbers`, so a mismatch cannot recur."""
     src = (HERE / "build-review-html.py").read_text(encoding="utf-8")
-    assert '"face": review_chip_face(open_n, refuted_n, fixed, assumed)' in src
+    assert '"face": review_chip_face(open_n, fixed, assumed)' in src
     assert "open_n, fixed, assumed = pile_numbers(spec)" in src
     spec = {"findings": [{"title": f"f{i}"} for i in range(6)],
             "autofixes": [{"title": f"a{i}"} for i in range(3)],
@@ -5122,10 +5010,11 @@ def test_the_scope_chip_says_the_same_thing_as_the_counts_line(tmp_path):
     assert lede.index("open") < lede.index("auto-fixed")
 
 
-def test_refuted_claims_are_counted_apart_from_the_open_pile(tmp_path):
+def test_refuted_claims_are_not_on_the_page_and_not_counted_as_open(tmp_path):
     """Eval run 8: the header chip, the counts line and the tab pill all said `11 open`,
     four of them CONTEXT cards whose own `why:` read "refuted — …". A refuted claim is
-    settled, so it is counted apart: `7 open · 4 refuted`, and it does not grade."""
+    settled, so it is not counted as open and does not grade — and since 5 Oct 2026
+    (Victor) it is not shown at all: no `N refuted` count, pill or pile."""
     live = [{"title": f"f{i}", "severity": "low", "why": "deliberate"} for i in range(7)]
     refuted = [{"title": f"r{i}", "severity": "info",
                 "why": "refuted — this spec asserts <code>%2B</code>"} for i in range(3)]
@@ -5136,17 +5025,15 @@ def test_refuted_claims_are_counted_apart_from_the_open_pile(tmp_path):
     spec = {"findings": live + refuted + [misfiled],
             "autofixes": [{"title": "a"}], "assumptions": []}
     assert build.pile_numbers(spec)[0] == 8
-    assert build.refuted_number(spec) == 4
+    assert build.refuted_number(spec) == 4, "the data still knows; the page does not say"
     badge = build.review_tab_badge(spec)
-    assert badge["count"] == 8 and badge["label"].startswith("8 open review issues · 4 refuted")
-    assert build.scope_chip_face(spec) == \
-        '\U0001f916Review: <b>8 open</b> · 4 refuted, <b>1 fixed</b>'
+    assert badge == {"count": 8, "label": "8 open review issues"}
+    assert build.scope_chip_face(spec) == '\U0001f916Review: <b>8 open</b>, <b>1 fixed</b>'
     build.reset_list()
     lede = build.opening_lede(dict(spec, tabs=[{"id": "review", "label": "R", "blocks": [
         {"type": "findings"}, {"type": "autofixes"}]}]))
-    assert "8 open LLM review issues · 4 refuted" in build._plain_text(lede)
-    # Eval run 10: the refuted clause jumps to the refuted pile, not into the open one.
-    assert '<a href="#refuted">4 refuted</a>' in lede
+    assert "8 open LLM review issues" in build._plain_text(lede)
+    assert "refuted" not in lede.lower()
     signal = next(s for s in build._pile_signals(spec) if s["key"].startswith("open"))
     assert signal["short"].startswith("8 open review issues"), signal
 
@@ -5720,21 +5607,20 @@ def test_an_extracted_constant_takes_its_use_sites_onto_its_own_card(tmp_path):
 
 # ── eval run 10: the Review tab's judges ────────────────────────────────────────
 
-def test_refuted_findings_are_their_own_pile_after_the_open_one_and_unnumbered():
-    """Run 10: three refuted claims were cards 11–13 of a pile every count called `10 open`,
-    wearing the open pile's CONTEXT badge. They are their own pile now, under the open one,
-    with a REFUTED badge and no number — the numbers count what is open."""
+def test_refuted_findings_are_left_off_the_page():
+    """Run 10 drew three refuted claims inside the open pile; run 11 gave them a pile of
+    their own under it. Victor (5 Oct 2026): not on the page at all — the open pile,
+    numbered, and nothing after it."""
     live = [{"title": "live high", "severity": "medium", "why": "deliberate"},
             {"title": "live info", "severity": "info", "why": "the spec asks for it"}]
     refuted = [{"title": "plus sign", "severity": "info",
                 "why": "refuted — Angular 16 encodes '+'"}]
     out = build.render_findings(live + refuted)
     ol, rest = out.split("</ol>", 1)
-    assert ol.count("<li") == 2 and "plus sign" not in ol, "only the open ones are numbered"
-    assert 'id="refuted"' in rest and "Refuted — 1" in rest
-    assert '<ul class="findings refuted">' in rest and "plus sign" in rest
-    assert '<span class="badge sev-refuted">refuted</span>' in rest
-    assert "sev-info" not in rest, "not the open pile's CONTEXT badge"
+    assert ol.count("<li") == 2 and "plus sign" not in out
+    assert rest == "" and "refuted" not in out.lower()
+    only = build.render_findings(refuted)
+    assert "plus sign" not in only and "refuted" not in only.lower()
 
 
 def test_the_review_pill_hover_says_where_the_left_out_piles_are_without_lying():
@@ -5744,9 +5630,8 @@ def test_the_review_pill_hover_says_where_the_left_out_piles_are_without_lying()
                          {"title": "r", "severity": "info", "why": "refuted — no"}],
             "autofixes": [{"title": "f"}], "assumptions": [{"title": "s"}, {"title": "t"}]}
     label = build.review_tab_badge(spec)["label"]
-    assert label.startswith("1 open review issue · 1 refuted")
     assert "further down" not in label
-    assert label == "1 open review issue · 1 refuted", "copy pass: the count, nothing else"
+    assert label == "1 open review issue", "copy pass: the count, nothing else"
 
 
 def _three_fix_commits(tmp_path):
@@ -6117,13 +6002,14 @@ def test_the_review_chip_hover_counts_one_reviewer_under_one_name():
 
 def test_the_review_chip_face_is_counts_only_so_the_scope_bar_keeps_one_row():
     """Eval run 10: `🤖Code: 6 unsure; 🤖Review: 10 open · 3 refuted, 6 fixed` was 379px of
-    a 1040px bar and wrapped it, taking the sticky header from 108px to 164px."""
-    assert build.review_chip_face(10, 3, 6, 6) == \
-        '\U0001f916 <b>6 unsure</b> · <b>10 open</b> · 3 refuted · <b>6 fixed</b>'
-    assert build.review_chip_face(1, 0, 0, 0) == '\U0001f916 <b>1 open</b> · <b>0 fixed</b>', \
-        "no assumptions, nothing refuted: those counts are absent, not zeroed"
-    assert build.review_chip_key(10, 3, 6, 6) == \
-        "Coding agent: 6 unsure. Review: 10 open · 3 refuted · 6 fixed."
+    a 1040px bar and wrapped it, taking the sticky header from 108px to 164px. And the
+    refuted count is gone from it altogether (Victor, 5 Oct 2026)."""
+    assert build.review_chip_face(10, 6, 6) == \
+        '\U0001f916 <b>6 unsure</b> · <b>10 open</b> · <b>6 fixed</b>'
+    assert build.review_chip_face(1, 0, 0) == '\U0001f916 <b>1 open</b> · <b>0 fixed</b>', \
+        "no assumptions: that count is absent, not zeroed"
+    assert build.review_chip_key(10, 6, 6) == \
+        "Coding agent: 6 unsure. Review: 10 open · 6 fixed."
 
 
 def test_without_a_pull_request_the_page_says_so_on_hover_only(tmp_path):
@@ -6197,7 +6083,7 @@ def test_an_unchanged_badge_never_sits_over_a_plus_gutter(tmp_path):
     _tiny_repo(tmp_path, ["const a = 1;", "const b = 2;"],
                ["const a = 1;", "", "const b = 2;"])
     out = es.render("a.ts:2", None, tmp_path, exact=True)
-    assert 'data-diff="unchanged"' in out
+    assert 'class="filemark" data-kind="unchanged"' in out
     assert '<span class="dm">+</span>' not in out and "ln-row added" not in out
 
 
@@ -6387,13 +6273,6 @@ def test_a_fix_line_that_only_restates_the_title_is_dropped():
     assert "f-fix" not in build.render_autofixes([card])
     card["fix"] = "a Retry button in the error alert reloads the same filter and sort."
     assert '<p class="f-fix"><b>Fix:</b> a Retry button' in build.render_autofixes([card])
-
-
-def test_the_refuted_piles_lede_is_its_headings_hover():
-    page = build.render_findings([{"title": "t", "severity": "info",
-                                   "why": "refuted — Owner.java:42 is @NotEmpty"}])
-    assert f'<h3 class="refuted-h" id="refuted" data-tip="{build.REFUTED_TIP}">' in page
-    assert "listed so you can check" not in page and "refuted-intro" not in page
 
 
 RUN11_FINDINGS = [

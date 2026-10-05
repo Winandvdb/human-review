@@ -681,13 +681,10 @@ def review_tab_badge(spec) -> dict:
     reader has to guess at.
     """
     open_n, fixed_n, assumed_n = pile_numbers(spec)
-    refuted_n = refuted_number(spec)
     # Copy pass (3 Oct 2026): the badge counts the open pile and says so — nothing more.
     # Which piles it leaves out, and where they sit, is what the tab itself shows a line
     # down; listing them here was a paragraph on a two-digit number.
     label = f'{open_n} open review issue{"" if open_n == 1 else "s"}'
-    if refuted_n:
-        label += f" · {refuted_n} refuted"
     return {"count": open_n, "label": label}
 
 
@@ -714,10 +711,7 @@ def scope_chip_face(spec, reviewer: str | None = None) -> str:
     model is not on the face (`reviewer` is accepted and ignored here): the pill names
     the role, the hover names the model."""
     open_n, fixed_n, assumed_n = pile_numbers(spec)
-    refuted_n = refuted_number(spec)
-    face = (f"\U0001f916Review: <b>{open_n} open</b>"
-            + (f" · {refuted_n} refuted" if refuted_n else "")
-            + f", <b>{fixed_n} fixed</b>")
+    face = f"\U0001f916Review: <b>{open_n} open</b>, <b>{fixed_n} fixed</b>"
     if assumed_n:
         face = f"\U0001f916Code: <b>{assumed_n} unsure</b>; " + face
     return face
@@ -1634,15 +1628,6 @@ def opening_lede(spec) -> str:
         at = _pile_anchor(spec, kind, fallback)
         return f'<a href="#{html.escape(at)}">{text}</a>' if at else text
 
-    def refuted_clause() -> str:
-        """` · 3 refuted`, the jump to the refuted pile `render_findings` draws under the
-        open one — its own anchor, not the open pile's (eval run 10)."""
-        n = refuted_number(spec)
-        if not n:
-            return ""
-        return (f' · <a href="#{REFUTED_ID}">{n} refuted</a>'
-                if _pile_anchor(spec, "findings", "first") else f" · {n} refuted")
-
     # Two vocabularies, because the two sources mean different things by the same pile.
     # With the piles written into the content file, `findings` is what a review pass raised
     # and nobody has answered yet — *open*. Read out of `review-points.md`, the same array
@@ -1662,7 +1647,7 @@ def opening_lede(spec) -> str:
             n_open = pile_numbers(spec)[0]
             parts.append(clause(
                 f"{n_open} open review issue{'' if n_open == 1 else 's'}",
-                "findings", "first") + refuted_clause())
+                "findings", "first"))
         if spec.get("autofixes"):
             parts.append(clause(f"{len(spec['autofixes'])} auto-fixed", "autofixes", "fixed"))
     else:
@@ -1676,7 +1661,7 @@ def opening_lede(spec) -> str:
             n_open = pile_numbers(spec)[0]
             parts.append(clause(
                 f"{n_open} open LLM review issue{'' if n_open == 1 else 's'}",
-                "findings", "first") + refuted_clause())
+                "findings", "first"))
         if spec.get("autofixes"):
             # `auto-fixed`, the same word the badge on every one of those items already
             # wears. "auto-applied" was a second name for one thing, and a reader who
@@ -1735,40 +1720,22 @@ def opening_lede(spec) -> str:
             + PILELEDE_SPY_JS)
 
 
-#: The id of the refuted pile's own heading, under the open one — what the counts line's
-#: `N refuted` jumps to.
-REFUTED_ID = "refuted"
-#: The refuted pile's hover — what its heading means, which the page used to print.
-REFUTED_TIP = "Shown never true, with the evidence. Not counted as open."
-
-
 def render_findings(findings) -> str:
-    """The open pile, numbered, then the refuted claims as a small pile of their own.
+    """The open pile, numbered — and nothing of the refuted claims.
 
-    Eval run 10: the three refuted findings were drawn inside *Open review issues* with
-    the same CONTEXT badge and numbered 1–13 under a counts line, a tab pill and a chip
-    that all said `10 open` — and the pill's hover said they were "further down the tab",
-    which they were not. A refuted claim is settled: it is listed apart, after the open
-    pile, unnumbered, under a REFUTED badge, so every count on the page is a count of
-    something drawn where it says."""
+    A refuted claim is settled, so it is not drawn at all (Victor, 5 Oct 2026): it used to
+    be a small pile of its own under the open one, with a `N refuted` count on the counts
+    line, the tab pill and the masthead chip. The items stay in the review data, and
+    `pile_numbers` still leaves them out of `open`, so every count on the page is still a
+    count of something drawn."""
     if not findings:
         return '<p class="sub">Nothing outstanding \u2014 the automated passes came back clean.</p>'
     live = [f for f in findings if not is_refuted(f)]
-    refuted = [f for f in findings if is_refuted(f)]
-    out = _render_finding_items(live, ordered=True) if live else (
-        '<p class="sub">Nothing left open \u2014 every finding the agent declined, it '
-        'refuted.</p>')
-    if refuted:
-        n = len(refuted)
-        # The lede is the heading's hover (eval run 11: a visible paragraph saying what
-        # the REFUTED badge on every card under it already says).
-        out += (f'<h3 class="refuted-h" id="{REFUTED_ID}" data-tip="{REFUTED_TIP}">'
-                f'Refuted \u2014 {n}</h3>'
-                + _render_finding_items(refuted, ordered=False))
-    return out
+    return (_render_finding_items(live) if live
+            else '<p class="sub">Nothing left open.</p>')
 
 
-def _render_finding_items(findings, ordered: bool) -> str:
+def _render_finding_items(findings) -> str:
     items = []
     # Worst first, whatever order the source listed them in: a pile that read "worth a
     # look, nit, worth a look" made the reader sort it in their head. Stable, so equal
@@ -1778,8 +1745,6 @@ def _render_finding_items(findings, ordered: bool) -> str:
     for f in findings:
         cls, label = SEVERITIES.get(f.get("severity", "info"), SEVERITIES["info"])
         li_cls = cls.replace("sev-", "n-")
-        if not ordered:
-            cls, label, li_cls = "sev-refuted", "refuted", "n-refuted"
         refs = _finding_refs(f)
         items.append(
             f'<li class="{li_cls}">'
@@ -1797,8 +1762,6 @@ def _render_finding_items(findings, ordered: bool) -> str:
             + (f.get("_diffs", "") or "")
             + "</li>"
         )
-    if not ordered:
-        return '<ul class="findings refuted">' + "\n".join(items) + "</ul>"
     return _open_list(len(findings)) + "\n".join(items) + "</ol>"
 
 

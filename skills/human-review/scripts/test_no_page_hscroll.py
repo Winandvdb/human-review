@@ -82,7 +82,7 @@ def _run10_masthead() -> str:
         {"label": "lines", "value": '<span class="added">+1330</span> / −292', "tip": "t",
          "href": "https://example.com"},
         {"label": "tests", "value": "+54 / −9 / ✍️7", "tip": "t", "href": "#t"},
-        {"face": chips.review_chip_face(10, 3, 6, 6), "tip": "t", "href": "#t"}])
+        {"face": chips.review_chip_face(10, 6, 6), "tip": "t", "href": "#t"}])
     strip = ('<div class="tabstrip" role="tablist"><button type="button" class="tab" '
              'role="tab" aria-controls="p1">Review</button></div>')
     return masthead.masthead_html(spec, "", bar, strip, state)

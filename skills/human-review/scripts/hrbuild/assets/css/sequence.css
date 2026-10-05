@@ -45,20 +45,6 @@ details.testsrc > summary > .foldlbl::after { content:"Show Test"; }
 details.testsrc[open] > summary > .foldlbl::after { content:"Hide Test"; }
 /* The hoisted bar keeps its own right alignment and takes the rest of the row. */
 details.testsrc > summary > .srcbar { flex:1 1 auto; margin:0; }
-/* What the branch did to the quoted file, drawn rather than spelled — the Tests tab's own
-   glyph, at the size the marks beside it are. `NEW FILE` in caps was read before the file
-   name it is a fact about; the words are on the hover, and the `+` column in the gutter
-   below counts the lines the caps used to. Green for a file that did not exist, amber for
-   one this branch edited, the page's own quiet grey for one it left alone. */
-.srcbar .filemark { display:inline-flex; flex:0 0 auto; cursor:help; margin-left:-2px;
-  --fm:#1a7f37; }
-.srcbar .filemark[data-kind=edited] { --fm:var(--drift); }
-.srcbar .filemark[data-kind=unchanged] { --fm:var(--muted); }
-.srcbar .filemark svg { display:block; width:15px; height:15px; overflow:visible; }
-.srcbar .filemark .fm-page, .srcbar .filemark .fm-mark { fill:var(--fm); }
-@media (prefers-color-scheme: dark) {
-  .srcbar .filemark { --fm:#56d364; }
-}
 details.testsrc > .snippet { margin:.4rem 0 0; }
 .testlead { margin:.7rem 0 0; }
 /* The fold's own summary: the names of the scenarios drawn inside it. It used to be the

@@ -244,7 +244,7 @@
    badge, in the same muted grey the excerpt's own `unchanged` badge wears, and the hover
    says why the row is here at all - the test is untouched, and it is listed because it
    runs through code this branch changed. */
-.reqmap .rm-cat[data-tip],.reqmap .code-badge{cursor:help}
+.reqmap .rm-cat[data-tip]{cursor:help}
 .reqmap .rm-st{flex:0 0 auto;align-self:center;display:inline-flex;cursor:help;
   --st:var(--rm-g-edge)}
 .reqmap .rm-st[data-st=edited]{--st:var(--rm-o-edge)}
@@ -356,39 +356,15 @@
 .reqmap .rm-part{border-bottom:1px solid var(--line,#e2e2e2)}
 .reqmap .rm-part:last-child{border-bottom:0}
 /* One phrase in one direction, the same one every other quoted block on this page reads
-   in: the two ways to open it, the file they open, then what changed in it. Nothing is
-   pushed away from anything else - the three parts are one group at the right edge. */
+   in: the file, then what changed in it. Nothing is pushed away from anything else - the
+   parts are one group at the right edge. */
 .reqmap .rm-srcbar{display:flex;justify-content:flex-end;align-items:center;
   gap:7px;padding:7px 12px 5px}
-.reqmap .rm-srcbar .code-badge{flex:0 0 auto;font-size:9px;padding:1px 6px;
-  letter-spacing:.06em}
-/* The handles lead, hard against the name they open. A file that did not exist at the
-   base has no diff to open and gets no mark rather than a dead one. The box they used to
-   wear was there to keep three letters from reading as prose; a mark needs no box, only
-   a hit area. */
-/* Closer than the row's own 7px: a mark is a smaller thing than the words around it, and
-   given the same air it floats off the name it belongs to. Two thirds of the gap, taken
-   back with a negative margin so the hover box keeps its full hit area. */
-.reqmap .rm-srcbar .rm-diff{flex:0 0 auto;display:inline-flex;align-items:center;
-  padding:2px 3px;border:0;border-radius:5px;text-decoration:none;line-height:0}
-.reqmap .rm-srcbar .rm-diff:hover{background:var(--accent-soft,rgba(127,127,127,.14))}
-/* Grey at rest, lit on hover. Two logos in full colour beside a file name are the
-   brightest thing in the row, and they are the least of what it says - a badge, a name
-   and two marks all shouting at once is a bar with no order to read it in. Grey they
-   recede to the weight of furniture and the name reads first; under the cursor each
-   comes up in the colour it is recognised by, which is the moment it has to be. */
-.reqmap .rm-srcbar .ico{display:block;width:14px;height:14px;fill:var(--muted,#6b6b6b);
-  transition:fill .12s ease}
-.reqmap .rm-srcbar .rm-diff:hover .ico{fill:var(--fg,#1c1c1c)}
-.reqmap .rm-srcbar .rm-diff:hover .ico-vsc{fill:#0098ff}
 /* A Java test path is longer than this column is wide. `anywhere` lets it wrap, and
    wrapping *at the slashes* keeps each fragment a path segment you can still read;
    `break-word` alone would split `victor` down the middle. */
 .reqmap .rm-srcbar .srcref{margin:0;font-size:10.5px;line-height:1.45;text-align:right;
   min-width:0;overflow-wrap:anywhere;word-break:break-word}
-/* After the rule above, which resets every margin in the bar and would otherwise put the
-   full 7px back on order alone. */
-.reqmap .rm-srcbar .rm-diff{margin-right:-2.33px}
 .reqmap .rm-scroll{overflow-x:auto}
 /* Token colours come from the page's one Pygments stylesheet, scoped to `pre.code` - the
    same classes extract-snippet.py emits for every other snippet, light and dark, so this

@@ -61,27 +61,6 @@
   // plus is its plus. The pencil is drawn rather than borrowed, because the codicon pencil
   // at the size that corner leaves is a few hairlines and disappears - it is a filled bar
   // along the diagonal, with a point at one end and a ferrule near the other.
-  // The two places a handle can take you, drawn rather than abbreviated. `\u21c6 GH` and
-  // `\u21c6 VSC` were initials in a box, the width of a short file name and reading as
-  // labels to be decoded; a logo is recognised without being read, so it can sit right
-  // against the name it opens. The tooltips are unchanged and still carry the sentence -
-  // they were already doing that, because "GH" did not say github.com either. Octicon
-  // `mark-github` (the octocat, already in its circle) and the VS Code ribbon, which keeps
-  // its own blue because it is only recognisable as VS Code while it is that blue.
-  var GHMARK='<svg class="ico ico-gh" viewBox="0 0 16 16" aria-hidden="true">'
-    +'<path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38'
-    +' 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95'
-    +' 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27'
-    +'s-1.36.09-2 .27c-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.27-.82 2.15'
-    +' 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82'
-    +'-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49'
-    +' 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>',
-      VSCMARK='<svg class="ico ico-vsc" viewBox="0 0 24 24" aria-hidden="true">'
-    +'<path d="M23.15 2.587 18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128'
-    +'a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26'
-    +'a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63'
-    +'a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352z'
-    +'m-5.146 14.861L10.826 12l7.178-5.448v10.896z"/></svg>';
   var PAGE='<path class="rm-page" d="M9.5 1.1l3.4 3.5.1.4v2h-1V6H8V2H3v11h4v1H2.5l-.5-.5'
           +'v-12l.5-.5h6.7l.3.1zM9 2v3h2.9L9 2z"/>',
       PLUS='<path class="rm-badge" d="M13 16h-1v-3H9v-1h3V9h1v3h3v1h-3v3z"/>',
@@ -171,22 +150,7 @@
     var t=D.tests[tid],out='';
     t.parts.forEach(function(p){
       var badge=fbadge(p);
-      // The handle that opens this file as a before/after rather than as a file. Same
-      // attributes the guide's own diff links carry, so the page's existing click handler
-      // picks it up: the served page asks its origin, a page read off disk hands the URI
-      // to victor-vsc, and with neither the href underneath still opens the file.
-      // Two destinations for the same comparison, each wearing the mark of the place it
-      // opens: VS Code, and the pull request on github.com. Each is emitted only where
-      // that side can really show it - no diff for a file with no before-state, and no
-      // github.com link for work github.com has not seen.
-      var d=p.diff_link?'<a class="srcref rm-diff" href="'+p.diff_link.href+'"'
-        +' data-diff-uri="'+p.diff_link.uri+'" data-diff-path="'+esc(p.diff_link.path)+'"'
-        +' data-diff-base="'+esc(p.diff_link.base)+'" data-tip="Diff in VS Code"'
-        +' aria-label="open as a diff in VS Code" target="_blank" rel="noopener">'+VSCMARK+'</a>':'';
-      if(p.gh_link)d+='<a class="srcref rm-diff" href="'+p.gh_link.href+'" target="_blank"'
-        +' rel="noopener" data-tip="GitHub"'
-        +' aria-label="open this diff on github.com">'+GHMARK+'</a>';
-      out+='<div class="rm-part"><div class="rm-srcbar">'+d
+      out+='<div class="rm-part"><div class="rm-srcbar">'
          // The name, and the path on hover - the same trade every other quoted block on
          // the page makes. A repo-relative Java path spends five segments on module,
          // `src/main/java` and the org package before it reaches the one word that

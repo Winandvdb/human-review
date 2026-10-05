@@ -1070,7 +1070,7 @@ Four tabs need something said about how they are written:
         `lines[0]`.
     - The wiring needs two things from the markup, and they are both things this fragment
       already emits: each excerpt in a `.rm-part`, and inside it the editor link from the
-      source bar (`a.srcref` that is not a `.rm-diff`) carrying the same `href` as the part's
+      source bar (`a.srcref`) carrying the same `href` as the part's
       `href` in the JSON. That link is how a part rendered in the browser says which window it
       is. Rename either and the excerpts render exactly as before, silently unlinked.
 
@@ -1080,17 +1080,15 @@ Four tabs need something said about how they are written:
 
     ```html
     <div class="srcbar">
-      <a class="srcref srcbar-diff" …><svg class="ico ico-vsc" …></a>
-      <a class="srcref srcbar-diff" …><svg class="ico ico-gh" …></a>
       <a class="srcref srcbar-path" href="vscode://file/…" data-tip="<repo-relative path> — open in VS Code">Name.java:76-79</a>
-      <span class="code-badge" data-diff="new" data-tip="…">new file</span>
+      <span class="filemark" data-kind="new" role="img" aria-label="new file" data-tip="New file"><svg …></svg></span>
     </div>
     ```
 
-    Read left to right, as one group at the right end: the two ways to open it, the file
-    they open, then what changed in it. **The handles lead and touch the name**, because
-    the name is what each of them opens — a handle a bar's width from the only word saying
-    what it would open is a pairing the reader has to make. **The badge trails**, because
+    Read left to right, as one group at the right end: the file, then what changed in it.
+    **No icons lead the name** — the VS Code and GitHub marks that used to sit in front of
+    it are gone; the name is the link (VS Code when served, the extension or the file off
+    disk). **The badge trails**, because
     `new file` is a fact *about* a file and leading with it makes the reader hold it in
     mind across the whole row before the row says which file is new. **The face is the
     file's name and the full path is on hover** — "which file is this?" is the only question the row exists to answer, and a
@@ -1117,37 +1115,6 @@ Four tabs need something said about how they are written:
     unbreakable token as far as line breaking goes — no spaces, and a slash is not a break
     opportunity — so the longest tip on the page overflowed its own `max-width` and was
     clipped at the edge, which reads as the page running off the screen.
-  - **Every quoted file offers its diff, and each handle wears the mark of where it
-    opens** — the VS Code ribbon (the base on the left, the working tree on the right,
-    through the served page or the editor's URI handler) and the GitHub octocat (the same
-    file inside the open pull request, anchored by the sha-256 of its path). A logo, not
-    initials: `⇆ VSC` and `⇆ GH` were three monospace letters the width of a short file
-    name, so a row whose whole job is to say *which file is this?* read as three words of
-    equal weight, two of which had to be decoded first. The marks are 14px, **grey at rest
-    and lit under the cursor** — two logos in full colour beside a file name are the
-    brightest thing in the row and the least of what it says, so at rest they sit at the
-    weight of furniture and the name reads first; on hover the octocat comes up in the
-    page's own ink (its mark is monochrome by its own brand — never the link blue it would
-    otherwise inherit, which reads as a decorated arrow) and the ribbon in its blue, which
-    is the only thing that makes it VS Code. **No underline** under either: the dotted rule
-    was there to keep three letters from reading as prose. They sit at **two thirds of the
-    row's gap** from what follows them — a mark is a smaller thing than the words around it
-    and floats off the name given the same air. The `aria-label` still spells out what each
-    opens, for a reader who cannot see the mark; the **tooltip is two or three words**
-    (`Open Diff in VSC`, `GitHub`), because a mark in a row of three is hovered to answer
-    *what is this?*, and the sentence a prose link can afford is a paragraph in a corner.
-    Each is emitted only where that side can really show it: no editor diff for a file with no
-    before-state, and no github.com link for work github.com has not seen — the file dirty
-    at HEAD, the branch unpushed, or no pull request open on it. **Take the pull request
-    number from `content.json`'s `pr` block**, never from whatever number was in the last
-    map you copied — a link to somebody else's pull request looks exactly like a working one.
-  - **A github.com link ends in a line, never in a bare file anchor** — `#diff-<sha256 of
-    the path>R<line>`, aimed at the first line the branch added in that window (the top of
-    the window when it added none). Not a nicety: github.com's Files-changed view renders
-    lazily, so `#diff-<sha>` alone **does not scroll at all** on a large pull request — the
-    reader lands wherever the page happened to be, several files away, which is
-    indistinguishable from a broken link. With `R<line>` the same URL scrolls to the hunk.
-    `L<line>` is the left side, and the only landing a pure deletion has.
   - **Quote the whole test method, always.** A window that stops at the last assertion and
     never shows the closing brace is a method the reviewer cannot see the end of — and they
     cannot tell whether that is the range or the code, having no file open to count

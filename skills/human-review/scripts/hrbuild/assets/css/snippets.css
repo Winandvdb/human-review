@@ -48,6 +48,21 @@ pre.code .ln-row * { text-indent:0; }
 .ghdiff > .srcbar { margin:0; padding:.45rem .7rem; border-bottom:1px solid var(--line);
                background:var(--code-bg); font:600 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
 .ghdiff > .srcbar .stat { font-weight:700; white-space:nowrap; }
+/* What the branch did to the quoted file, drawn rather than spelled, right after the file
+   name in every source bar (`shared/filemark.py`, the Tests tab's own glyph): `NEW FILE` /
+   `NEW CODE` in caps were read before the name they are a fact about; the words are on
+   the hover, and the `+` column in the gutter below counts the lines the caps used to.
+   Green for a file that did not exist, amber for one this branch edited (new code in it
+   included), the page's own quiet grey for one it left alone. */
+.srcbar .filemark { display:inline-flex; flex:0 0 auto; cursor:help; margin-left:-2px;
+  --fm:#1a7f37; }
+.srcbar .filemark[data-kind=edited] { --fm:var(--drift); }
+.srcbar .filemark[data-kind=unchanged] { --fm:var(--muted); }
+.srcbar .filemark svg { display:block; width:15px; height:15px; overflow:visible; }
+.srcbar .filemark .fm-page, .srcbar .filemark .fm-mark { fill:var(--fm); }
+@media (prefers-color-scheme: dark) {
+  .srcbar .filemark { --fm:#56d364; }
+}
 .ghdiff-scroll { overflow-x:auto; }
 table.ghdiff-body { border-collapse:collapse; width:100%;
                     font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; }

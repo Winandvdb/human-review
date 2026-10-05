@@ -313,12 +313,12 @@ def _logging_listing(added: list, root: Path) -> str:
         return ('<p class="lede"><b>None.</b> Not one logging statement was added or '
                 'changed on the lines this change set touches.</p>')
     boxes = []
-    # `new code` / `2 lines changed` — dropped on this tab only. Everywhere else the badge
-    # answers "is this quoted block new, or an old one with a line in it?", which is a real
-    # question about a snippet a reviewer did not choose. Here it is not: the gutter beside
+    # The file glyph (`new code` / `2 lines changed` on its hover) — dropped on this tab
+    # only. Everywhere else the glyph answers "is this quoted block new, or an old one with
+    # a line in it?", which is a real question about a snippet a reviewer did not choose. Here it is not: the gutter beside
     # the statement already marks the added lines with `+`, and every block on this tab is
     # here *because* the branch added or rewrote that logging line.
-    BADGE_RE = re.compile(r'<span class="code-badge"[^>]*>[^<]*</span>')
+    BADGE_RE = re.compile(r'<span class="filemark"[^>]*>.*?</span>', re.S)
     # …except that a `+` line is not always a new statement. `logextract.py` tells the two
     # apart (`pair_with_old_calls`: the same hunk deleted a call to the same logger
     # method), and a literal swapped for a constant must not read as new logging. New

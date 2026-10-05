@@ -140,9 +140,9 @@ def _cat_chip(cat: str | None, test_rel: str = "") -> str:
     """The kind of test, and what wrote it: one pill reading `UI · Gherkin`.
 
     The kind alone comes off the Tests tab — same words, same palette, same pill. Copied
-    rather than shared, like `FILE_PAGE` above it: the Tests tab is an included asset that
-    builds its own markup, and the two will not be made to import from each other. What is
-    shared is the decision, which is written down in `TEST_CATS`.
+    rather than shared, as `reqmap.js` copies the file glyph: the Tests tab is an included
+    asset that builds its own markup, and the two will not be made to import from each
+    other. What is shared is the decision, which is written down in `TEST_CATS`.
 
     The runner is this tab's own, and it is here because the kind is not enough to place a
     row: `UI` covers both a Playwright spec and a Cucumber feature, and a reader looking
@@ -410,54 +410,8 @@ def _scenarios_drawn(puml_rel: str, test_rel: str, root: Path) -> list[tuple[int
     return sorted(found.items())
 
 
-#: The Tests tab's file glyph, and the corner mark that says what the branch did to that
-#: file. Copied here from `requirements-map.html` deliberately: one vocabulary for "what
-#: happened to this file" across the page, drawn the same way in both places, so a reader
-#: who has learnt it on one tab is not taught it again on another. A page with a `+` is a
-#: file that did not exist, a page with a pencil is one this branch edited, a bare page is
-#: one it left alone — and the words those glyphs replace are on the hover, never dropped.
-FILE_PAGE = ('<path class="fm-page" d="M9.5 1.1l3.4 3.5.1.4v2h-1V6H8V2H3v11h4v1H2.5l-.5-.5'
-             'v-12l.5-.5h6.7l.3.1zM9 2v3h2.9L9 2z"/>')
-FILE_PLUS = '<path class="fm-mark" d="M13 16h-1v-3H9v-1h3V9h1v3h3v1h-3v3z"/>'
-FILE_PENCIL = ('<path class="fm-mark" d="M8.65 13.65 13.65 8.65 15.55 10.55 10.55 15.55Z'
-               'M8.65 13.65 10.55 15.55 7.9 16.3Z"/>'
-               '<path class="fm-mark" d="M12.5 9.8 14.4 11.7 13.75 12.35 11.85 10.45Z"/>')
-
-#: `<span class="code-badge" data-diff="new" data-tip="…">new file</span>` — the words
-#: `srcbar_html` prints at the end of a source bar.
-CODE_BADGE = re.compile(
-    r'<span class="code-badge"[^>]*?(?: data-tip="(?P<tip>[^"]*)")?>(?P<label>[^<]*)</span>')
-
-
-def _badge_as_glyph(bar: str) -> str:
-    """The bar's own `new file` / `2 lines changed` badge, drawn instead of spelled.
-
-    `NEW FILE` in caps beside a file name is read before the name is — a label louder than
-    its subject, on a row whose subject is the file. The Tests tab settled this one level
-    down already: the same page glyph, marked `+` or pencil in its corner, with the words
-    it replaces moved into the hover. This is that decision applied to the row the Sequence
-    tab puts above a quoted test, and it is the same drawing, not a lookalike.
-
-    Keyed off the badge's words rather than its `data-diff`, exactly as the Tests tab keys
-    it: `new file` and `new code` are both `new` to git and are not the same fact — one is
-    a file that did not exist, the other is fresh lines inside one that did.
-    """
-    def swap(m):
-        label = m["label"]
-        kind = ("new" if label.startswith("new file")
-                else "unchanged" if label.startswith("unchanged") else "edited")
-        mark = {"new": FILE_PLUS, "edited": FILE_PENCIL, "unchanged": ""}[kind]
-        tip = m["tip"] or ""
-        return (f'<span class="filemark" data-kind="{kind}" role="img"'
-                f' aria-label="{html.escape(label, quote=True)}"'
-                f' data-tip="{label[:1].upper()}{label[1:]}{" &mdash; " + tip if tip else ""}">'
-                f'<svg viewBox="0 0 16 16" aria-hidden="true">{FILE_PAGE}{mark}</svg></span>')
-
-    return CODE_BADGE.sub(swap, bar, count=1)
-
-
-#: The header `extract-snippet.py` puts at the top of every quoted block: the two handles,
-#: the file name with the lines it quotes, and what changed in it. Matched rather than
+#: The header `extract-snippet.py` puts at the top of every quoted block: the file name
+#: with the lines it quotes, and the glyph for what changed in it. Matched rather than
 #: rebuilt, because only that module knows what the bar says — the window may have snapped
 #: past a leading comment, and the badge is computed against the review's own base. It has
 #: no nested `<div>`, so the first `</div>` is its own; anything else would need a parser.
@@ -484,7 +438,7 @@ def _fold_over(quoted: list[str]) -> tuple[str, list[str]]:
     m = SRCBAR.search(quoted[0])
     if not m:
         return "", list(quoted)
-    return (_badge_as_glyph(m.group(0)),
+    return (m.group(0),
             [quoted[0][: m.start()] + quoted[0][m.end():], *quoted[1:]])
 
 

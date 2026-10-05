@@ -79,8 +79,11 @@ from hrbuild.shared.commands import (
 from hrbuild.shared.snippets import (
     DIFF_CONTEXT, diff_html, DIFF_INLINE_TOKEN, diff_link_html, DIFF_TOKEN, diff_uri_handler,
     expand_snippets, github_blob_base, review_step_rev, SNIPPET_BASE, snippet_html,
-    SNIPPET_TOKEN, _extract_module, _first_changed, _github_compare_link, _icon, _parse_unified,
-    _shown_in_compare, _snippet_links, _unmoved_since, set_diff_base, commit_stamp
+    SNIPPET_TOKEN, _extract_module, _parse_unified, set_diff_base, commit_stamp
+)
+from hrbuild.shared.filemark import (
+    FILE_MARK_D, FILE_PAGE, FILE_PAGE_D, FILE_PENCIL, FILE_PLUS, filemark, filemark_kind,
+    mark_path, page_path
 )
 from hrbuild.shared.svg import (
     CREOLE_IN_TITLE, CREOLE_LINK, DIAGRAM_COLOR_VARS, DIAGRAM_FILL_ATTR, DIAGRAM_STYLE_COLOR,
@@ -170,7 +173,7 @@ from hrbuild.tabs.review import (
     NARROWED_QUOTE, _quote, _decision_link, _narrowed_signals, _grade_rows, fix_commit,
     ANCHORS_KEY, ANCHORS_AT_REVIEW, _written_at, reanchor_refs, _anchor_note,
     drop_stale_pr_comments, NO_PR_LINE, no_pr_line,
-    REFUTED_ID, _render_finding_items, REVIEW_COMMITS_JSON, generated_in, fix_commits,
+    _render_finding_items, REVIEW_COMMITS_JSON, generated_in, fix_commits,
     _commit_face, fix_commits_html, review_commits_warnings, SPEC_DOCS, QA_DOC,
     CITING_FIELDS, CITE_QUOTE, _CITE, _CITE_GUARD, _spec_change_dir, _doc_lines,
     _cited_quote, _find_line, _resolve_citation, link_spec_citations, urllib_quote,
@@ -179,12 +182,12 @@ from hrbuild.tabs.review import (
     _OPEN_END, widen_anchor, _snapped_spans, _spans_ref, _first_lines, snippet_card,
     GRADE_LINES_MAX, SPARE_SIGNALS, _REPEATS, _PILE_WORD, _PILE_OF_WORD, _PILE_SAID,
     _plain_words, named_items, hunk_bodies, _layout_free, format_only_hunk, _OBS_LABELS,
-    _obs_label, _STOPWORDS, _words, restates_title, REFUTED_TIP,
+    _obs_label, _STOPWORDS, _words, restates_title,
     _CONST_DECL, constants_declared, replaces_constant
 )
 from hrbuild.tabs.sequence import (
-    CODE_BADGE, FILE_PAGE, FILE_PENCIL, FILE_PLUS, render_testpairs, SEQ_ARROW, SEQ_DECL,
-    SEQ_UI_DRIVERS, SRCBAR, STALE, TEST_CATS, TEST_RUNNERS, _badge_as_glyph, _cat_chip,
+    render_testpairs, SEQ_ARROW, SEQ_DECL,
+    SEQ_UI_DRIVERS, SRCBAR, STALE, TEST_CATS, TEST_RUNNERS, _cat_chip,
     _fold_over, _folded_pair, _line_spans, _moved_since_base, _narrowed, _pair_cat,
     _pair_runner, _scenario_extents, _scenarios_drawn, _share_excerpts, _spans_for,
     _stale_sequence, _unchanged_sequence, _unquoted_note,
@@ -608,7 +611,6 @@ def _main(argv=None) -> int:
             # A chip counting items the reader then cannot find is the same lie as a
             # hand-typed number, arrived at by a longer route.
             open_n, fixed, assumed = pile_numbers(spec)
-            refuted_n = refuted_number(spec)
             # Everything the reviewers raised, refuted claims included: the hover's
             # breakdown is counted off the same items (`_raised_by`).
             total = len(spec.get("findings", []) or []) + fixed
@@ -672,7 +674,7 @@ def _main(argv=None) -> int:
                 # refuted, 6 fixed` — was the chip that wrapped the scope bar to a second
                 # row. The counts stay; the agent names moved to the hover's first sentence
                 # (`review_chip_key`), still off the same `pile_numbers`.
-                "face": review_chip_face(open_n, refuted_n, fixed, assumed),
+                "face": review_chip_face(open_n, fixed, assumed),
                 # The total, which the face no longer carries, split by the pass that
                 # raised each item. `by /code-review and /simplify` named the two passes
                 # and left the reader to guess the split — which is the only thing the
@@ -690,7 +692,7 @@ def _main(argv=None) -> int:
                 # and "N assumptions the coding agent recorded while implementing" went:
                 # the face counts them, the Review tab lists them, and neither changes
                 # what a reviewer does next. Who reviewed is the one fact left.
-                "tip": review_chip_key(open_n, refuted_n, fixed, assumed)
+                "tip": review_chip_key(open_n, fixed, assumed)
                 + (f" {reviewed}." if reviewed else ""),
             }
             c = {**computed, **{k: v for k, v in c.items() if k != "auto"}}

@@ -99,17 +99,6 @@ ol.findings > li.fixed .f-title { font-weight:600; }
   ol.findings > li.n-assumed { --num-bg:#8b6fd4; border-left-color:#8b6fd4; }
 }
 ol.findings > li.n-assumed { --num-bg:#5b3fa8; border-left:3px solid #5b3fa8; }
-/* The refuted claims: their own small pile under the open one, unnumbered (the numbers
-   count what is open), receding like the fixed pile, with a REFUTED badge of their own
-   rather than the open pile's CONTEXT. Eval run 10 drew them as cards 11–13 of `10 open`. */
-.refuted-h { font-size:1rem; margin:1.4rem 0 .2rem; color:var(--muted); }
-.refuted-h[data-tip] { cursor:help; }
-ul.findings.refuted { list-style:none; padding:0; margin:.4rem 0 1rem; }
-ul.findings.refuted > li { background:var(--code-bg); border:1px dashed var(--line);
-                    border-radius:8px; padding:.7rem 1rem; margin:.5rem 0; }
-.sev-refuted { background:#eceef1; color:#4b5563; border:1px solid #c9ced6; }
-@media (prefers-color-scheme: dark) {
-  .sev-refuted { background:#24282e; color:#9aa3af; border-color:#3a4049; } }
 /* The road not taken, which is what makes an assumption checkable at a glance: the reader
    recognises their own intent in one of the two readings without opening anything. */
 .f-alt { color:var(--muted); font-size:.9rem; margin:.35rem 0 0; }

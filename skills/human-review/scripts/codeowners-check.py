@@ -43,6 +43,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from hrbuild.shared.filemark import mark_path, page_path  # noqa: E402
+
 APPROVAL_REQUIRED, CLEAR, NO_FILE = "approval_required", "no_owners_touched", "no_codeowners"
 # Not every required owner is the same phone call. A team named for the guardrail system
 # itself — "elders" in this project's own convention — is the escalation of last resort;
@@ -274,15 +277,13 @@ STATUS_LABEL = {"A": "added", "M": "modified", "D": "deleted", "C": "copied", "T
 # than the filename beside it — read first, though it is the lesser fact — and, worse, each
 # word is a different width, so every file name in the list started at its own indent and
 # the column could not be scanned. A 16px box is the same 16px on every row.
-PAGE = ('<path class="cow-page" d="M9.5 1.1l3.4 3.5.1.4v2h-1V6H8V2H3v11h4v1H2.5l-.5-.5'
-        'v-12l.5-.5h6.7l.3.1zM9 2v3h2.9L9 2z"/>')
-PLUS = '<path class="cow-badge" d="M13 16h-1v-3H9v-1h3V9h1v3h3v1h-3v3z"/>'
-PENCIL = ('<path class="cow-badge" d="M8.65 13.65 13.65 8.65 15.55 10.55 10.55 15.55Z'
-          'M8.65 13.65 10.55 15.55 7.9 16.3Z"/>'
-          '<path class="cow-badge" d="M12.5 9.8 14.4 11.7 13.75 12.35 11.85 10.45Z"/>')
-# The plus turned 45 degrees — the same fact with the sign flipped.
-CROSS = ('<path class="cow-badge" d="M16 9.7 15.3 9 12.5 11.8 9.7 9 9 9.7 11.8 12.5'
-         ' 9 15.3 9.7 16 12.5 13.2 15.3 16 16 15.3 13.2 12.5Z"/>')
+#
+# The drawing itself is the page's one file glyph (`hrbuild/shared/filemark.py`), in this
+# fragment's own classes so its colours stay its own.
+PAGE = page_path("cow-page")
+PLUS = mark_path("plus", "cow-badge")
+PENCIL = mark_path("pencil", "cow-badge")
+CROSS = mark_path("cross", "cow-badge")
 # [badge, `data-st` — which is also the colour the badge wears, so a status added here
 #  cannot end up in another one's colour.]
 STATUS_MARK = {"A": (PLUS, "added"), "C": (PLUS, "added"),

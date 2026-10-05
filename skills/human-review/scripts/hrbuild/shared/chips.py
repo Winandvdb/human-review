@@ -563,33 +563,29 @@ def chip_html(c: dict) -> str:
     return f'<span class="chip">{inner}</span>'
 
 
-def review_chip_face(open_n: int, refuted_n: int, fixed_n: int, assumed_n: int) -> str:
-    """`🤖 <b>6 unsure</b> · <b>10 open</b> · 3 refuted · <b>6 fixed</b>` — the masthead's
-    review chip, numbers only, one robot.
+def review_chip_face(open_n: int, fixed_n: int, assumed_n: int) -> str:
+    """`🤖 <b>6 unsure</b> · <b>10 open</b> · <b>6 fixed</b>` — the masthead's review chip,
+    numbers only, one robot.
 
     Eval run 10: `🤖Code: 6 unsure; 🤖Review: 10 open · 3 refuted, 6 fixed` was 379px of a
     1040px scope bar, and it was the chip that wrapped to a second row and took the sticky
     header from 108px to 164px on every tab. The two agent names and the second robot
     were the words a reader needs once, so they moved to the hover (`review_chip_key`);
     the counts stay, each one with the noun that says what it counts, in the order of the
-    work — what the coder guessed at first, then what is left, what was set aside, what
-    was already done. With no assumptions the `unsure` count is absent rather than zeroed,
-    and with nothing refuted so is `refuted`: a zero is a claim the page cannot stand
-    behind (`pile_numbers` counts the piles the tab renders)."""
+    work — what the coder guessed at first, then what is left, what was already done.
+    With no assumptions the `unsure` count is absent rather than zeroed: a zero is a claim
+    the page cannot stand behind (`pile_numbers` counts the piles the tab renders). The
+    refuted claims are not on the page at all (Victor, 5 Oct 2026), so not here either."""
     parts = ([f"<b>{assumed_n} unsure</b>"] if assumed_n else []) + [f"<b>{open_n} open</b>"]
-    if refuted_n:
-        parts.append(f"{refuted_n} refuted")
     parts.append(f"<b>{fixed_n} fixed</b>")
     return "\U0001f916 " + " · ".join(parts)
 
 
-def review_chip_key(open_n: int, refuted_n: int, fixed_n: int, assumed_n: int) -> str:
+def review_chip_key(open_n: int, fixed_n: int, assumed_n: int) -> str:
     """The hover's first sentence: the chip's face in the long words it no longer has room
     for, so `6 unsure` is never left to be guessed at."""
     coder = f"Coding agent: {assumed_n} unsure. " if assumed_n else ""
-    return (coder + f"Review: {open_n} open"
-            + (f" · {refuted_n} refuted" if refuted_n else "")
-            + f" · {fixed_n} fixed.")
+    return coder + f"Review: {open_n} open · {fixed_n} fixed."
 
 
 # The words a reviewer's name is spelt around: `correctness reviewer`, `reviewer correctness`,

@@ -590,14 +590,16 @@ def test_a_rewritten_statement_is_not_shown_as_new_logging():
                  "was": 'LOG.info("Booking {}", owner)'}
     fresh = {**INFO_HIT, "change": "added"}
     out = build._logging_listing([rewritten, fresh], REPO_ROOT)
-    assert out.index("New log statement") < out.index("Rewritten, not new")
+    # The new one is listed first, and carries no caption: its `+` gutter says it.
+    assert "New log statement" not in out
+    cards = out.split('<figure class="snippet">')[1:]
+    assert "lg-change" not in cards[0] and "Rewritten, not new" in cards[1]
     assert "it logs the same text as before" in out
     assert "Was <code>LOG.info(&quot;Booking {}&quot;, owner)</code>" in out
     # Without a base there is no claim either way — no label at all.
     assert "lg-change" not in build._logging_listing([INFO_HIT], REPO_ROOT)
     # Eval run 6: the label floated between two cards. It is each card's own caption now.
-    for card in out.split('<figure class="snippet">')[1:]:
-        assert card.lstrip().startswith('<figcaption class="snippet-note"><span class="lg-change')
+    assert cards[1].lstrip().startswith('<figcaption class="snippet-note"><span class="lg-change')
 
 
 def test_a_rewritten_statement_wears_a_neutral_mark_not_the_added_plus():

@@ -263,8 +263,8 @@ def _change_line(h: dict) -> str:
     It is the card's own caption (`snippet_html`'s figcaption, inside the frame), not a
     paragraph between two cards: eval run 6 printed it in the gap, equidistant from the
     card above and the card below, and a reader could not tell which one it described."""
-    if h.get("change") == "added":
-        return '<span class="lg-change lg-new">New log statement</span>'
+    # A new statement gets no caption: its green `+` gutter already says it, and Victor
+    # (5 Oct 2026) found "New log statement" over every new card self-evident.
     if h.get("change") != "modified":
         return ""
     what = ("Rewritten, not new — it logs the same text as before"

@@ -101,7 +101,7 @@ from hrbuild.shared.diagrams import (
     select_rows, shorten_dgm_src, unchanged_row, UNCHANGED, UNCHANGED_BADGE, VIEW_WORDS,
     _context_svg, _diagram_views, _drawio_unchanged_card, _focus_views, _provenance,
     _source_link, _sql_shape, _SQL_COLLATE, _SQL_COLUMN, _SQL_INDEX, _SQL_TABLE,
-    _unchanged_body, _why_not_drawn, SCHEMA_ONLY, SCHEMA_ONLY_BADGE
+    _unchanged_body, _why_not_drawn, SCHEMA_ONLY, SCHEMA_ONLY_BADGE, trace_legend
 )
 from hrbuild.shared.bands import (
     set_bands, _BANDS, _TOP_BANDS, _flush_bands, _flush_top_bands, _lede_above
@@ -135,7 +135,7 @@ from hrbuild.shared.validate import (
 from hrbuild.shared.layout import (
     _layout_overridden, _layout_section, _video_step_ran, LAYOUT_ALWAYS, LAYOUT_MODEL_KEYS, LAYOUT_PRODUCER,
     LAYOUT_SECTIONS, LAYOUT_TABS, own_layout, LAYOUT_TESTPAIRS, _squash, _own_testpairs,
-    _own_diagram_title
+    _own_diagram_title, LAYOUT_WHEN_WRITTEN
 )
 from hrbuild.tabs.review import (
     AFTERMATH_FILES, aftermath_html, aftermath_reads_takeover, AFTERMATH_JSON, CONFIDENCE_TIP,

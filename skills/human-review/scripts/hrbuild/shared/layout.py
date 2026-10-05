@@ -42,6 +42,7 @@ LAYOUT_SECTIONS: dict[str, dict] = {
                   "missing": "run scripts/openapi-visual-diff.py (needs `brew install oasdiff`)"},
     },
     "conceptual": {"id": "conceptual", "title": "", "body": "{{drawio:conceptual}}"},
+    "deployment": {"id": "deployment", "title": "", "body": "{{drawio:deployment}}"},
     "requirements-map": {"id": "requirements-map", "title": "",
                          "includeHtml": "assets/requirements-map.html", "includeFirst": True},
     "ds-audit": {"id": "ds-audit", "title": "", "includeHtml": "assets/ds-audit.html"},
@@ -77,7 +78,7 @@ LAYOUT_TABS: dict[str, dict] = {
     "sequence":     {"label": "Sequence", "blocks": ("testpairs", "diagrams", "puml"),
                      "sections": (), "required": ()},
     "packages":     {"label": "Structure", "blocks": ("diagrams", "puml"),
-                     "sections": (), "required": ()},
+                     "sections": ("deployment",), "required": ()},
     "city":         {"label": "Code City", "blocks": ("codecity",), "sections": (),
                      "required": ()},
     "dsaudit":      {"label": "UX", "blocks": (), "sections": ("ds-audit",),
@@ -89,6 +90,12 @@ LAYOUT_TABS: dict[str, dict] = {
     "owners":       {"label": "CODEOWNERS", "blocks": ("codeowners",), "sections": (),
                      "required": ()},
 }
+
+#: A canonical section that is on its tab whenever the step that feeds it wrote this file,
+#: declared or not. The hand-drawn deployment diagram closes the Structure tab, under the
+#: container view it is checked against, only when the project configured one
+#: (`steps.c2.drawio`) — a model writing the content file cannot know that it did.
+LAYOUT_WHEN_WRITTEN = {"deployment": "assets/deployment-diff.json"}
 
 #: The tab that is on the page whenever its step ran, declared or not: no film is the case
 #: that most needs saying, and an absent pill says nothing.
@@ -208,6 +215,10 @@ def own_layout(spec: dict, out_dir) -> list[str]:
                     orphans.add(b.get("id"))
         for sid in rule["required"]:
             if sid not in sections:
+                sections.append(sid)
+        for sid in rule["sections"]:
+            wrote = LAYOUT_WHEN_WRITTEN.get(sid)
+            if wrote and sid not in sections and (out_dir / wrote).is_file():
                 sections.append(sid)
         if dropped:
             warnings.append(f"tab {tid!r}: dropped {', '.join(dropped)} — the tab is "

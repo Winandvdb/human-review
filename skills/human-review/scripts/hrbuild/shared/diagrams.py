@@ -140,6 +140,24 @@ CM_LEGEND_TODO = ('<span class="todo"><i></i>'
                   "<b>still waiting for a manual re-layout</b></span>")
 
 
+def trace_legend(verdict: dict) -> str:
+    """What the weights and the red dashes mean, on a drawing laid over the traces
+    (`drawio-diff.py --traces`). A row is there only when the picture shows one: a legend
+    entry for a mark that is nowhere on the drawing sends the reader looking for it."""
+    t = verdict.get("traces")
+    if not t:
+        return ""
+    rows = []
+    if t.get("walked"):
+        rows.append('<span class="walked"><i></i><b>walked by a test</b></span>')
+    if t.get("unwalked"):
+        rows.append('<span class="unwalked"><i></i><b>no test walks it</b></span>')
+    if t.get("undrawn"):
+        rows.append('<span class="undrawn"><i></i><b>called in the traces, '
+                    'missing from the drawing</b></span>')
+    return f'<p class="cmlegend">{"".join(rows)}</p>' if rows else ""
+
+
 def drawio_unchanged(verdict: dict) -> bool:
     """Did `drawio-diff.py` find nothing — no box or line added, removed, changed or
     moved, and nothing left red for a re-layout? An absent verdict is not "unchanged":
@@ -174,7 +192,8 @@ def _drawio_unchanged_card(name: str, verdict: dict, assets: Path, root: Path) -
     return ('<div class="diagram"><div class="head">'
             f'<b>{html.escape(title)}</b>{UNCHANGED_BADGE}'
             + (_source_link(rel, root) if rel else "") + '</div>'
-            f'<div class="svgbox">{inline_svg(svg, root)}</div></div>')
+            f'<div class="svgbox">{inline_svg(svg, root)}</div>'
+            + trace_legend(verdict) + '</div>')
 
 
 def drawio_widget_html(name: str, assets: Path, root: Path, rebuild: str = "") -> str:
@@ -200,11 +219,12 @@ def drawio_widget_html(name: str, assets: Path, root: Path, rebuild: str = "") -
     # Repeated under `New`, where the red is on screen with nothing else to explain it.
     # The green is not: nothing is coloured green in the undiffed drawing.
     todo_only = f'<p class="cmlegend">{CM_LEGEND_TODO}</p>' if red else ""
+    traced = trace_legend(verdict)
 
     panes = []
-    for view, suffix, tail in (("diff", "diff", legend),
-                               ("new", "new", todo_only),
-                               ("old", "original", "")):
+    for view, suffix, tail in (("diff", "diff", legend + traced),
+                               ("new", "new", todo_only + traced),
+                               ("old", "original", traced)):
         svg = assets / f"{name}-{suffix}.svg"
         if svg.is_file():
             panes.append((view, f'<div class="svgbox">{inline_svg(svg, root)}</div>{tail}'))

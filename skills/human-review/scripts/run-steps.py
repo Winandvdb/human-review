@@ -1187,6 +1187,21 @@ def _c2(ctx: Ctx):
                           "the sequence step is what produces them")
     if r.returncode != 0:
         raise RuntimeError(f"c2-from-sequence.py exit {r.returncode}")
+    # The project's own picture of the same thing, drawn by hand, checked against the
+    # graph just projected: which of its arrows a test walked, which no test did, and
+    # which calls the traces made that it does not draw. Here and not in `_diagrams`,
+    # because it reads what this step wrote. The name is fixed — it is the token the
+    # Structure tab's layout expands (`{{drawio:deployment}}`).
+    cfg = ctx.step_cfg("c2")
+    d = cfg.get("drawio")
+    if d:
+        graph = f"{ART}/c2/{cfg.get('name') or 'C2-Containers'}.json"
+        extra = (f" --tested-against {shlex.quote(d['tested_against'])}"
+                 if d.get("tested_against") else "")
+        if d.get("participant"):
+            extra += f" --trace-attr {shlex.quote(d['participant'])}"
+        sh(f"{HERE}/drawio-diff.py --base {ctx.base} --diagram {shlex.quote(d['diagram'])} "
+           f"--out-dir {ART} --name deployment --traces {graph}" + extra, ctx)
 
 
 def _city(ctx: Ctx):
@@ -2075,10 +2090,10 @@ STEP_INPUTS = {
                      "tools": ("puml-diff.sh", "drawio-diff.py",
                                "../puml-diff/puml_diff.py", "../puml-diff/seq_puml_diff.py"),
                      "outputs": ("assets/diagrams",)},
-    "c2":           {"paths": ("*.genseq.puml",),
+    "c2":           {"paths": ("*.genseq.puml", "*.drawio", "*.drawio.png", "*.drawio.svg"),
                      # whether those were re-traced on this run: the card says so
                      "reads": ("assets/sequence.verdict.json",),
-                     "tools": ("c2-from-sequence.py",),
+                     "tools": ("c2-from-sequence.py", "drawio-diff.py"),
                      "outputs": ("assets/c2",)},
     "complexity":   {"paths": ("*.java",),
                      "tools": ("endpoint-complexity.py", "endpoint-complexity-delta.py"),

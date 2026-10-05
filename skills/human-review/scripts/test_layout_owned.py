@@ -146,3 +146,34 @@ def test_a_heading_that_only_repeats_the_card_under_it_is_dropped(tmp_path):
     assert "title" not in c2
     assert maven["title"] == "How the build is cut"
     assert any("C2 Containers" in w for w in warnings)
+
+
+# ── the deployment drawing closes the Structure tab, when the c2 step drew one ────────
+
+STRUCTURE = [{"id": "packages", "label": "Structure", "blocks": [
+    {"type": "diagrams", "manifest": "assets/c2/MANIFEST.tsv", "only": ["C2-Containers"]}]}]
+
+
+def test_the_deployment_drawing_goes_under_the_container_view_when_it_was_drawn(tmp_path):
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "deployment-diff.json").write_text("{}")
+    spec, _ = _own(json.loads(json.dumps(STRUCTURE)), tmp_path)
+    blocks = spec["tabs"][0]["blocks"]
+    assert blocks[0]["type"] == "diagrams"
+    assert blocks[-1] == {"type": "section", "id": "deployment"}
+    assert {"id": "deployment", "title": "", "body": "{{drawio:deployment}}"} in spec["sections"]
+
+
+def test_no_deployment_section_for_a_project_that_configured_none(tmp_path):
+    spec, _ = _own(json.loads(json.dumps(STRUCTURE)), tmp_path)
+    assert [b["type"] for b in spec["tabs"][0]["blocks"]] == ["diagrams"]
+
+
+def test_the_legend_shows_only_the_marks_the_drawing_has(tmp_path):
+    import importlib
+    diagrams = importlib.import_module("hrbuild.shared.diagrams")
+    legend = diagrams.trace_legend({"traces": {"walked": ["a → b"], "unwalked": [],
+                                               "undrawn": ["c → d"]}})
+    assert "walked by a test" in legend and "missing from the drawing" in legend
+    assert "no test walks it" not in legend
+    assert diagrams.trace_legend({}) == ""

@@ -871,3 +871,118 @@ def test_no_undo_is_offered_when_every_revision_draws_the_same_thing(tmp_path, b
         capture_output=True, text=True, cwd=tmp_path)
     assert proc.returncode == 0, proc.stderr
     assert "revert" not in json.loads((tmp_path / "out" / "conceptual-diff.json").read_text())
+
+# ── a deployment drawing, laid over the traces (`--traces`) ───────────────────────
+
+def container(cid: str, label: str, lifeline: str, x: int, y: int) -> str:
+    return (f'<object label="&lt;b&gt;{label}&lt;/b&gt;" traceParticipant="{lifeline}" id="{cid}">'
+            f'<mxCell style="rounded=1;strokeColor=#82b366;" vertex="1" parent="1">'
+            f'<mxGeometry x="{x}" y="{y}" width="200" height="70" as="geometry"/>'
+            f"</mxCell></object>")
+
+
+def arrow(cid: str, src: str, tgt: str) -> str:
+    return (f'<object label="" traced="yes" id="{cid}">'
+            f'<mxCell style="endArrow=block;strokeWidth=2;strokeColor=#82b366;" edge="1" '
+            f'parent="1" source="{src}" target="{tgt}">'
+            f'<mxGeometry relative="1" as="geometry"/></mxCell></object>')
+
+
+PERSON = ('<object label="Pet Owner" id="owner"><mxCell style="rounded=1;" vertex="1" '
+          'parent="1"><mxGeometry x="0" y="0" width="160" height="50" as="geometry"/>'
+          '</mxCell></object>')
+
+DEPLOYMENT = model(
+    PERSON
+    + container("fe", "Frontend", "Browser", 0, 120)
+    + container("be", "Backend", "Backend", 0, 280)
+    + container("db", "Database", "DB", 0, 440)
+    + container("ns", "Notification Service", "NotificationService", 400, 280)
+    + arrow("e-owner-fe", "owner", "fe")
+    + arrow("e-fe-be", "fe", "be")
+    + arrow("e-be-db", "be", "db")
+    + arrow("e-be-ns", "be", "ns"))
+
+
+def _styles(xml: str) -> dict:
+    return {c.id: dd.style_dict(c.style) for c in dd.parse_model(xml).values()}
+
+
+def test_an_arrow_a_test_walked_is_drawn_at_double_weight():
+    xml, report = dd.overlay_traces(DEPLOYMENT, {("Browser", "Backend"), ("Backend", "DB")})
+    st = _styles(xml)
+    assert st["e-fe-be"]["strokeWidth"] == "4" and st["e-be-db"]["strokeWidth"] == "4"
+    assert st["e-fe-be"]["strokeColor"] == "#82b366", "the drawing keeps its own colour"
+    # by what the reader sees on the box, not by the lifeline it maps to
+    assert report["walked"] == ["Backend → Database", "Frontend → Backend"]
+
+
+def test_an_arrow_no_test_walked_is_greyed_not_removed():
+    xml, report = dd.overlay_traces(DEPLOYMENT, {("Browser", "Backend"), ("Backend", "DB")})
+    st = _styles(xml)
+    for cid in ("e-owner-fe", "e-be-ns"):
+        assert st[cid]["strokeColor"] == dd.UNWALKED_COLOR and st[cid]["opacity"] == "55"
+    assert set(report["unwalked"]) == {"Pet Owner → Frontend", "Backend → Notification Service"}
+    assert report["undrawn"] == []
+
+
+def test_a_call_drawn_the_other_way_round_is_not_walked():
+    """Direction is part of the claim: the guardrail compares `A -> B`, so does the page."""
+    _, report = dd.overlay_traces(DEPLOYMENT, {("DB", "Backend")})
+    assert "Backend → Database" in report["unwalked"]
+    assert report["undrawn"] == ["DB → Backend"]
+
+
+def test_a_call_no_arrow_carries_is_added_in_red_beside_its_caller():
+    """NotificationService -> "SMS gateway": in every trace, on no drawing — the gap this
+    overlay was built to show. The missing box goes next to the one that calls it."""
+    xml, report = dd.overlay_traces(DEPLOYMENT, {("NotificationService", "SMS gateway"),
+                                                 ("Backend", "NotificationService")})
+    assert report["undrawn"] == ["NotificationService → SMS gateway"]
+    assert report["unmapped"] == ["SMS gateway"]
+    cells = dd.parse_model(xml)
+    ghost = cells["hr-undrawn-box-0"]
+    assert "SMS gateway" in ghost.label and dd.UNDRAWN_COLOR in ghost.style
+    edge = cells["hr-undrawn-0"]
+    assert (edge.source, edge.target) == ("ns", "hr-undrawn-box-0")
+    assert dd.style_dict(edge.style)["dashed"] == "1"
+    # right of Notification Service (x 400..600), on its row, clear of every other box
+    assert float(ghost.geometry["x"]) > 600 and ghost.geometry["y"] == "280"
+
+
+def test_an_added_arrow_no_test_walks_keeps_its_green_faded():
+    """Green is "added by this branch" and the overlay never spends it — nor paints over it."""
+    painted = DEPLOYMENT.replace(arrow("e-be-ns", "be", "ns"), arrow("e-be-ns", "be", "ns")
+                                 .replace("#82b366", dd.ADDED_COLOR))
+    st = _styles(dd.overlay_traces(painted, set())[0])["e-be-ns"]
+    assert st["strokeColor"] == dd.ADDED_COLOR and st["opacity"] == "55"
+
+
+def test_traces_end_to_end_take_each_side_from_its_own_graph(tmp_path):
+    """The base pane against the base's calls, the branch's against the branch's — and
+    no --concepts needed for a drawing of containers."""
+    old_png, new_png = tmp_path / "old.drawio.png", tmp_path / "new.drawio.png"
+    old_png.write_bytes(png_with(DEPLOYMENT))
+    new_png.write_bytes(png_with(DEPLOYMENT))
+    c2 = tmp_path / "C2.json"
+    edge = lambda a, b: {"from": a, "to": b, "status": "same"}
+    c2.write_text(json.dumps({
+        "old": {"edges": [edge("Browser", "Backend")]},
+        "new": {"edges": [edge("Browser", "Backend"), edge("Backend", "NotificationService")]}}))
+    subprocess.run([sys.executable, str(HERE / "drawio-diff.py"), str(old_png), str(new_png),
+                    "--out-dir", str(tmp_path), "--name", "deployment", "--renderer",
+                    "builtin", "--traces", str(c2)], check=True, capture_output=True)
+    verdict = json.loads((tmp_path / "deployment-diff.json").read_text())
+    assert verdict["traces"]["walked"] == ["Backend → Notification Service",
+                                           "Frontend → Backend"]
+    old_svg = (tmp_path / "deployment-original.svg").read_text()
+    new_svg = (tmp_path / "deployment-new.svg").read_text()
+    assert new_svg.count('stroke-width="4.0"') == 2 and old_svg.count('stroke-width="4.0"') == 1
+
+
+def test_neither_concepts_nor_traces_is_a_usage_error(tmp_path):
+    png = tmp_path / "d.drawio.png"
+    png.write_bytes(png_with(DEPLOYMENT))
+    r = subprocess.run([sys.executable, str(HERE / "drawio-diff.py"), str(png), str(png),
+                        "--out-dir", str(tmp_path)], capture_output=True, text=True)
+    assert r.returncode == 2 and "--concepts is required" in r.stderr

@@ -441,6 +441,160 @@ def paint_added(xml: str, verdict: dict) -> str:
     return ET.tostring(root, encoding="unicode")
 
 
+# ── the traces, laid over the drawing ─────────────────────────────────────────────
+
+# A deployment picture is a claim about what calls what, and the sequence diagrams the
+# tests recorded are the evidence. `--traces` reads the container graph
+# `c2-from-sequence.py` projected from them and says, on the drawing itself, which of the
+# arrows a test actually walked:
+#
+#   * walked  — an arrow between two boxes that declare the lifeline they answer to
+#               (`traceParticipant="Backend"`), in the direction a trace called. Drawn at
+#               double weight: weight is the drawing's own language for emphasis, and
+#               this is the emphasis a reviewer wants — where the real traffic is.
+#   * not walked — every other arrow: a human using the frontend, a hop with no agent on
+#               it, or a call no test exercises any more. Greyed, never removed: the
+#               drawing may well be right, and the tests silent.
+#   * not drawn — a call the traces recorded that no arrow carries. Added, dashed and red,
+#               between the two boxes (a box no lifeline maps onto is added too, in a lane
+#               right of the drawing): it is a to-do for whoever owns the picture, and red
+#               is this page's colour for a hand-drawn diagram's to-do.
+#
+# Green stays "added by this branch" and is never spent here: an arrow can be both new and
+# walked, and it keeps its green at double weight.
+TRACE_ATTR = "traceParticipant"
+UNWALKED_COLOR = "#A0A0A0"
+UNDRAWN_COLOR = "#FF0000"
+
+
+def _restyle(style: str, updates: dict) -> str:
+    """Set style keys in place, keeping draw.io's bare keys and their order."""
+    updates = dict(updates)
+    out = []
+    for part in (style or "").split(";"):
+        if not part:
+            continue
+        key, sep, _ = part.partition("=")
+        out.append(f"{key}={updates.pop(key)}" if sep and key in updates else part)
+    out += [f"{k}={v}" for k, v in updates.items()]
+    return ";".join(out) + ";"
+
+
+def trace_edges(c2_json: Path, side: str = "new") -> set:
+    """(from, to) of every call between two containers, as `c2-from-sequence.py` wrote it."""
+    graph = json.loads(c2_json.read_text(encoding="utf-8")).get(side) or {}
+    return {(e["from"], e["to"]) for e in graph.get("edges") or []
+            if e.get("from") and e.get("to") and e.get("status") != "removed"}
+
+
+def overlay_traces(xml: str, observed: set, attr: str = TRACE_ATTR) -> tuple[str, dict]:
+    """The drawing with the traces laid over it, and what the overlay found.
+
+    Matching is by the participant name a box *declares*, never by its drawn label — the
+    label is the human's ("Frontend"), the lifeline is the trace's ("Browser"), and the
+    attribute is the one place the two are tied together on purpose."""
+    root = ET.fromstring(xml)
+    cells = parse_model(xml)
+    participant = {c.id: c.attrs.get(attr) for c in cells.values()
+                   if c.kind == "node" and c.attrs.get(attr)}
+    box_of = {name: cid for cid, name in participant.items()}
+
+    def name(cid: str) -> str:
+        """What the reader sees on the box — the lifeline name only for a box with no text."""
+        c = cells.get(cid)
+        return (_plain(c.label).strip() if c else "") or participant.get(cid) or cid or "?"
+
+    walked, unwalked, drawn = [], [], set()
+    styles = {}
+    for c in cells.values():
+        if c.kind != "edge":
+            continue
+        ends = (participant.get(c.source), participant.get(c.target))
+        what = f"{name(c.source)} → {name(c.target)}"
+        if all(ends) and ends in observed:
+            drawn.add(ends)
+            walked.append(what)
+            width = float(style_dict(c.style).get("strokeWidth", 1) or 1)
+            styles[c.id] = {"strokeWidth": f"{max(width * 2, 3):g}"}
+        else:
+            unwalked.append(what)
+            st = style_dict(c.style)
+            upd = {"opacity": "55", "textOpacity": "55"}
+            if (st.get("strokeColor") or "").lower() != ADDED_COLOR.lower():
+                upd["strokeColor"] = UNWALKED_COLOR
+            upd["strokeWidth"] = "1"
+            styles[c.id] = upd
+
+    for node in root.iter():
+        if node.tag in ("object", "UserObject") and node.get("id") in styles:
+            inner = node.find("mxCell")
+            if inner is not None:
+                inner.set("style", _restyle(inner.get("style") or "", styles[node.get("id")]))
+        elif node.tag == "mxCell" and node.get("id") in styles:
+            node.set("style", _restyle(node.get("style") or "", styles[node.get("id")]))
+
+    undrawn = sorted(observed - drawn)
+    layer = next((n for n in root.iter("mxCell") if n.get("id") == "1"), None)
+    holder = next((p for p in root.iter() if layer is not None and layer in list(p)), None)
+    if undrawn and holder is not None:
+        geo = {c.id: tuple(float(c.geometry.get(k, 0) or 0) for k in ("x", "y", "width", "height"))
+               for c in cells.values() if c.kind in ("node", "annotation") and c.geometry.get("width")}
+        W, H, GAP = 180.0, 70.0, 60.0
+
+        def free(x, y):
+            return all(x + W + 20 <= bx or bx + bw + 20 <= x or y + H + 20 <= by or by + bh + 20 <= y
+                       for bx, by, bw, bh in geo.values())
+
+        def place(beside: str | None):
+            """Next to the box it is called from or calls, where nothing is drawn yet:
+            right of it, then below, then left — the line it hangs on stays short."""
+            if beside in geo:
+                x, y, w, h = geo[beside]
+                for cx, cy in ((x + w + GAP, y), (x + (w - W) / 2, y + h + GAP),
+                               (x - W - GAP, y), (x + (w - W) / 2, y - H - GAP)):
+                    if free(cx, cy):
+                        return cx, cy
+            right = max((x + w for x, _, w, _ in geo.values()), default=0) + GAP
+            y = min((y for _, y, _, _ in geo.values()), default=0)
+            while not free(right, y):
+                y += H + 20
+            return right, y
+
+        ghost = 0
+        for a, b in undrawn:
+            for end, other in ((a, b), (b, a)):
+                if end in box_of:
+                    continue
+                cid = f"hr-undrawn-box-{ghost}"
+                box_of[end] = cid
+                gx, gy = place(box_of.get(other))
+                geo[cid] = (gx, gy, W, H)
+                cell = ET.SubElement(holder, "mxCell", {
+                    "id": cid, "parent": "1", "vertex": "1",
+                    "value": f"<b>{_esc(end)}</b>",  # HTML, as a label is
+                    "style": ("rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=none;"
+                              f"strokeColor={UNDRAWN_COLOR};fontColor={UNDRAWN_COLOR};"
+                              "strokeWidth=2;fontSize=13;")})
+                ET.SubElement(cell, "mxGeometry", {
+                    "x": f"{gx:g}", "y": f"{gy:g}",
+                    "width": f"{W:g}", "height": f"{H:g}", "as": "geometry"})
+                ghost += 1
+        for i, (a, b) in enumerate(undrawn):
+            cell = ET.SubElement(holder, "mxCell", {
+                "id": f"hr-undrawn-{i}", "parent": "1", "edge": "1",
+                "source": box_of[a], "target": box_of[b], "value": "",
+                "style": ("html=1;endArrow=block;dashed=1;rounded=0;"
+                          f"strokeColor={UNDRAWN_COLOR};strokeWidth=3;")})
+            ET.SubElement(cell, "mxGeometry", {"relative": "1", "as": "geometry"})
+
+    report = {"attr": attr,
+              "walked": sorted(walked),
+              "unwalked": sorted(unwalked),
+              "undrawn": [f"{a} → {b}" for a, b in undrawn],
+              "unmapped": sorted({e for pair in observed for e in pair} - set(participant.values()))}
+    return ET.tostring(root, encoding="unicode"), report
+
+
 # ── linking a box to the class it names ───────────────────────────────────────────
 
 # `class Owner [[src://petclinic-backend/.../Owner.java:32{Click to open in editor}]] {`
@@ -752,9 +906,13 @@ def render_builtin(xml: str, out: Path) -> None:
             continue
         ax, ay = a[0] + a[2] / 2, a[1] + a[3] / 2
         bx, by = b[0] + b[2] / 2, b[1] + b[3] / 2
-        w = float(style_dict(cell.style).get("strokeWidth", 1) or 1)
+        st = style_dict(cell.style)
+        w = float(st.get("strokeWidth", 1) or 1)
+        dash = ' stroke-dasharray="6 4"' if st.get("dashed") == "1" else ""
+        fade = (f' opacity="{float(st["opacity"]) / 100:g}"'
+                if st.get("opacity", "").replace(".", "", 1).isdigit() else "")
         body.append(f'<line x1="{ax}" y1="{ay}" x2="{bx}" y2="{by}" '
-                    f'stroke="{stroke_of(cell)}" stroke-width="{w}"/>')
+                    f'stroke="{stroke_of(cell)}" stroke-width="{w}"{dash}{fade}/>')
     for cell in cells.values():
         if cell.kind not in ("node", "annotation") or cell.id not in boxes:
             continue
@@ -924,12 +1082,20 @@ def main():
     ap.add_argument("--out-dir", default=".", help="where the three SVGs are written")
     ap.add_argument("--name", help="stem for the written files (default: the diagram's)")
     ap.add_argument("--renderer", choices=("auto", "drawio", "builtin"), default="auto")
-    ap.add_argument("--concepts", metavar="PUML", required=True,
+    ap.add_argument("--concepts", metavar="PUML",
                     help="the generated domain-model PlantUML, whose class links say "
                          "where each concept is declared; every concept box in every "
                          "pane becomes a link into that class. REQUIRED: without it the "
                          "command still succeeds and quietly produces boxes that are not "
                          "links, which is the failure nobody notices until they click one")
+    ap.add_argument("--traces", metavar="C2_JSON",
+                    help="the container graph c2-from-sequence.py projected from the "
+                         "traced sequence diagrams: each pane is drawn with the arrows a "
+                         "test walked at double weight, the others greyed, and the calls "
+                         "no arrow carries added in red. Replaces --concepts for a diagram "
+                         "of containers rather than of concepts")
+    ap.add_argument("--trace-attr", default=TRACE_ATTR,
+                    help="the attribute by which a box names its lifeline in the traces")
     ap.add_argument("--repo-root", default=".",
                     help="what the paths inside --concepts are relative to")
     ap.add_argument("--redraw", metavar="COMMAND",
@@ -947,6 +1113,8 @@ def main():
     ap.add_argument("--json", action="store_true",
                     help="print the verdict as JSON instead of a summary line")
     args = ap.parse_args()
+    if not args.concepts and not args.traces:
+        ap.error("--concepts is required (or --traces, for a diagram of containers)")
 
     if args.base:
         if not args.diagram:
@@ -969,7 +1137,7 @@ def main():
     # One map, from the WORKING TREE, applied to all three panes. That is what makes the
     # "old" pane behave: a concept this branch deleted is simply not in it, so its box on
     # the base diagram quietly loses its link instead of pointing at a file that is gone.
-    sources = concept_sources(Path(args.concepts))
+    sources = concept_sources(Path(args.concepts)) if args.concepts else {}
     unresolved = set()
 
     def linked(xml):
@@ -977,12 +1145,27 @@ def main():
         unresolved.update(missing)
         return link_annotations(out, source)
 
+    # Each pane against the traces of its own side: the base drawing against the calls
+    # the base's tests made, the branch's against the branch's.
+    reports = {}
+
+    def traced(xml, side):
+        if not args.traces:
+            return xml
+        out, reports[side] = overlay_traces(xml, trace_edges(Path(args.traces), side),
+                                            args.trace_attr)
+        return out
+
     written = {
-        "original": render(linked(old_xml), out_dir / f"{stem}-original.svg", args.renderer),
-        "new": render(linked(new_xml), out_dir / f"{stem}-new.svg", args.renderer),
-        "diff": render(linked(paint_added(new_xml, verdict)),
+        "original": render(linked(traced(old_xml, "old")),
+                           out_dir / f"{stem}-original.svg", args.renderer),
+        "new": render(linked(traced(new_xml, "new")),
+                      out_dir / f"{stem}-new.svg", args.renderer),
+        "diff": render(linked(traced(paint_added(new_xml, verdict), "new")),
                        out_dir / f"{stem}-diff.svg", args.renderer),
     }
+    if args.traces:
+        verdict["traces"] = {**reports["new"], "source": str(args.traces)}
     verdict["linked_concepts"] = sorted(sources)
     verdict["unlinked_concepts"] = sorted(unresolved)
     verdict["renderer"] = written["diff"]

@@ -1438,9 +1438,19 @@ def run_tests_steps(skill_dir: Path) -> list[str]:
             if LEDGER_TAB in [t.strip() for t in (row[1] or "").split(",")]]
 
 
-def declare_run_tests_rerun(root: Path, out_dir: Path, skill_dir: Path) -> dict | None:
-    """Declare `__rerun_tests__:requirements` in the page's action manifest and return
-    `{"id", "steps", "tip"}` for the button — or None where the page cannot offer it.
+def declare_run_tests_rerun(root: Path, out_dir: Path, skill_dir: Path, *,
+                            tab: str = LEDGER_TAB, then: tuple[str, ...] = (),
+                            label: str = "Re-run the tests, then re-derive the Tests tab",
+                            tip: str = "Re-run the tests. Free, takes minutes, needs the app "
+                                       "running.") -> dict | None:
+    """Declare `__rerun_tests__:<tab>` in the page's action manifest and return
+    `{"id", "steps", "tip", "tab", "label"}` for the button — or None where the page
+    cannot offer it.
+
+    `tab` and `then` are for another tab whose evidence is made OF the tests: the Code City
+    colours itself with the coverage they measured, so its ⏳ is this same press with the
+    city's own producer appended (`tabs/city.py`) — one runner, which tests it runs decided
+    here and nowhere else.
 
     `--force`, because the point of the press is that the suite RUNS: `run-steps.py` would
     otherwise find `traces` unchanged since its last run and hand back the old recordings.
@@ -1456,13 +1466,13 @@ def declare_run_tests_rerun(root: Path, out_dir: Path, skill_dir: Path) -> dict 
     steps = run_tests_steps(skill_dir)
     if not steps:
         return None
+    steps += [s for s in then if s not in steps]
     here = shlex.quote(str(root.resolve()))
     line = (f"{shlex.quote(sys.executable)} {shlex.quote(str(refresh))} "
             f"--dir {shlex.quote(rel)} --steps {shlex.quote(','.join(steps))} --force --no-serve")
-    action = declare_action(tab_rerun_id(RUN_TESTS_ACTION, LEDGER_TAB), f"cd {here} && {line}",
-                            reload=True, label="Re-run the tests, then re-derive the Tests tab")
-    tip = "Re-run the tests. Free, takes minutes, needs the app running."
-    return {"id": action, "steps": steps, "tip": tip}
+    action = declare_action(tab_rerun_id(RUN_TESTS_ACTION, tab), f"cd {here} && {line}",
+                            reload=True, label=label)
+    return {"id": action, "steps": steps, "tip": tip, "tab": tab, "label": label}
 
 
 def run_tests_button(info: dict | None) -> str:
@@ -1471,10 +1481,13 @@ def run_tests_button(info: dict | None) -> str:
     if not info:
         return ""
     steps = html.escape(",".join(info["steps"]), quote=True)
+    tab = html.escape(info.get("tab") or LEDGER_TAB, quote=True)
+    label = html.escape(info.get("label") or "Re-run the tests, then re-derive the Tests tab",
+                        quote=True)
     return ('<button type="button" class="chip chip-rerun chip-served tabrerun tabrerun-tests" '
             f'hidden aria-disabled="true" data-rerun="{RUN_TESTS_ACTION}" '
-            f'data-tab="{LEDGER_TAB}" data-steps="{steps}" '
-            'aria-label="Re-run the tests, then re-derive the Tests tab" '
+            f'data-tab="{tab}" data-steps="{steps}" '
+            f'aria-label="{label}" '
             f'data-tip="{html.escape(info["tip"], quote=True)}">'
             # ↺⏳ in one button, the masthead's own face for the same press: regenerate,
             # and wait for the suites.

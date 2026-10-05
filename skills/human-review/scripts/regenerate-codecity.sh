@@ -29,6 +29,10 @@
 #                         replace the base's numbers with the branch's own, which is
 #                         both a meaningless diff and the end of the comparison. This
 #                         belongs to a merge into the default branch, nowhere else
+#   --coverage PATH       line + acceptance coverage per file, as the JSON code-city's
+#                         `generate.sh --coverage` reads — run-steps.py converts the test
+#                         step's own measurement into it (city-coverage.py). Optional;
+#                         without it the city has no coverage colours, exactly as before
 #   --no-pull             keep the vendored tool as it is (offline, or pinned)
 #
 # NOTE, since code-city a1d11c5: the generators no longer RUN the CRAP/coverage pass —
@@ -37,16 +41,18 @@
 # and passed through but have nothing to read, and --write-baseline will always take the
 # "no coverage data in this run" branch below. The flags stay wired for the day step [3]
 # comes back; until then a project is better off not configuring city.acceptance /
-# city.baseline at all, the way petclinic no longer does.
+# city.baseline at all, the way petclinic no longer does. Coverage reaches the city through
+# --coverage instead: what the review's test step already measured, run nothing again.
 set -euo pipefail
 
-REPO="" ; OUT="" ; TITLE="Code City" ; BASELINE="" ; WRITE_BASELINE="" ; NO_PULL="" ; ACCEPTANCE=""
+REPO="" ; OUT="" ; TITLE="Code City" ; BASELINE="" ; WRITE_BASELINE="" ; NO_PULL="" ; ACCEPTANCE="" ; COVERAGE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo)           REPO="$2"; shift 2 ;;
     --out)            OUT="$2"; shift 2 ;;
     --title)          TITLE="$2"; shift 2 ;;
     --acceptance)     ACCEPTANCE="$2"; shift 2 ;;
+    --coverage)       COVERAGE="$2"; shift 2 ;;
     --baseline)       BASELINE="$2"; shift 2 ;;
     --write-baseline) WRITE_BASELINE=1; shift ;;
     --no-pull)        NO_PULL=1; shift ;;
@@ -59,7 +65,7 @@ REPO="$(cd "${REPO:-$(git rev-parse --show-toplevel)}" && pwd)"
 TOOL_URL="${CODECITY_TOOL_URL:-https://github.com/victorrentea/code-city.git}"
 TOOL_DIR="${CODECITY_TOOL_DIR:-$REPO/.human-review/.tools/codecity}"
 
-if [ ! -d "$TOOL_DIR/.git" ]; then
+if [ ! -e "$TOOL_DIR/.git" ]; then      # -e: a git worktree has a .git FILE
   echo "cloning the Code City generators into $TOOL_DIR ..."
   mkdir -p "$(dirname "$TOOL_DIR")"
   git clone --depth 1 "$TOOL_URL" "$TOOL_DIR"
@@ -107,9 +113,18 @@ if [ -n "$BINDING" ] && ! PYTHONPATH="$TOOL_DIR/.pylibs" python3 -c 'import tree
   fi
 fi
 
+# Absolute, before generate.sh changes directory; and only when it is there — a tool
+# checkout older than --coverage would otherwise refuse the flag, and a missing file is
+# a city without colours, not a failed step.
+if [ -n "$COVERAGE" ]; then
+  case "$COVERAGE" in /*) ;; *) COVERAGE="$PWD/$COVERAGE" ;; esac
+  [ -f "$COVERAGE" ] || { echo "no coverage at $COVERAGE — the city is built without it" >&2; COVERAGE=""; }
+fi
+
 CODECITY_TITLE="$TITLE" \
 CODECITY_COVERAGE_BASELINE="$BASELINE" \
 CODECITY_JACOCO_ACCEPTANCE="$ACCEPTANCE" \
+CODECITY_COVERAGE="$COVERAGE" \
   "$TOOL_DIR/generate.sh" "$REPO" "$ABS_OUT"
 
 # The baseline is this run's coverage, kept so the NEXT branch off here can draw its

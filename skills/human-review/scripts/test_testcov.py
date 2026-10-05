@@ -200,7 +200,8 @@ def test_the_step_feeds_the_tests_tab_after_the_traced_run():
     assert "testcov" in names
     row = rs.STEPS[names.index("testcov")]
     assert row[1] == T.LEDGER_TAB
-    assert names.index("testcov") > names.index("traces") > names.index("city")
+    # ...and before the city, which is coloured by what this step measured.
+    assert names.index("city") > names.index("testcov") > names.index("traces")
 
 
 def test_the_step_is_cached_on_what_it_reads():

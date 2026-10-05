@@ -830,8 +830,8 @@ def _run_traced(ctx: Ctx, cfg: dict, commands, runs: list[dict],
                 write_seq_verdict("skipped", reason, missing=down)
                 raise LookupError(reason)
         # A Playwright suite in these commands writes its html report to a folder of its
-        # own. The default is the one `city`'s traced browser run just wrote and `traces`
-        # is about to harvest: eval run 17's one-test sequence run overwrote it 6 s before
+        # own. The default is the one the traced browser run (`city.tests`, run by
+        # `traces`) writes and `traces` harvests: eval run 17's one-test sequence run overwrote it 6 s before
         # the harvest, and every Playwright UI row lost its 📺 replay. The env var beats
         # the config's outputFolder; a suite that is not Playwright ignores it.
         # Outside .human-review/, which is published whole.
@@ -1204,31 +1204,67 @@ def _c2(ctx: Ctx):
            f"--out-dir {ART} --name deployment --traces {graph}" + extra, ctx)
 
 
-def _city(ctx: Ctx):
-    # The city's CRAP and coverage colours are the only thing on this page that cannot be
-    # read off the sources and the git log: they need a coverage report, which needs the
-    # project's tests to have actually run. `city.tests` is where a project says how, and
-    # a project that does not say simply gets a city without those two metrics — the
-    # generator drops them rather than colouring every building "not measured".
-    #
-    # Failures do not stop it. A red suite is a finding for the review to carry, not a
-    # reason to lose the whole city tab, and the coverage of a run with one broken test
-    # is still the coverage of that run. The test command is expected to say so itself
-    # (Maven: -Dmaven.test.failure.ignore=true), because a build that aborts on the first
-    # failure never reaches its report goal and leaves LAST week's report on disk for the
-    # city to be coloured with, which is the one outcome worse than having no colours.
-    # A list, because measuring two suites is several commands that must run in order:
-    # the unit run, the acceptance run against a separately started application, and the
-    # merge that turns their two .exec files into the reports the city reads. A single
-    # string still works for a project with only one of them.
+def _city_tests(ctx: Ctx) -> None:
+    """Run `city.tests` — the traced browser suite — once, for everything that reads it.
+
+    The key keeps its old name and its old home in the config, but the run left `_city` on
+    5 Oct 2026. It was here for the city's own coverage colours, which code-city stopped
+    computing; what it kept feeding was the Playwright report `traces` harvests and the
+    per-test browser coverage `testcov` reads. The city now colours itself from THAT
+    measurement (`city-coverage.py`), so the city has to come after `testcov`, `testcov`
+    after this run — and a run inside `_city` would have been a cycle. So `traces` runs
+    it, first, before its own commands: the step that harvests a run is the step that
+    starts it.
+
+    Failures do not stop it. A red suite is a finding for the review to carry, and the
+    coverage of a run with one broken test is still the coverage of that run. A list,
+    because a project may need several commands in order; a single string still works."""
     tests = ctx.step_cfg("city").get("tests")
     if isinstance(tests, str):
         tests = [tests]
     for cmd in tests or []:
         r = sh(cmd, ctx, check=False)
         if r.returncode != 0:
-            ctx.notes.append(f"a suite behind the city's coverage colours did not pass "
-                             f"({cmd}); say so next to the CRAP reading")
+            ctx.notes.append(f"the traced browser suite did not pass ({cmd}); its recordings "
+                             "and its coverage are of that run")
+
+
+def city_coverage(ctx: Ctx) -> Path | None:
+    """The coverage JSON the city is coloured with, converted from the test step's own
+    measurement (`assets/test-coverage.json`) — or None, and the city is built as it was.
+
+    Nothing is run: this reads what `testcov` wrote. Run on its own (the Code City tab's
+    ⚙️), it reuses whatever coverage is on disk; after a ⏳ the run before it has just
+    rewritten that file. Coverage of another commit is still used, and said so: a stale
+    colour named as stale is more use to a reviewer than a grey plate."""
+    src, dest = ART / "test-coverage.json", ART / "codecity-coverage.json"
+    if ctx.dry:
+        return dest
+    dest.unlink(missing_ok=True)       # never colour this run with a previous run's file
+    r = sh(f"{HERE}/city-coverage.py --in {src} --out {dest}", ctx, check=False)
+    if r.returncode != 0 or not dest.is_file():
+        ctx.notes.append("no coverage colours on the city: " + (
+            "the test step has not measured any (assets/test-coverage.json)"
+            if not src.is_file() else
+            "assets/test-coverage.json predates the whole-project map — re-run the tests"))
+        return None
+    try:
+        measured = json.loads(dest.read_text(encoding="utf-8")).get("commit") or ""
+    except ValueError:
+        measured = ""
+    head = sh("git rev-parse HEAD", ctx, capture=True, check=False).stdout.strip()
+    if measured and head and not head.startswith(measured):
+        ctx.notes.append(f"the city's coverage colours were measured on {measured[:8]}, not "
+                         f"on HEAD {head[:8]} — re-run the tests (⏳) to bring them up")
+    return dest
+
+
+def _city(ctx: Ctx):
+    # The CRAP colours still need a JaCoCo report, which nothing here produces any more.
+    # Line and acceptance coverage do not: the test step (`testcov`) already measured both,
+    # per test, for the Tests tab, and `city_coverage` hands that to the generator. No test
+    # is run from here — the traced browser suite moved to `traces` (see `_city_tests`).
+    cov = city_coverage(ctx)
     # Two ways to get the page. `regenerate` is a project's own command, for a project
     # that has one; `out` hands the job to the script here, which is the arrangement to
     # prefer — it leaves the analysed repo holding only the DATA (a committed
@@ -1257,6 +1293,11 @@ def _city(ctx: Ctx):
     if regen:
         # A project's own command may only know how to write in place. `html` says where,
         # and the original bytes are put back after the new page has been copied out.
+        # Its coverage, if it calls code-city's generate.sh, rides the env var that reads.
+        if cov:
+            os.environ["CODECITY_COVERAGE"] = str(cov.resolve())
+        else:
+            os.environ.pop("CODECITY_COVERAGE", None)
         inplace = city.get("html")
         with bytes_restored([inplace] if inplace else []):
             sh(regen, ctx, check=False)
@@ -1270,8 +1311,10 @@ def _city(ctx: Ctx):
     elif out:
         baseline = f' --baseline "{city["baseline"]}"' if city.get("baseline") else ""
         acceptance = f' --acceptance "{city["acceptance"]}"' if city.get("acceptance") else ""
+        coverage = f' --coverage "{cov}"' if cov else ""
         sh(f'{HERE}/regenerate-codecity.sh --out "{page.parent}" '
-           f'--title "{city.get("title", "Code City")}"{baseline}{acceptance}', ctx, check=False)
+           f'--title "{city.get("title", "Code City")}"{baseline}{acceptance}{coverage}', ctx,
+           check=False)
     r = sh(f"{HERE}/capture-codecity.sh {ART}/codecity.png highlight {page}", ctx, capture=True)
     lit = (r.stdout or "").strip().splitlines()
     if lit:
@@ -1496,8 +1539,8 @@ def app_instance(ctx: Ctx, cfg: dict, sha: dict, clean: bool = False):
 
     inst = AppInstance()
     try:
-        # Already up — started by an earlier step of this run (city's browser suite brings
-        # up the very stack video and dsaudit need): reuse it, and leave it up. Tearing
+        # Already up — started by an earlier step of this run (the traced browser suite
+        # brings up the very stack video and dsaudit need): reuse it, and leave it up. Tearing
         # down a stack this step did not create was measured costing the run a full
         # rebuild: video's `down` removed city's stack, and dsaudit then rebuilt every
         # image and container of the same commit from scratch on the critical path.
@@ -1984,15 +2027,17 @@ def _tests(ctx: Ctx):
 def _traces(ctx: Ctx):
     """The Playwright recordings of the run, copied next to the page that shows them.
 
-    No suite is run from here by default. The browser suite has already run — `city.tests`
-    runs it for the coverage colours — and running it a second time to record it would
-    double the longest step on the page in exchange for a second, differently-flaky
-    opinion about the same branch. What a project has to do instead is turn tracing ON in
+    The browser suite in `city.tests` is run from here, first (`_city_tests`), and only
+    once: running it a second time to record it would double the longest step on the page
+    in exchange for a second, differently-flaky opinion about the same branch. What a project has to do instead is turn tracing ON in
     that run (`--trace on`, or an env knob its config reads); `commands` is here for the
     project that genuinely has no other run to attach to.
     """
     c = ctx.step_cfg("traces")
     report = c.get("report")
+    # The browser suite first, whether or not there is a report to harvest from it: its
+    # per-test coverage is `testcov`'s, and through it the Code City's.
+    _city_tests(ctx)
     if not report:
         raise LookupError("traces.report not configured")
     with app_instance(ctx, c.get("app"), _app_slots(ctx)) as app:
@@ -2025,7 +2070,7 @@ def _testcov(ctx: Ctx):
     skill ships (a JUnit Platform listener that dumps and resets JaCoCo around every test, a
     Karma reporter that diffs Istanbul's counters around every spec), and harvests what the
     browser suites left in `steps.testcov.e2e.dir` when `city.tests` / `traces.commands`
-    ran them with COVERAGE_DIR. It never runs the browser suites a second time: they are
+    (both run by `traces`) ran them with COVERAGE_DIR. It never runs the browser suites a second time: they are
     the longest run on the page, and they have already run, traced, for the recordings.
 
     Free, never a model: the Tests tab's right-hand column is drawn from what this writes,
@@ -2354,8 +2399,6 @@ STEPS = [
      lambda c: has_genseq() or "no *.genseq.puml in this repository — nothing to project "
                                "a container view from",
      _c2),
-    ("city",        "city",          "Code City capture",
-     lambda c: have("google-chrome") or have("chromium") or True, _city),
     ("video",       "behaviour",     "feature recording",         None,              _video),
     ("complexity",  "complexity",    "entry-point complexity",
      lambda c: bool(c.step_cfg("complexity")) or has_java()
@@ -2375,12 +2418,16 @@ STEPS = [
     # the reader knows which tests moved, and they are only worth copying once the run
     # they belong to is over.
     ("traces",      "requirements",  "Playwright trace recordings",
-     lambda c: bool(c.step_cfg("traces").get("report")) or "traces.report not configured",
-     _traces),
+     lambda c: bool(c.step_cfg("traces").get("report") or c.step_cfg("city").get("tests"))
+     or "traces.report not configured", _traces),
     # After `traces`, and never before: the browser suites' per-test coverage is written by
     # the run `city.tests` / `traces.commands` do, and this is the step that reads it.
     ("testcov",     "requirements",  "per-test coverage of the change",
      lambda c: bool(c.step_cfg("testcov")) or "testcov not configured", _testcov),
+    # After `testcov`, and never before: the city is coloured by the coverage that step
+    # measured (line coverage, and what the end-to-end tests alone reach).
+    ("city",        "city",          "Code City capture",
+     lambda c: have("google-chrome") or have("chromium") or True, _city),
 ]
 
 
@@ -2391,17 +2438,20 @@ STEPS = [
 NEEDS = {
     "aftermath": {"reviewpoints"},     # reads the review commit reviewpoints resolved
     "c2":        {"sequence"},         # projects the diagrams sequence drew
-    "traces":    {"city", "tests"},    # copies the report city's browser run wrote
-    "testcov":   {"city", "traces"},   # reads the per-test coverage that run dumped
+    "traces":    {"tests"},            # after the manifest; runs the browser suites itself
+    "testcov":   {"traces"},           # reads the per-test coverage those suites dumped
+    "city":      {"testcov"},          # colours the plate with what testcov measured
     "dsaudit":   {"basestack"},        # reuses the merge-base stack it started
 }
 
 #: What a step harvests from another step's run, and so has to be re-run with it: a subset
 #: of NEEDS, not all of it. `traces` NEEDS `tests` only to start after it — pulling the
 #: cucumber run into every `--only tests` re-read would turn a one-second press into two
-#: minutes of Docker — while `testcov` reads the per-test coverage the browser suites of
-#: `city` and `traces` dumped, and nothing else re-reads it.
-HARVESTS = {"testcov": {"city", "traces"}}
+#: minutes of Docker — while `testcov` reads the per-test coverage the browser suites
+#: `traces` runs dumped, and `city` colours its plate with what `testcov` wrote: re-running
+#: the tests re-colours the city (Victor, 5 Oct 2026: "when we run the tests, everything
+#: that has to do with the tests should follow").
+HARVESTS = {"testcov": {"traces"}, "city": {"testcov"}}
 
 
 def downstream(names: set[str]) -> set[str]:
@@ -2415,25 +2465,28 @@ def downstream(names: set[str]) -> set[str]:
     re-run with the step it reads — its cache key (`STEP_INPUTS`' `reads`) makes that free
     when the output did not move."""
     out = set(names)
-    for step, sources in HARVESTS.items():
-        if sources & out:
-            out.add(step)
-    return out
+    # To a fixed point: a harvester can be harvested in turn (traces -> testcov -> city).
+    while True:
+        grown = out | {step for step, sources in HARVESTS.items() if sources & out}
+        if grown == out:
+            return out
+        out = grown
 
 
 #: What a step holds that no other step may hold at the same time. Measured on petclinic:
-#: `city`'s browser suite, `traces`' cucumber run, `video` and `dsaudit` all run against
+#: `traces`' browser suites (Playwright and cucumber), `video` and `dsaudit` all run against
 #: the one Docker stack of
 #: the commit under review (`petclinic-<sha>`), and the step that started it tears it down
 #: when it ends — under another step still using it. `sequence` and `testcov` both run
 #: `mvn test` in the same module, and two Maven builds in one `target/` corrupt each
 #: other. Everything else reads git and files, and runs alongside anything.
 #: The lane is also what keeps a capture honest: `video` and `dsaudit` (`CAPTURES`) reset
-#: the database first, and only because they hold `stack` can no writer — city's suite,
-#: the cucumber run — land between that reset and their last screenshot.
+#: the database first, and only because they hold `stack` can no writer — the traced
+#: suites — land between that reset and their last screenshot. `city` held it too while it
+#: ran the Playwright suite; since that moved to `traces` it reads files and runs beside
+#: anything.
 USES = {
-    "city":     {"stack"},
-    "traces":   {"stack"},             # its cucumber run writes to that stack's database
+    "traces":   {"stack"},             # its browser suites write to that stack's database
     "video":    {"stack"},
     "dsaudit":  {"stack"},
     "sequence": {"maven", "devports"},

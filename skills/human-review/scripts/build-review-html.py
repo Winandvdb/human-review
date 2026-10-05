@@ -233,7 +233,7 @@ from hrbuild.tabs.demo import (
     _link_captions, derived_app_links, derived_runtime, _project_root, _screen_changed
 )
 from hrbuild.tabs.city import (
-    CITY_HEADING
+    CITY_HEADING, CITY_TAB, declare_city_run_tests
 )
 from hrbuild.tabs.logging import (
     LOGEXTRACT, logging_fragment, logging_libraries, logging_libraries_tip,
@@ -351,6 +351,11 @@ def _main(argv=None) -> int:
     run_tests = declare_run_tests_rerun(root, out_dir, HERE)
     if run_tests and tab_reruns.get(LEDGER_TAB):
         tab_reruns[LEDGER_TAB]["extra"] = run_tests_button(run_tests)
+    # ...and the Code City's, the same press with the city rebuilt after it: the city is
+    # coloured by the coverage those suites measure.
+    city_tests = declare_city_run_tests(root, out_dir, HERE)
+    if city_tests and tab_reruns.get(CITY_TAB):
+        tab_reruns[CITY_TAB]["extra"] = run_tests_button(city_tests)
     # How to start this build again — the last stage of every command offered under a
     # hand-drawn diagram.
     rebuild_cmd = " ".join([rebuild_interpreter(), shlex.quote(str(Path(__file__).resolve())),

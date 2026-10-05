@@ -13,6 +13,7 @@ Run with:  python3 -m pytest test_city_step.py
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -166,3 +167,115 @@ def test_capture_still_copies_a_city_that_lives_elsewhere(tmp_path):
                        cwd=repo, env=env, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     assert (repo / PAGE).read_text() == "<html>main's city</html>\n"
+
+
+# ── the city is coloured by the coverage the test step measured ─────────────────────
+
+def _coverage_on_disk(repo: Path, head: str) -> None:
+    """What `testcov.py` leaves: per-test hits and every file's executable lines."""
+    assets = repo / ".human-review/assets"
+    assets.mkdir(parents=True, exist_ok=True)
+    (assets / "test-coverage.json").write_text(json.dumps({
+        "head": head, "executableAll": {"src/main/java/A.java": [1, 2, 3, 4]},
+        "tests": [{"suite": "E2E Playwright", "source": "jacoco+v8", "file": "e2e/a.spec.ts",
+                   "hits": {"src/main/java/A.java": [1, 2]}}]}))
+
+
+class RealCoverage(Shell):
+    """`sh` faked for everything but the converter, which is what is under test."""
+
+    def __call__(self, cmd, ctx, check=True, capture=False):
+        if "city-coverage.py" in cmd or cmd.startswith("git "):
+            self.ran.append(cmd)
+            return subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        return super().__call__(cmd, ctx, check, capture)
+
+
+def test_the_city_is_generated_with_the_coverage_the_test_step_left(tmp_path, monkeypatch):
+    repo = _repo(tmp_path)
+    monkeypatch.chdir(repo)
+    _coverage_on_disk(repo, _git(repo, "rev-parse", "HEAD").strip())
+    sh = RealCoverage()
+    monkeypatch.setattr(steps, "sh", sh)
+    ctx = steps.Ctx("origin/main", {"steps": {"city": {"out": "x", "title": "Code City"}}},
+                    dry=False)
+
+    steps._city(ctx)
+
+    regen = sh.first("regenerate-codecity.sh")
+    assert '--coverage ".human-review/assets/codecity-coverage.json"' in regen
+    got = json.loads((repo / ".human-review/assets/codecity-coverage.json").read_text())
+    assert got["files"]["src/main/java/A.java"] == {
+        "line": {"covered": 2, "total": 4}, "acceptance": {"covered": 2, "total": 4}}
+    assert not [n for n in ctx.notes if "coverage" in n], ctx.notes
+    assert not any("mvn" in c or "npm" in c for c in sh.ran), "no test is run from here"
+
+
+def test_without_coverage_on_disk_the_city_is_built_as_before_and_says_why(
+        tmp_path, monkeypatch):
+    repo = _repo(tmp_path)
+    monkeypatch.chdir(repo)
+    stale = repo / ".human-review/assets/codecity-coverage.json"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("{}")                 # a previous run's: must not colour this one
+    sh = RealCoverage()
+    monkeypatch.setattr(steps, "sh", sh)
+    ctx = steps.Ctx("origin/main", {"steps": {"city": {"out": "x"}}}, dry=False)
+
+    steps._city(ctx)
+
+    assert "--coverage" not in sh.first("regenerate-codecity.sh")
+    assert not stale.exists()
+    assert any("no coverage colours on the city" in n for n in ctx.notes)
+
+
+def test_coverage_of_another_commit_is_used_and_named_stale(tmp_path, monkeypatch):
+    repo = _repo(tmp_path)
+    monkeypatch.chdir(repo)
+    _coverage_on_disk(repo, "0123456789abcdef")
+    monkeypatch.setattr(steps, "sh", RealCoverage())
+    ctx = steps.Ctx("origin/main", {"steps": {"city": {"out": "x"}}}, dry=False)
+    steps._city(ctx)
+    assert any("measured on 01234567" in n for n in ctx.notes), ctx.notes
+
+
+def test_the_traced_browser_suite_runs_in_traces_before_its_harvest(tmp_path, monkeypatch):
+    """`city.tests` moved out of `_city` (the city now waits for the coverage it dumps):
+    `traces` runs it first — even with no report to harvest, since `testcov` reads it."""
+    repo = _repo(tmp_path)
+    monkeypatch.chdir(repo)
+    sh = Shell()
+    monkeypatch.setattr(steps, "sh", sh)
+    ctx = steps.Ctx("origin/main", {"steps": {"city": {"tests": "npm test"}}}, dry=False)
+    try:
+        steps._traces(ctx)
+    except LookupError as e:
+        assert "traces.report" in str(e)
+    assert sh.ran[0] == "npm test"
+    names = [row[0] for row in steps.STEPS]
+    assert steps.NEEDS["city"] == {"testcov"} and steps.NEEDS["testcov"] == {"traces"}
+    assert names.index("traces") < names.index("testcov") < names.index("city")
+    assert "city" not in steps.USES, "the city reads files; the stack is the suites'"
+
+
+# ── the ⏳ on the Code City tab ─────────────────────────────────────────────────────
+
+def test_the_code_city_tab_has_the_tests_tabs_run_the_tests_press_with_the_city_after_it(
+        tmp_path):
+    _bspec = importlib.util.spec_from_file_location("brh_city", HERE / "build-review-html.py")
+    build = importlib.util.module_from_spec(_bspec)
+    _bspec.loader.exec_module(build)
+    build.ACTIONS.clear()
+    tests = build.declare_run_tests_rerun(tmp_path, tmp_path / ".human-review", HERE)
+    city = build.declare_city_run_tests(tmp_path, tmp_path / ".human-review", HERE)
+    assert city["id"] == "__rerun_tests__:city"
+    assert city["steps"] == tests["steps"] + ["city"], "one runner: the tests, then the city"
+    cmd = build.ACTIONS["__rerun_tests__:city"]["command"]
+    assert f"--steps {','.join(city['steps'])} --force --no-serve" in cmd
+    assert cmd.index("traces") < cmd.index("testcov") < cmd.index("city --force")
+    button = build.run_tests_button(city)
+    assert 'data-rerun="__rerun_tests__"' in button and 'data-tab="city"' in button
+    assert build.RUN_TESTS_FACE in button and "⏳" in button
+    # The Tests tab's own is unchanged.
+    assert 'data-tab="requirements"' in build.run_tests_button(tests)
+    build.ACTIONS.clear()

@@ -55,9 +55,10 @@ def test_steps_sharing_a_resource_never_overlap():
 
 
 def test_independent_slow_steps_do_run_at_the_same_time():
-    """The point of it: Code City and the sequence suite share nothing."""
-    spans = _trace(jobs=8, durations={"city": 0.3, "sequence": 0.3})
-    (s1, e1), (s2, e2) = spans["city"], spans["sequence"]
+    """The point of it: the film and the sequence suite share nothing. (It used to be Code
+    City here; the city now waits for the coverage the tests measure, and so for them.)"""
+    spans = _trace(jobs=8, durations={"video": 0.3, "sequence": 0.3})
+    (s1, e1), (s2, e2) = spans["video"], spans["sequence"]
     assert s1 < e2 and s2 < e1
 
 
@@ -81,9 +82,9 @@ def test_needs_never_point_backwards_in_the_serial_order():
             assert NAMES.index(need) < NAMES.index(step), (need, step)
 
 
-#: The steps that write into the commit's stack database: city's Playwright suite, the
-#: traces' cucumber run, and the film's own clicks.
-STACK_WRITERS = {"city", "traces", "video"}
+#: The steps that write into the commit's stack database: the traced browser suites
+#: (Playwright and cucumber, both run by `traces` since 5 Oct 2026), and the film's clicks.
+STACK_WRITERS = {"traces", "video"}
 
 
 def test_a_capture_never_runs_beside_a_step_that_writes_into_its_stack():
@@ -106,9 +107,13 @@ def test_a_step_that_harvests_another_step_s_suite_is_re_run_with_it():
     Playwright coverage another run had left behind and dropped it as stale; the suite was
     then re-run with `--only sequence,city`, and nothing re-read what it wrote. `--only`
     now pulls in the harvester — and only it: `traces` NEEDS `tests` merely to start after
-    it, and a one-second `--only tests` must not buy a cucumber run."""
-    assert rs.downstream({"sequence", "city"}) == {"sequence", "city", "testcov"}
-    assert rs.downstream({"traces"}) == {"traces", "testcov"}
+    it, and a one-second `--only tests` must not buy a cucumber run.
+
+    And to a fixed point: the city is coloured by what `testcov` measured, so re-running
+    the browser suites re-reads their coverage AND re-colours the city with it."""
+    assert rs.downstream({"sequence", "city"}) == {"sequence", "city"}
+    assert rs.downstream({"traces"}) == {"traces", "testcov", "city"}
+    assert rs.downstream({"testcov"}) == {"testcov", "city"}
     assert rs.downstream({"tests"}) == {"tests"}
     assert rs.downstream({"api", "logging"}) == {"api", "logging"}
     assert all(src <= set(rs.NEEDS[h]) for h, src in rs.HARVESTS.items()), \

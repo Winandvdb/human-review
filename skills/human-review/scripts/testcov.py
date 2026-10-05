@@ -25,6 +25,9 @@ Writes `.human-review/assets/test-coverage.json`:
   changed       {file: [lines]}   changed lines of production code worth a reader's eye
                                   (blank lines, comments, braces and imports dropped)
   executable    {file: [lines]}   of those files, every line some probe can see run
+  executableAll {file: [lines]}   the same, for EVERY production file in `sources` — the
+                                  denominator of a whole-project line coverage, which is
+                                  what the Code City colours by (`city-coverage.py`)
   unmeasurable  [{file, lines, reason, proxy?}]   changed lines no probe can see: an
                                   annotation, a query string, a migration. `proxy` names
                                   the lines that DO run when it matters — the annotated
@@ -38,6 +41,12 @@ the join with the diff is redone by the page at every build, so a rebuild is fre
 Usage:
   testcov.py --base origin/main [--config human-review.json]
              [--out .human-review/assets/test-coverage.json] [--only junit,karma,e2e]
+             [--reuse]
+
+`--reuse` runs no suite: it re-reads what the last run left in `.human-review/coverage/`
+(the JUnit dumps, `karma-N.json`, the browser suites' dumps — those are never run from
+here anyway) and writes the file again. For a change to what this program *derives*, not
+to what the tests do; seconds instead of minutes, and nothing in that folder is touched.
 
 Exit 0 with the file written; 3 when `steps.testcov` is not configured; 1 on a failure that
 left nothing to write.
@@ -427,19 +436,21 @@ def run_logged(cmd: str, cwd: Path, logfile: Path, env: dict | None = None) -> i
 
 
 def junit_suites(cfg: list[dict], repo: Repo, tools: dict,
-                 init: dict) -> tuple[list[dict], list[dict], dict]:
+                 init: dict, reuse: bool = False) -> tuple[list[dict], list[dict], dict]:
     tests, suites, executable = [], [], {}
     for i, run in enumerate(cfg):
         label = run.get("label", "JUnit")
         out = (WORK / f"junit-{i}").resolve()
-        shutil.rmtree(out, ignore_errors=True)
-        out.mkdir(parents=True)
         t0 = time.monotonic()
-        slot = (f"-Dmaven.test.additionalClasspath={shlex.quote(str(tools['listener']))} "
-                f"-Dhr.testcov.dir={shlex.quote(str(out))}")
-        rc = run_logged(expand(run["command"], junit=slot, listener=str(tools["listener"]),
-                               dir=str(out)),
-                        repo.root / run.get("cwd", "."), WORK / f"junit-{i}.log")
+        rc = 0
+        if not reuse:
+            shutil.rmtree(out, ignore_errors=True)
+            out.mkdir(parents=True)
+            slot = (f"-Dmaven.test.additionalClasspath={shlex.quote(str(tools['listener']))} "
+                    f"-Dhr.testcov.dir={shlex.quote(str(out))}")
+            rc = run_logged(expand(run["command"], junit=slot, listener=str(tools["listener"]),
+                                   dir=str(out)),
+                            repo.root / run.get("cwd", "."), WORK / f"junit-{i}.log")
         rows = []
         idx = out / "index.jsonl"
         if idx.is_file():
@@ -518,19 +529,22 @@ def karma_tests(doc: dict, repo: Repo, label: str, cwd: str, rel) -> list[dict]:
     return out
 
 
-def karma_suites(cfg: list[dict], repo: Repo) -> tuple[list[dict], list[dict], dict]:
+def karma_suites(cfg: list[dict], repo: Repo,
+                 reuse: bool = False) -> tuple[list[dict], list[dict], dict]:
     tests, suites, executable = [], [], {}
     conf = TOOLS / "karma" / "karma.conf.js"
     for i, run in enumerate(cfg):
         label = run.get("label", "Karma")
         cwd = repo.root / run.get("cwd", ".")
         out = (WORK / f"karma-{i}.json").resolve()
-        out.unlink(missing_ok=True)
         t0 = time.monotonic()
-        rc = run_logged(expand(run["command"], karma=f"--karma-config={shlex.quote(str(conf))}"),
-                        cwd, WORK / f"karma-{i}.log",
-                        env={"HR_TESTCOV_KARMA_BASE": str((cwd / run.get("config", "karma.conf.js")).resolve()),
-                             "HR_TESTCOV_OUT": str(out)})
+        rc = 0
+        if not reuse:
+            out.unlink(missing_ok=True)
+            rc = run_logged(expand(run["command"], karma=f"--karma-config={shlex.quote(str(conf))}"),
+                            cwd, WORK / f"karma-{i}.log",
+                            env={"HR_TESTCOV_KARMA_BASE": str((cwd / run.get("config", "karma.conf.js")).resolve()),
+                                 "HR_TESTCOV_OUT": str(out)})
         if not out.is_file():
             suites.append({"name": label, "source": "karma", "status": "failed", "tests": 0,
                            "seconds": round(time.monotonic() - t0, 1),
@@ -666,6 +680,8 @@ def main(argv=None) -> int:
     ap.add_argument("--config", default="human-review.json")
     ap.add_argument("--out", default=str(DEFAULT_OUT))
     ap.add_argument("--only", help="comma-separated: junit,karma,e2e")
+    ap.add_argument("--reuse", action="store_true",
+                    help="run no suite; re-read what the last run left in .human-review/coverage")
     args = ap.parse_args(argv)
 
     root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True,
@@ -714,12 +730,12 @@ def main(argv=None) -> int:
 
     if cfg.get("junit") and "junit" in only:
         if tools:
-            merge(junit_suites(cfg["junit"], repo, tools, init))
+            merge(junit_suites(cfg["junit"], repo, tools, init, args.reuse))
         else:
             suites.append({"name": "JUnit", "source": "jacoco", "status": "failed", "tests": 0,
                            "note": "the listener could not be built"})
     if cfg.get("karma") and "karma" in only:
-        merge(karma_suites(cfg["karma"], repo))
+        merge(karma_suites(cfg["karma"], repo, args.reuse))
     if cfg.get("e2e") and "e2e" in only:
         mods = [str(root / p / "node_modules") for p in
                 (cfg["e2e"].get("project"), cfg["e2e"].get("frontend"),
@@ -741,6 +757,10 @@ def main(argv=None) -> int:
         "version": 1, "head": head, "base": mb,
         "changed": changed,
         "executable": {p: sorted(executable[p]) for p in changed if p in executable},
+        # Every production file's, not only the changed ones': the Tests tab joins the
+        # diff, the Code City colours the whole plate, and both divide by this.
+        "executableAll": {p: sorted(v) for p, v in sorted(executable.items())
+                          if v and in_scope(p, sources, exclude)},
         "unmeasurable": unmeasurable,
         "suites": suites,
         "tests": tests,

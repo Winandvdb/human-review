@@ -731,7 +731,10 @@ def test_a_screen_the_branch_moved_is_the_one_drawn():
     assert [ds.screen_touched(sc) for sc in result["screens"]] == [True, True]
     frag = ds.render(result, "")
     assert frag.count('<details class="dsa-screen" id="dsa-') == 2
-    assert " open>" not in frag, "collapsed by default, like the Sequence tab's rows"
+    # The screen rows, that is. A gap's own detail inside a screen opens with it (it is
+    # the product); the screen around it still starts shut.
+    assert not re.search(r'<details class="dsa-screen"[^>]*\bopen\b', frag), \
+        "collapsed by default, like the Sequence tab's rows"
     assert "2 of 2 screens changed" in frag
     assert "in place" not in frag
 

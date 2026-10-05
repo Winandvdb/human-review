@@ -154,6 +154,9 @@ def latest_runs(sha: str, workflow: str | None) -> tuple[list[dict] | None, str]
     # `--commit` already filters, but the evidence claims an exact SHA, so check it here too.
     runs = [x for x in runs if isinstance(x, dict) and x.get("headSha", sha) == sha]
     runs.sort(key=lambda x: (x.get("createdAt") or "", x.get("databaseId") or 0), reverse=True)
+    # A `skipped` run built nothing (e.g. the pull_request twin of a push run, guarded by `if:`),
+    # so it must not shadow a run of the same workflow that did build this SHA. Stable sort.
+    runs.sort(key=lambda x: (x.get("conclusion") or "").lower() == "skipped")
     return runs, ""
 
 

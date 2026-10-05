@@ -202,7 +202,7 @@ from hrbuild.tabs.tests import (
     LEDGER_TAB, render_requirements, render_test_ledger, render_tests, render_traces,
     REQMAP_CSS, REQMAP_CUT, REQMAP_SEMCOV_JS, REQMAP_TIP_JS, reqmap_layout, resolve_tests,
     REQMAP_CATS_JS, REQMAP_LEDGER_JS, cats_filter,
-    SEMCOV_LABEL, semcov_switch, SILENCED_LABEL, VIA_HELPER_LABEL, via_helper_tip,
+    SEMCOV_LABEL, _SEMCOV_TIP, semcov_switch, SILENCED_LABEL, VIA_HELPER_LABEL, via_helper_tip,
     test_index, TEST_STATES,
     TICKET_CACHE, ticket_head, ticket_ref, tests_chip, _append_inside, _element, _find,
     drawn_ticket,

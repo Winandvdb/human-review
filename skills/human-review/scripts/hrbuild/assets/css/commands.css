@@ -9,7 +9,6 @@
    read as one pair of facts about *this copy of the page*, not as a control competing
    with the score. Emitted hidden; the probe raises it. */
 button.chip-rerun { font:inherit; cursor:pointer; }
-button.chip-rerun:hover:not(:disabled) { border-color:var(--link); background:var(--accent-soft); }
 button.chip-rerun:disabled { cursor:progress; color:var(--muted); }
 /* One face for every rerun press (`rerun_face`, shared/commands.py): a round button, a ↻
    ring in the button's own colour, one emoji centred inside it (font-size half the button,
@@ -17,9 +16,16 @@ button.chip-rerun:disabled { cursor:progress; color:var(--muted); }
    size and the only thing a context sets: the masthead's 1.75rem, the strip's smaller one.
    The ring is what turns while it runs, clockwise, the way ↻ points; the emoji holds
    still, so the kind of rerun stays readable mid-run. */
+/* No border and no ground of its own: the ring *is* the edge (Victor, 5 Oct 2026). The box
+   stays the old size, so the click area does too. */
 button.chip-rerun { --rr-size:1.75rem; width:var(--rr-size); height:var(--rr-size);
-            box-sizing:border-box; padding:0; border-radius:50%;
+            box-sizing:border-box; padding:0; border:0; border-radius:50%; background:none;
             display:inline-flex; align-items:center; justify-content:center; }
+/* Without a border to recolour, hover and focus act on the ring: it thickens into a soft
+   glow of its own colour, and the keyboard focus gets a ring outside it. */
+button.chip-rerun:hover:not(:disabled) .rr-ring,
+button.chip-rerun:focus-visible .rr-ring { filter:drop-shadow(0 0 1.5px currentColor) brightness(1.15); }
+button.chip-rerun:focus-visible { outline:2px solid currentColor; outline-offset:1px; }
 .rr-ico { position:relative; display:inline-flex; align-items:center; justify-content:center;
           width:100%; height:100%; line-height:1; }
 .rr-ring { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
@@ -33,16 +39,6 @@ button.chip-rerun.running .rr-ring { animation:hrspin .9s linear infinite; }
    mark here already uses. A solid edge like its neighbours: it used to be dashed, and
    Victor read the dash as noise — the amber alone is what sets it apart. */
 button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
-/* Hover fills the chip with its own colour and turns the glyph to the ground's: a 10%
-   wash over whatever sits under the chip read as nothing on a light tab and as mud on a
-   dark one, and the arrow — the one mark on the face — was what disappeared. */
-button.chip-rerun-ai:hover:not(:disabled) { border-color:var(--drift);
-            background:var(--drift); color:var(--drift-fg); }
-button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#2e7d32;
-            background:#2e7d32; color:#fff; }
-@media (prefers-color-scheme:dark) {
-  button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#6bd48a;
-            background:#6bd48a; color:#10261a; } }
 /* The same pair, narrowed to one tab, beside the selected pill on the strip. Shown only
    while its tab is the selected one: the strip is navigation, and thirteen glyphs on it
    would make every pill read as a control with two halves. `[hidden]` still wins on a
@@ -80,10 +76,9 @@ button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#2e7d32;
    (frame.css), and a box shorter than the tab would otherwise sink to that line too and
    sit low in the pill it is drawn over. */
 .tabstrip .tabre { align-self:stretch; }
-/* Round and all one size, so the sum above is exact, and an opaque ground, so the ring
-   never sits on whatever the tab behind it is painted with. */
-.tabre .tabrerun { --rr-size:var(--tabre-rr); border:1px solid; background:var(--card);
-            font-size:.72rem; }
+/* Round and all one size, so the sum above is exact. No ground: the ring sits straight on
+   the selected pill it is drawn into. */
+.tabre .tabrerun { --rr-size:var(--tabre-rr); font-size:.72rem; }
 .tabre .tabrerun[hidden] { display:none; }
 /* The page's own confirmation, over the page. Fixed and full-viewport because the click it
    guards costs money and a panel the reader can scroll away from is a panel they can
@@ -305,7 +300,7 @@ button.chip-served.chip-rerun:hover:not(:disabled) { border-color:#2e7d32;
    attribute. */
 /* The three presses are round (`rerun_face`): the row's padding, set for the word badges
    beside them, would stretch them back into pills. */
-.titlerow .chip-rerun { padding:0; width:var(--rr-size); }
+.titlerow .chip-rerun { padding:0; width:var(--rr-size); border:0; background:none; }
 .titlerow .chip-vsc[hidden], .titlerow .chip-mode[hidden], .titlerow .chip-serve[hidden], .titlerow .chip-rerun[hidden] { display:none; }
 /* Stop: the ⏹️ after the word `Served`, inside its pill. A bare glyph with no ring of its
    own — the pill's border is the only border — at about the text's cap height, and its own

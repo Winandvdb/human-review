@@ -53,14 +53,17 @@ CMD_STOP = "\u25A0"         # ■
 #: ⚙️ regenerates from scripts (free, seconds), ⏳ runs the slow steps first (free,
 #: minutes), 🤖 asks a model (paid). One face, so a reader learns the ring once and reads
 #: only the emoji. The ring is SVG rather than ↺ because a text arrow cannot hold a second
-#: glyph inside it; it is `currentColor`, so it still takes the green or the amber.
+#: glyph inside it; it is `currentColor`, so it still takes the green or the amber. The
+#: ring is the button's only edge: it runs at nearly the full diameter, with no pill border
+#: or ground behind it, and its head is drawn large enough to read as an arrow at 19px.
 RERUN_MARK_SCRIPT = "\u2699\uFE0F"   # ⚙️
 RERUN_MARK_SLOW = "\u23F3"            # ⏳
 RERUN_MARK_AI = "\U0001F916"          # 🤖
 _RERUN_RING = ('<svg class="rr-ring" viewBox="0 0 24 24" aria-hidden="true">'
-               '<path d="M18.1 4.7A9.5 9.5 0 1 1 5.9 4.7" fill="none" stroke="currentColor" '
-               'stroke-width="2" stroke-linecap="round"/>'
-               '<path d="M8.0 2.9L7.0 6.8L4.0 3.3Z" fill="currentColor"/></svg>')
+               '<path d="M18.5 5.5A9.2 9.2 0 1 1 5.5 5.5" fill="none" stroke="currentColor" '
+               'stroke-width="2.4" stroke-linecap="round"/>'
+               '<path d="M7.8 3.2L6.9 8.9L2.1 4.1Z" fill="currentColor" stroke="currentColor" '
+               'stroke-width=".8" stroke-linejoin="round"/></svg>')
 
 
 def rerun_face(mark: str) -> str:

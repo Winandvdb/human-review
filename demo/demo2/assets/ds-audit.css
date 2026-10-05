@@ -118,6 +118,42 @@ details.dsa-screen > summary .dsa-sumtail { font-weight: 400; }
 .dsa-unlisted { color: var(--dsa-bad); border: 1px solid var(--dsa-bad); border-radius: 6px;
   padding: .45rem .7rem; margin: .4rem 0 .8rem; font-size: .9rem; }
 .dsa-unlisted code { color: inherit; }
+/* One number per drawn verdict, on the picture and at the head of its row
+   (`number_findings`). Inside a change frame the frame's own chip carries it; a mark
+   outside every frame wears it the way a frame does, outside its top-left corner, in the
+   verdict's colour. The row's chip is the same chip in the same colour, so the eye can
+   match the two without reading. */
+.dsa-mark > b.dsa-mnum { left: -3px; top: -3px; transform: translateX(-100%);
+  padding: 0 .3rem; z-index: 2; }
+.dsa-mark { cursor: pointer; }
+.dsa-rnum { display: inline-block; min-width: 1.15rem; box-sizing: border-box; text-align: center;
+  margin-right: .4rem; padding: 0 .25rem; border-radius: .2rem; cursor: help;
+  font: 700 .68rem/1.15rem -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--dsa-label-fg); }
+.dsa-rnum.framed { background: var(--dsa-frame); }
+.dsa-rnum.bad { background: var(--dsa-bad); }
+.dsa-rnum.ok { background: var(--dsa-ok); }
+/* What opens under a verdict's row (`detail_html`): the rule, then the element's markup
+   under the page's own source bar. The bar and the token colours are the page's snippet
+   stylesheet; only the spacing is local — a rendered element has no line numbers, so its
+   code would otherwise touch the block's left edge. */
+.dsa-table tr:has(+ tr.dsa-more) td { border-bottom-color: transparent; }
+/* Its one wide cell is the row's second, which the side column's `nowrap` would otherwise
+   reach: the rule ran 200px past the card on one unbroken line. */
+.dsa-table tr.dsa-more td { padding-top: 0; white-space: normal; }
+details.dsa-why > summary { cursor: pointer; font-size: .84rem; line-height: 1.5; }
+details.dsa-why.ok > summary { font-size: .78rem; opacity: .65; }
+details.dsa-why.ok[open] > summary { opacity: .8; }
+.dsa-whyk { font-weight: 700; text-transform: uppercase; font-size: .68rem; letter-spacing: .04em;
+  color: var(--dsa-bad); margin-right: .15rem; }
+.dsa-rule { margin: .3rem 0 0; font-size: .82rem; opacity: .85; }
+.dsa-snip { margin: .45rem 0 .35rem; padding: .45rem .6rem; max-width: 56rem; }
+.dsa-snip .srcbar { margin-bottom: .35rem; }
+.dsa-snip pre.code { padding-left: .7rem; }
+details.dsa-why.ok .dsa-snip { opacity: .85; }
+.dsa-nosrc { font-size: .78rem; opacity: .75; font-style: italic; }
+.dsa-srcnote { font-size: .72rem; opacity: .7; cursor: help; }
+.dsa-table tr.dsa-more.flash td { background: color-mix(in srgb, var(--dsa-hot) 16%, transparent); }
 :root { --dsa-ok: #1f7a45; --dsa-bad: #c1121f; --dsa-new: #1a4fa0; --dsa-hot: #f0a500;
         --dsa-label-fg: #ffffff; --dsa-frame: #a23fd6; --dsa-warn: #946200; }
 @media (prefers-color-scheme: dark) {

@@ -202,7 +202,7 @@
       "blocks": [
         {
           "type": "logging",
-          "base": "7a75ccf2",
+          "base": "f78a360a",
           "paths": [
             "petclinic-backend"
           ],

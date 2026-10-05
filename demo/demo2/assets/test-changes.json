@@ -1,5 +1,5 @@
 {
-  "base": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
+  "base": "f78a360af2d7329451d88b900fe9b3619869e843",
   "totals": {
     "added": 48,
     "modified": 6,
@@ -417,8 +417,8 @@
       "status": "deleted",
       "line": 48,
       "baseLine": 89,
-      "baseSha": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-      "baseUrl": "https://github.com/victorrentea/petclinic/blob/7a75ccf2148c7e0df6600ca8141bac46ea40400c/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L89"
+      "baseSha": "f78a360af2d7329451d88b900fe9b3619869e843",
+      "baseUrl": "https://github.com/victorrentea/petclinic/blob/f78a360af2d7329451d88b900fe9b3619869e843/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L89"
     },
     {
       "name": "should call ngOnInit() method",
@@ -426,8 +426,8 @@
       "status": "deleted",
       "line": 54,
       "baseLine": 93,
-      "baseSha": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-      "baseUrl": "https://github.com/victorrentea/petclinic/blob/7a75ccf2148c7e0df6600ca8141bac46ea40400c/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L93"
+      "baseSha": "f78a360af2d7329451d88b900fe9b3619869e843",
+      "baseUrl": "https://github.com/victorrentea/petclinic/blob/f78a360af2d7329451d88b900fe9b3619869e843/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L93"
     },
     {
       "name": " should show full name after getOwners observable (async) ",
@@ -435,8 +435,8 @@
       "status": "deleted",
       "line": 66,
       "baseLine": 99,
-      "baseSha": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-      "baseUrl": "https://github.com/victorrentea/petclinic/blob/7a75ccf2148c7e0df6600ca8141bac46ea40400c/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L99"
+      "baseSha": "f78a360af2d7329451d88b900fe9b3619869e843",
+      "baseUrl": "https://github.com/victorrentea/petclinic/blob/f78a360af2d7329451d88b900fe9b3619869e843/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L99"
     },
     {
       "name": "searchByLastName should call getOwners for empty term",
@@ -444,8 +444,8 @@
       "status": "deleted",
       "line": 107,
       "baseLine": 109,
-      "baseSha": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-      "baseUrl": "https://github.com/victorrentea/petclinic/blob/7a75ccf2148c7e0df6600ca8141bac46ea40400c/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L109"
+      "baseSha": "f78a360af2d7329451d88b900fe9b3619869e843",
+      "baseUrl": "https://github.com/victorrentea/petclinic/blob/f78a360af2d7329451d88b900fe9b3619869e843/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L109"
     },
     {
       "name": "searchByLastName should call searchOwners for non-empty term",
@@ -453,8 +453,8 @@
       "status": "deleted",
       "line": 123,
       "baseLine": 119,
-      "baseSha": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-      "baseUrl": "https://github.com/victorrentea/petclinic/blob/7a75ccf2148c7e0df6600ca8141bac46ea40400c/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L119"
+      "baseSha": "f78a360af2d7329451d88b900fe9b3619869e843",
+      "baseUrl": "https://github.com/victorrentea/petclinic/blob/f78a360af2d7329451d88b900fe9b3619869e843/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L119"
     },
     {
       "name": "a search is not overwritten by the initial load answering late",
@@ -462,8 +462,8 @@
       "status": "deleted",
       "line": 185,
       "baseLine": 131,
-      "baseSha": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-      "baseUrl": "https://github.com/victorrentea/petclinic/blob/7a75ccf2148c7e0df6600ca8141bac46ea40400c/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L131"
+      "baseSha": "f78a360af2d7329451d88b900fe9b3619869e843",
+      "baseUrl": "https://github.com/victorrentea/petclinic/blob/f78a360af2d7329451d88b900fe9b3619869e843/petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts#L131"
     },
     {
       "name": "getOwners without a query asks for the API defaults and returns the page",
@@ -525,8 +525,8 @@
       "status": "deleted",
       "line": 52,
       "baseLine": 51,
-      "baseSha": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-      "baseUrl": "https://github.com/victorrentea/petclinic/blob/7a75ccf2148c7e0df6600ca8141bac46ea40400c/petclinic-frontend/src/app/owners/owner.service.spec.ts#L51"
+      "baseSha": "f78a360af2d7329451d88b900fe9b3619869e843",
+      "baseUrl": "https://github.com/victorrentea/petclinic/blob/f78a360af2d7329451d88b900fe9b3619869e843/petclinic-frontend/src/app/owners/owner.service.spec.ts#L51"
     },
     {
       "name": "search owners by last name prefix",
@@ -534,8 +534,8 @@
       "status": "deleted",
       "line": 180,
       "baseLine": 134,
-      "baseSha": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-      "baseUrl": "https://github.com/victorrentea/petclinic/blob/7a75ccf2148c7e0df6600ca8141bac46ea40400c/petclinic-frontend/src/app/owners/owner.service.spec.ts#L134"
+      "baseSha": "f78a360af2d7329451d88b900fe9b3619869e843",
+      "baseUrl": "https://github.com/victorrentea/petclinic/blob/f78a360af2d7329451d88b900fe9b3619869e843/petclinic-frontend/src/app/owners/owner.service.spec.ts#L134"
     },
     {
       "name": "Filter owners by a case-sensitive prefix of the last name",
@@ -579,8 +579,8 @@
       "status": "deleted",
       "line": 26,
       "baseLine": 26,
-      "baseSha": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-      "baseUrl": "https://github.com/victorrentea/petclinic/blob/7a75ccf2148c7e0df6600ca8141bac46ea40400c/petclinic-test/src/owner-search.feature#L26"
+      "baseSha": "f78a360af2d7329451d88b900fe9b3619869e843",
+      "baseUrl": "https://github.com/victorrentea/petclinic/blob/f78a360af2d7329451d88b900fe9b3619869e843/petclinic-test/src/owner-search.feature#L26"
     }
   ]
 }

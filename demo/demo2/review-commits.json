@@ -1,25 +1,25 @@
 {
- "base": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
+ "base": "f78a360af2d7329451d88b900fe9b3619869e843",
  "head": "HEAD",
  "points_file": "review-points.md",
  "commits": 3,
- "implementation": "97e09d9a0c4d64e4a8ae1f0d5c2b1dc7d2c19d86",
- "review": "d31998a7f71d103c6fe681a65fc1ededb388da10",
+ "implementation": "f242cbeec80c39c01da33a33e5a121fb975d6d41",
+ "review": "810678122004a60220d5aefbcb5249793a33057a",
  "session": "e7cc9112-be45-4d7b-9c2e-741d6e6f951b",
  "fallback": false,
  "after": [],
  "after_detail": [],
- "review_when": "2026-10-05T20:40:24+03:00",
+ "review_when": "2026-10-05T21:20:27+03:00",
  "takeover": null,
  "auto_fixes": [
   {
-   "sha": "d31998a7f71d103c6fe681a65fc1ededb388da10",
-   "when": "2026-10-05T20:40:24+03:00",
+   "sha": "810678122004a60220d5aefbcb5249793a33057a",
+   "when": "2026-10-05T21:20:27+03:00",
    "subject": "[auto-fix] Owners grid review: push-gate line length, add-visit fixtures page through, retry after a failed load, wider query budget"
   }
  ],
  "review_commits": [
-  "d31998a7f71d103c6fe681a65fc1ededb388da10"
+  "810678122004a60220d5aefbcb5249793a33057a"
  ],
  "warnings": []
 }

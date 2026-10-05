@@ -1,5 +1,5 @@
-[run-steps] base 7a75ccf2148c: the base the review audited (review-points.md), inside origin/main
-    $ git merge-base 7a75ccf2148c7e0df6600ca8141bac46ea40400c HEAD
+[run-steps] base f78a360af2d7: the base the review audited (review-points.md), inside origin/main
+    $ git merge-base f78a360af2d7329451d88b900fe9b3619869e843 HEAD
   > city: started at +0 s (log: .human-review/logs/city.log)
   > sequence: started at +0 s (log: .human-review/logs/sequence.log)
   > basestack: started at +0 s (log: .human-review/logs/basestack.log)
@@ -41,7 +41,7 @@
 
   step         status   why / what to say
   basestack    ran      
-               note     started the merge-base stack (7a75ccf2) early, for the design-system audit
+               note     started the merge-base stack (f78a360a) early, for the design-system audit
   reviewpoints ran      
   aftermath    ran      
   diagrams     ran      

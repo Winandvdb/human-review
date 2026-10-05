@@ -5,9 +5,9 @@
 [review] content.json's assumptions title ('Decided where the ticket did not') is ignored — the Review tab's headings are the builder's
 [review] no pull request named in content.json (`pr.number` / `pr.url`) — the Review tab offers no 'Publish comment on GitHub PR'
 [review] Tests matrix: 27 sentences × 97 tests — 0 links by script (unconfirmed), 62 by model, 63 rejected, 0 sentences not paired yet
-[review] difflink: Q&A.md is identical at 7a75ccf2148c7e0df6600ca8141bac46ea40400c and in the working tree — link dropped rather than opening an empty diff
-[review] difflink: openspec/changes/paginate-sort-owners/proposal.md is identical at 7a75ccf2148c7e0df6600ca8141bac46ea40400c and in the working tree — link dropped rather than opening an empty diff
+[review] difflink: Q&A.md is identical at f78a360af2d7329451d88b900fe9b3619869e843 and in the working tree — link dropped rather than opening an empty diff
+[review] difflink: openspec/changes/paginate-sort-owners/proposal.md is identical at f78a360af2d7329451d88b900fe9b3619869e843 and in the working tree — link dropped rather than opening an empty diff
 [review] WARNING: verdict line dropped from the grade panel — it repeats the computed narrowed line: 'Issue #25 was never told the scope narrowed to Name/City and the response became an envelo'
-[review] difflink: petclinic-test/src/add-visit.spec.ts is identical at 7a75ccf2148c7e0df6600ca8141bac46ea40400c and in the working tree — link dropped rather than opening an empty diff
+[review] difflink: petclinic-test/src/add-visit.spec.ts is identical at f78a360af2d7329451d88b900fe9b3619869e843 and in the working tree — link dropped rather than opening an empty diff
 [review] tabs kept as context (struck through, no delta): Structure
 [review] wrote /Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated/.human-review/review.html

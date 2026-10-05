@@ -3,15 +3,15 @@
  "mode": "points",
  "source": "review-points.md",
  "provenance": {
-  "base": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-  "auditedBase": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-  "auditedHead": "97e09d9a0c4d64e4a8ae1f0d5c2b1dc7d2c19d86",
-  "implementation": "97e09d9a0c4d64e4a8ae1f0d5c2b1dc7d2c19d86",
-  "head": "97e09d9a0c4d64e4a8ae1f0d5c2b1dc7d2c19d86",
+  "base": "f78a360af2d7329451d88b900fe9b3619869e843",
+  "auditedBase": "f78a360af2d7329451d88b900fe9b3619869e843",
+  "auditedHead": "f242cbeec80c39c01da33a33e5a121fb975d6d41",
+  "implementation": "f242cbeec80c39c01da33a33e5a121fb975d6d41",
+  "head": "f242cbeec80c39c01da33a33e5a121fb975d6d41",
   "reviewers": "4 read-only Sonnet subagents (correctness, security, ticket-fit, tests) on the RR briefs",
   "harness": "claude-code",
   "session": "e7cc9112-be45-4d7b-9c2e-741d6e6f951b",
-  "reviewCommit": "d31998a7f71d103c6fe681a65fc1ededb388da10"
+  "reviewCommit": "810678122004a60220d5aefbcb5249793a33057a"
  },
  "fixed_in": "HEAD",
  "findings": [
@@ -337,17 +337,17 @@
   }
  ],
  "meta": {
-  "base": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-  "implementation": "97e09d9a0c4d64e4a8ae1f0d5c2b1dc7d2c19d86",
+  "base": "f78a360af2d7329451d88b900fe9b3619869e843",
+  "implementation": "f242cbeec80c39c01da33a33e5a121fb975d6d41",
   "reviewers": "4 read-only Sonnet subagents (correctness, security, ticket-fit, tests) on the RR briefs",
   "session": "e7cc9112-be45-4d7b-9c2e-741d6e6f951b"
  },
  "frontmatter": {
-  "base": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-  "audited-base": "7a75ccf2148c7e0df6600ca8141bac46ea40400c",
-  "audited-head": "97e09d9a0c4d64e4a8ae1f0d5c2b1dc7d2c19d86",
-  "implementation": "97e09d9a0c4d64e4a8ae1f0d5c2b1dc7d2c19d86",
-  "head": "97e09d9a0c4d64e4a8ae1f0d5c2b1dc7d2c19d86",
+  "base": "f78a360af2d7329451d88b900fe9b3619869e843",
+  "audited-base": "f78a360af2d7329451d88b900fe9b3619869e843",
+  "audited-head": "f242cbeec80c39c01da33a33e5a121fb975d6d41",
+  "implementation": "f242cbeec80c39c01da33a33e5a121fb975d6d41",
+  "head": "f242cbeec80c39c01da33a33e5a121fb975d6d41",
   "reviewers": "4 read-only Sonnet subagents (correctness, security, ticket-fit, tests) on the RR briefs",
   "harness": "claude-code",
   "session": "e7cc9112-be45-4d7b-9c2e-741d6e6f951b",

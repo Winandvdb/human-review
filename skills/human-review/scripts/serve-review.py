@@ -379,13 +379,38 @@ def line_span(q: dict) -> tuple[int, int | None]:
     return line, end
 
 
-def open_in_editor(path, line, end_line=None):
+def comment_aim(q: dict, line: int) -> dict:
+    """The PR comment thread a click asks the editor to bring up, as `open_in_editor` /
+    `review_open` keyword arguments: `{"comment": True}`, plus `comment_line` when GitHub
+    anchored the thread on another line than the reference starts on. Empty for anything
+    but an explicit `comment=1`/`true`, and a malformed `commentLine` is dropped, not
+    guessed — the bridge then looks on the reference's own first line."""
+    if (q.get("comment") or [""])[0] not in ("1", "true"):
+        return {}
+    raw = (q.get("commentLine") or [""])[0]
+    at = int(raw) if raw.isdigit() and int(raw) > 0 else None
+    return {"comment": True, **({"comment_line": at} if at and at != line else {})}
+
+
+def _comment_fields(comment, comment_line):
+    """What the bridge is sent for a comment: nothing unless asked, so a bridge too old to
+    know it gets the request it always did."""
+    if not comment:
+        return {}
+    return {"comment": True, **({"commentLine": comment_line} if comment_line else {})}
+
+
+def open_in_editor(path, line, end_line=None, comment=False, comment_line=None):
     """Land the reader in the class. Through the VS Code window that has this file's
     folder open where the bridge is installed, and through the OS otherwise.
 
     `end_line` makes it a range: the bridge selects `line..end_line`, highlights it and
     fades the rest until the reader moves. Sent only when there is one, so a bridge too
     old to know it still gets the request it always did. The OS route cannot carry it.
+
+    `comment` asks the bridge to bring up the PR comment thread on the reference too —
+    expanded and focused, on `comment_line` when GitHub anchored it on another line than
+    `line` — so the reader can reply or resolve it right there.
 
     The page cannot do this itself: its references are `vscode://file/...` links, and the
     embedded browser's iframe is sandboxed under a `frame-src *` CSP, so a webview cannot
@@ -407,9 +432,11 @@ def open_in_editor(path, line, end_line=None):
                     # the click read as a no-op and the file waited to be found by
                     # accident. The bridge raises the window natively.
                     data=json.dumps({"path": str(path), "line": line, "focus": True,
-                                     **({"endLine": end_line} if end_line else {})}).encode(),
+                                     **({"endLine": end_line} if end_line else {}),
+                                     **_comment_fields(comment, comment_line)}).encode(),
                     headers={"x-relay-token": entry["token"], "Content-Type": "application/json"})
-                urllib.request.urlopen(req, timeout=5).read()
+                # A comment adds the bridge's wait for the PR extension's threads (≤ ~2 s).
+                urllib.request.urlopen(req, timeout=8 if comment else 5).read()
                 return "relay"
             except Exception:
                 continue
@@ -425,7 +452,7 @@ def open_in_editor(path, line, end_line=None):
     return "os"
 
 
-def review_open(path, line, sha, root, branch, end_line=None):
+def review_open(path, line, sha, root, branch, end_line=None, comment=False, comment_line=None):
     """Ask the editor bridge to open `path` in a window holding the *reviewed* version of it.
 
     Any window will do as the one asked: the extension compares the file at each window's
@@ -435,7 +462,8 @@ def review_open(path, line, sha, root, branch, end_line=None):
     the way it always has, because without the bridge there is nothing to check against."""
     payload = json.dumps({"file": str(path), "line": line, "sha": sha, "root": root,
                           "branch": branch,
-                          **({"endLine": end_line} if end_line else {})}).encode()
+                          **({"endLine": end_line} if end_line else {}),
+                          **_comment_fields(comment, comment_line)}).encode()
     for f in sorted((Path.home() / ".walkie-talkie" / "ide").glob("vscode-*.json")):
         try:
             entry = json.loads(f.read_text())
@@ -1803,8 +1831,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             q = urllib.parse.parse_qs(self.path.partition("?")[2])
             target = Path(q.get("path", [""])[0])
             line, end = line_span(q)
-            # Only a range travels with an end; a single line goes out exactly as before.
-            span = {"end_line": end} if end else {}
+            # Only a range travels with an end; a single line goes out exactly as before. A
+            # card posted to the PR adds its comment thread, the same way: only when asked.
+            span = {**({"end_line": end} if end else {}), **comment_aim(q, line)}
             ok = ROOT is not None and target.is_file()
             if ok:
                 try:

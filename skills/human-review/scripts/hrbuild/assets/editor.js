@@ -126,6 +126,31 @@
     return end ? '&endLine=' + end : '';
   }
 
+  // A card posted to the PR names its thread on its "on GitHub \u2197" link (`data-pr-*`).
+  // A click on one of that card's references to the same file, on lines that overlap the
+  // thread's, asks the editor to bring the thread up too \u2014 expanded and focused, ready
+  // for Reply or Resolve \u2014 with `comment=1`, plus `commentLine` when GitHub anchored it
+  // on another line than the reference starts on (a thread sits on its range's last line).
+  // Any other link sends nothing, and opens exactly as it did.
+  function commentQuery(link, path, line) {
+    for (var li = link.closest && link.closest('li'); li;
+         li = li.parentElement && li.parentElement.closest('li')) {
+      var gh = null;
+      for (var i = 0; i < li.children.length; i++) {
+        if (li.children[i].matches('a.f-gh[data-pr-path]')) { gh = li.children[i]; break; }
+      }
+      if (!gh) continue;
+      var rel = gh.getAttribute('data-pr-path');
+      if (path !== rel && path.slice(-(rel.length + 1)) !== '/' + rel) return '';
+      var at = Number(gh.getAttribute('data-pr-line'));
+      var from = Number(gh.getAttribute('data-pr-start')) || at;
+      var a = Number(line), b = Number(endOf(link, line) || line);
+      if (!at || b < from || a > at) return '';
+      return '&comment=1' + (at !== a ? '&commentLine=' + at : '');
+    }
+    return '';
+  }
+
   // The one button on the page that copies something that is not a source reference:
   // the command that re-renders the hand-drawn diagram. It lives in this handler because
   // `copy` and `flash` do, and a second clipboard-and-toast implementation for one button
@@ -326,7 +351,8 @@
     var ref2 = SERVED && parse(link.getAttribute('href'));
     if (ref2) {
       fetch('/__open__?path=' + encodeURIComponent(ref2.path) + '&line=' + ref2.line
-            + endQuery(link, ref2.line) + (STAMP.hrHead ? '&' + commitQuery() : ''))
+            + endQuery(link, ref2.line) + commentQuery(link, ref2.path, ref2.line)
+            + (STAMP.hrHead ? '&' + commitQuery() : ''))
         .then(function (r) {
           if (r.status === 204) return;
           return r.text().then(function (t) {

@@ -3402,6 +3402,12 @@ def prepare_pr_push(spec: dict, out_dir: Path, root: Path, skill_dir: Path) -> d
             if urls.get(cid):
                 item["_ghUrl"] = urls[cid]
                 item["_ghInSummary"] = modes.get(cid) == "body"
+                # Where the thread sits, for the click that opens the card's lines in VS
+                # Code to bring it up there too (`gh_comment_link`'s data-pr-*).
+                c = (posted.get("comments") or {}).get(cid) or {}
+                if not item["_ghInSummary"] and c.get("path") and c.get("line"):
+                    item["_ghThread"] = {"path": c["path"], "line": c["line"],
+                                         "start": c.get("start_line") or c["line"]}
     counts = {p: sum(1 for c in comments if c.get("pile") == p)
               for p in ("fixed", "ignored", "assumption")}
     spec["_prPush"] = {"count": len(comments), "counts": counts,
@@ -3432,8 +3438,15 @@ def gh_comment_link(f) -> str:
     # in the review's summary instead, with a permalink to the lines, and the link says so.
     tip = ("In the review's summary on GitHub — this line is not in the PR's diff"
            if f.get("_ghInSummary") else "PR comment")
+    # An inline thread says where it sits, so editor.js can ask VS Code to bring it up —
+    # expanded and focused — when the reader opens the card's lines (`comment=1`). A
+    # summary-only item has no thread in the file, so it says nothing.
+    t = f.get("_ghThread") or {}
+    where = (f' data-pr-path="{html.escape(str(t["path"]), quote=True)}"'
+             f' data-pr-line="{int(t["line"])}" data-pr-start="{int(t["start"])}"'
+             if t.get("path") and t.get("line") else "")
     return (f' <a class="f-gh" href="{html.escape(url, quote=True)}" target="_blank" '
-            f'rel="noopener" data-tip="{html.escape(tip, quote=True)}">on GitHub ↗</a>')
+            f'rel="noopener" data-tip="{html.escape(tip, quote=True)}"{where}>on GitHub ↗</a>')
 
 
 # Run on DOMContentLoaded, not inline: this sits in the Review tab, far above the page's

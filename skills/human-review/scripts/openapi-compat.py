@@ -734,9 +734,10 @@ def panel(result: dict, ours: dict | None,
 
     # "and" put the two on one footing; they are not on one. oasdiff produced every
     # number on this line, and our sibling only re-read the same specs to see whether it
-    # would say something different. "double-checked by ours" is that arrangement said out
-    # loud — the verdict is the tool's, the second opinion is the house's.
-    checked = (f"checked by {engine}, double-checked by our {ours_label}"
+    # would say something different. "double-checked by" is that arrangement said out
+    # loud — the verdict is the tool's, the second opinion is the script's, named by its
+    # file name and no possessive (Victor, 5 Oct 2026).
+    checked = (f"checked by {engine}, double-checked by {ours_label}"
                if ours is not None else
                f"checked by {engine} alone — the cross-check did not run")
     # Same verdict, different count: said, not smoothed over. The two differs cut a change

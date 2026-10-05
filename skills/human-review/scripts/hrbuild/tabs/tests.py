@@ -256,11 +256,18 @@ def render_test_ledger(rows, root: Path) -> tuple[str, int]:
             + "</section>"
         )
     off, new, gone, edited = (len(g[2]) for g in groups)
+    # The three moves are their signs and their counts only, `+54 −9 ✍7` (Victor, 5 Oct
+    # 2026): on the covering card's header strip the words and the dots made the line
+    # longer than the title it sits beside. The word each sign stands for is on its hover.
+    def count(cls: str, face: str, n: int, what: str) -> str:
+        tip = f"{n} {what}" if n != 1 else f"1 {what.replace('tests', 'test')}"
+        return (f'<span class="{cls}" data-tip="{html.escape(tip, quote=True)}">'
+                f'{face}{n}</span>') if n else ""
+    moves = " ".join(x for x in (count("added", "+", new, "new tests"),
+                                 count("removed", "−", gone, "tests gone"),
+                                 count("changed", PENCIL, edited, "tests edited")) if x)
     face = " · ".join(x for x in (
-        f'<span class="toff">{off} stopped running</span>' if off else "",
-        f'<span class="added">+{new} new</span>' if new else "",
-        f'<span class="removed">−{gone} gone</span>' if gone else "",
-        f'<span class="changed">{PENCIL}{edited} edited</span>' if edited else "",
+        f'<span class="toff">{off} stopped running</span>' if off else "", moves,
     ) if x) or "no test moved"
     rest = (f'{untouched} more test{"s" if untouched != 1 else ""} in the files this '
             "change set touched, left exactly as they were") if untouched else ""
@@ -583,14 +590,17 @@ def ticket_ref(spec: dict, out_dir: Path) -> dict | None:
 #: box is there for the moment they want to read the ticket as the author wrote it, four
 #: sentences with no green under them, and then put the fills back.
 SEMCOV_LABEL = "Semantic Test Coverage"
+#: Its hover (Victor, 5 Oct 2026): the colours it switches are a model's reading of which
+#: test proves which claim, and a checkbox named like a metric reads as a measured one.
+_SEMCOV_TIP = "Claim ↔ test matching as inferred by AI: a judgement, not a measurement"
 
 
 def semcov_switch() -> str:
     """The `Semantic Test Coverage` checkbox, checked. It sits at the far end of the
     ticket frame's own header strip (`victorrentea opened on …`), on the thing whose
     colouring it switches, rather than on the title row above the frame."""
-    return (f'<label class="rm-semcov"><input type="checkbox" checked> '
-            f'{SEMCOV_LABEL}</label>')
+    return (f'<label class="rm-semcov" data-tip="{html.escape(_SEMCOV_TIP, quote=True)}">'
+            f'<input type="checkbox" checked> {SEMCOV_LABEL}</label>')
 
 
 #: What the card's own header strip says, whatever the model wrote there. It said
@@ -652,8 +662,10 @@ def card_head(side: str) -> str:
 COVERAGE_JSON = "assets/test-coverage.json"
 #: Said of a change set with no pull request — eval run 10 said "in this PR" over a branch
 #: that had none. "PR" only when there is one (`covcard_who`).
-COVCARD_WHO = "Covering tests"
-COVCARD_WHO_PR = "Covering tests"
+#: Victor, 5 Oct 2026: "Tests covering the change set" — "Covering tests" left the reader
+#: asking "covering what?".
+COVCARD_WHO = "Tests covering the change set"
+COVCARD_WHO_PR = "Tests covering the change set"
 COVCARD_TIP = ("Every test was run with a per-test coverage probe; a row is a test that "
                "executed at least one line this branch changed")
 #: A changed line counts as "passed through" when more than this share of a suite's
@@ -1148,7 +1160,9 @@ def ticket_head(ref: dict | None) -> str:
                  if ref.get("url") else f'<span class="rm-title">{face}</span>')
     else:
         title = ""
-    return f'<p class="rm-head">{title}</p>'
+    # The tab's own first-line title, the shared `h2.tabtitle` (core.css) every tab that
+    # opens on one wears, in its size and margins (Victor, 5 Oct 2026).
+    return f'<h2 class="tabtitle rm-head">{title}</h2>'
 
 
 def cats_filter(cats: str) -> str:
@@ -1183,10 +1197,10 @@ REQMAP_CSS = """
   align-items:start}
 .reqmap .rm-text{grid-column:1;grid-row:2}
 .reqmap .rm-side{grid-column:2;grid-row:2;max-width:none}
-/* A heading's distance from the thing it heads, not a column gutter's: close enough under
-   it to read as its title, with a little air over it so it does not hang off the tab strip. */
+/* Its size, weight and margins are `h2.tabtitle`'s (core.css), the same title every tab
+   opens on; this only places it in the grid. */
 .reqmap .rm-head{grid-column:1;grid-row:1;display:flex;align-items:center;
-  justify-content:space-between;gap:12px;margin:10px 2px 8px;min-width:0}
+  justify-content:space-between;gap:12px;min-width:0}
 /* The switch keeps to the far end of the ticket's header strip, and reads in the muted
    weight of a control rather than the weight of the login beside it. */
 .reqmap .rm-semcov{flex:0 0 auto;margin-left:auto;display:inline-flex;align-items:center;
@@ -1199,11 +1213,8 @@ REQMAP_CSS = """
    its height but not its ink, so the card beside it does not jump. */
 .reqmap[data-semcov=off] .rm-f[data-cov]{background:none}
 .reqmap[data-semcov=off] .rm-legend{visibility:hidden}
-.reqmap[data-semcov=off] .rm-tally{visibility:hidden}
-/* The ticket's own heading scale, not the page's h2: this is quoted furniture around
-   quoted text, and an h2 here would outrank the tab's own heading. */
-.reqmap .rm-head .rm-title{font-size:1.35em;line-height:1.25;font-weight:600;
-  color:var(--fg,#1c1c1c);text-decoration:none;overflow-wrap:anywhere}
+/* The title is the link out to the issue, in the heading's ink rather than link blue. */
+.reqmap .rm-head .rm-title{color:var(--fg,#1c1c1c);text-decoration:none;overflow-wrap:anywhere}
 .reqmap .rm-head .rm-title:hover{text-decoration:underline}
 .reqmap .rm-head .rm-num{color:var(--muted,#6b6b6b);font-weight:400}
 /* Both keys now sit under what they explain, so the margin that lifted them off it moves
@@ -1212,7 +1223,7 @@ REQMAP_CSS = """
 .reqmap .rm-legend{min-height:0;margin:10px 2px 0}
 /* The UI/API/unit key sits on the title row, over the card, in the stretch the title left
    empty; its margins are the title's, so the two read as one line. */
-.reqmap .rm-cats{grid-column:2;grid-row:1;align-self:center;min-height:0;margin:10px 2px 8px}
+.reqmap .rm-cats{grid-column:2;grid-row:1;align-self:center;min-height:0;margin:.2rem 2px .15rem}
 .reqmap .rm-cats .rm-catf{display:inline-flex;align-items:center;gap:5px;cursor:pointer;
   user-select:none}
 .reqmap .rm-cats .rm-catf input{margin:0;cursor:pointer}
@@ -1220,17 +1231,44 @@ REQMAP_CSS = """
 .reqmap .rm-cats .rm-catf:has(input:not(:checked)){opacity:.5}
 .reqmap .rm-t[data-catoff=yes]{display:none}
 /* Two columns, two scrollbars (Victor, 4 Oct 2026): the ticket and the test list each
-   scroll on their own, pinned under the masthead, so a sentence and the tests that cover
-   it can be read side by side however far apart they are. Clicking either brings the
-   other side's matches into view (reqmap.js `bringIn`). Wide screens only; stacked, the
-   page scrolls both. An open test no longer unpins its column: it scrolls inside it. */
+   scroll on their own, so a sentence and the tests that cover it can be read side by side
+   however far apart they are. Clicking either brings the other side's matches into view
+   (reqmap.js `bringIn`). Wide screens only; stacked, the page scrolls both. An open test
+   no longer unpins its column: it scrolls inside it.
+   And only those two (Victor, 5 Oct 2026): the matrix is exactly one window tall, from
+   the masthead's bottom edge to the window's, so the page itself has nothing left to
+   scroll but the footer under the fold. The panes used to be sticky and capped at the
+   window, which left the title row, the adopt line and the footer to an outer bar — a
+   third scrollbar, moving the two pinned ones under the masthead. The body is a grid of
+   the title row and a 1fr row the panes stretch into; `--strip-h` is the masthead's own
+   measured height (tabs.js), and the panel starts right under it. `100vh` is said first
+   for a browser without `dvh`. */
 @media (min-width:901px){
+  .reqmap .rm-body{height:calc(100vh - var(--strip-h, 7rem));
+    height:calc(100dvh - var(--strip-h, 7rem));grid-template-rows:auto minmax(0,1fr)}
   .reqmap .rm-text,.reqmap .rm-side,.reqmap .rm-side:has(.rm-t[data-open=yes]){
-    position:sticky;top:calc(var(--strip-h, 7rem) + 8px);
-    max-height:calc(100vh - var(--strip-h, 7rem) - 16px);overflow-y:auto;
+    position:static;align-self:stretch;min-height:0;display:flex;flex-direction:column;
+    overflow:hidden}
+  /* What scrolls is under each pane's header strip, not the pane (Victor, 5 Oct 2026):
+     the author row over the ticket and the card's title row stand still, and each
+     scrollbar starts at the strip's bottom edge instead of running up beside it. A frame
+     takes the height its content asks for, up to what the pane has left once the keys
+     under it are laid out; its strip keeps its own, and the body under the strip — the
+     ticket's prose, the card's list — is what gives and scrolls. `clip` keeps the round
+     corners without making the frame a scroller of its own. */
+  .reqmap .rm-ticket,.reqmap .rm-code{flex:0 1 auto;min-height:0;display:flex;
+    flex-direction:column;overflow:clip}
+  .reqmap .rm-ticket > .rm-tkhead,.reqmap .rm-code > .rm-tkhead,.reqmap .rm-ticket > .rm-src,
+  .reqmap .rm-legend{flex:none}
+  .reqmap .rm-issue,.reqmap .rm-list{flex:1 1 auto;min-height:0;overflow-y:auto;
     overscroll-behavior:contain}
+  /* The blind-spot box under the ticket, the coverage notes under the card, and the
+     changed-tests summary opened on the card's strip are each one click from being long;
+     they scroll inside a cap rather than squeeze the list above them to nothing. */
+  .reqmap .rm-gap,.reqmap .rm-side > .cov-after{flex:none;max-height:35vh;overflow-y:auto}
+  .reqmap .rm-code > .rm-tkhead:has(> .tledger[open]){max-height:50vh;overflow-y:auto}
 }
-/* The changed-tests summary (`+54 new · −9 gone · ✍️7 edited`) sits on the card's title
+/* The changed-tests summary (`+54 −9 ✍️7`) sits on the card's title
    row, at its right end; opened, its body takes the card's full width under the row. */
 .reqmap .rm-code > .rm-tkhead{flex-wrap:wrap}
 .reqmap .rm-code > .rm-tkhead > .tledger{margin:0 0 0 auto;font-weight:400}

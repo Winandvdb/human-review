@@ -461,51 +461,51 @@ def test_sentences_are_coloured_as_the_mapping_says(tmp_path):
     assert "<ol start=\"1\">" in page and ">ana</span>" in page
 
 
-def test_who_paired_a_sentence_is_said_on_its_hover_and_once_not_after_every_clause(tmp_path):
+def test_who_paired_a_sentence_is_said_on_its_hover_not_after_every_clause(tmp_path):
     """Eval run 8: a 🤖 after each of 30+ highlighted clauses made the ticket column
-    unreadable. The provenance is on the sentence's hover and, once, on the hover of the
-    tally line — eval run 11: a visible line of its own was one more line between a busy
-    reviewer and the ticket, and changed no decision."""
+    unreadable. The provenance is on the sentence's hover — eval run 11: a visible line of
+    its own was one more line between a busy reviewer and the ticket, and changed no
+    decision."""
     _, entries, page, _ = _render(tmp_path)
     css = (S.ASSETS / "reqmap.css").read_text(encoding="utf-8")
     assert "[data-src=model]::after" not in css
-    assert page.count(S.AI_NOTE) == 1 and 'class="rm-ainote"' not in page
-    assert f'<span class="rm-tallyt" data-tip="{S.AI_NOTE}">' in page
+    assert 'class="rm-ainote"' not in page
     js = (S.ASSETS / "reqmap.js").read_text(encoding="utf-8")
     assert "'🤖 checked by AI':'paired by script'" in js
-    # No model answer, no note.
-    root, review = tmp_path / "repo", tmp_path / "repo" / ".human-review"
-    g = S.gather(S._spec(review), review, root)
-    bare = S.render(g["ticket"], g["blocks"], g["rows"],
-                    S.merge(g["sentences"], g["scripted"], None), root)
-    assert S.AI_NOTE not in bare
 
 
-def test_what_is_not_green_is_counted_at_the_top_of_the_ticket_with_a_jump_to_it(tmp_path):
-    """Eval run 10: the top of the column read solid green, and the one `missing` and four
-    `partly` sentences took a scroll to find. One line inside the frame, under its header
-    strip (so the two frames still start level), counts them; each count links to its
-    first sentence and the script walks on to the next per press."""
+def test_no_count_of_what_is_not_green_sits_over_the_ticket(tmp_path):
+    """Victor, 5 Oct 2026: the "8 of 27 claims not fully covered: 1 missing · 6 partially"
+    line over the prose is gone, its jump script and its styles with it — the colours in
+    the ticket say it where the reader is looking."""
     g, entries, page, pirate = _render(tmp_path)
-    ticket = page[page.index('<div class="rm-ticket">'):]
-    assert ticket.index('class="rm-tally"') < ticket.index('class="rm-issue"')
-    at = ticket.index('class="rm-tally"')
-    tally = ticket[at:ticket.index("</p>", at)]
-    claims = [e for e in entries if e["coverage"] != "n/a"]
-    off = sum(1 for e in claims if e["coverage"] != "covered")
-    assert f"{off} of {len(claims)} claims not fully covered" in tally
-    assert (f'<a class="rm-lg rm-jump" data-cov="missing" href="#rm-s-{pirate}" '
-            'data-tip="Jump to it">1 missing</a>') in tally
-    assert f'id="rm-s-{pirate}"' in page, "the link lands on the sentence itself"
+    assert "rm-tally" not in page and "claims not fully covered" not in page
+    assert "rm-jump" not in page.split('class="rm-data"')[0].split("</style>")[-1]
+    assert f'id="rm-s-{pirate}"' in page, "a sentence keeps its anchor"
     js = (S.ASSETS / "reqmap.js").read_text(encoding="utf-8")
-    assert "closest('.rm-jump')" in js and "j.dataset.i=i" in js
-    # Everything green is said too: "none" must not look like "not counted".
-    green = [dict(e, coverage="covered") for e in entries]
-    root = tmp_path / "repo"
-    all_green = S.render(g["ticket"], g["blocks"], g["rows"], green, root)
-    assert (f'<p class="rm-tally" data-all="yes" data-tip="{S.AI_NOTE}">All {len(claims)} '
-            "claims fully covered by a test.</p>") in all_green
-    assert "rm-jump" not in all_green.split('class="rm-data"')[0].split("</style>")[-1]
+    css = (S.ASSETS / "reqmap.css").read_text(encoding="utf-8")
+    assert "rm-jump" not in js and "rm-tally" not in css and "rm-jump" not in css
+
+
+def test_a_partial_or_narrowed_sentence_says_on_its_hover_what_it_lacks(tmp_path):
+    """Victor, 5 Oct 2026: the hatch says "not all of it"; the hover says which part, in
+    the matching pass's own words (`gap`), without a click."""
+    root, review = _repo(tmp_path)
+    g = S.gather(S._spec(review), review, root)
+    pirate = next(sid for sid in g["scripted"]["open"])
+    gap = "The tie-break on owner ID is not asserted."
+    model = {"schema": "test-mapping/1", "sentences": [
+        {"id": pirate, "coverage": "partial", "tests": [], "gap": gap}]}
+    page = S.render(g["ticket"], g["blocks"], g["rows"],
+                    S.merge(g["sentences"], g["scripted"], model), root)
+    data = json.loads(page.split('class="rm-data">')[1].split("</script>")[0])
+    assert data["sentences"][pirate]["cov"] == "partly"
+    assert data["sentences"][pirate]["gap"] == gap
+    js = (S.ASSETS / "reqmap.js").read_text(encoding="utf-8")
+    assert ("if((s.cov==='partly'||s.cov==='narrowed')&&s.gap)\n"
+            "      tip+='<span class=\"rm-gaptip\">'+esc(s.gap)+'</span>';") in js
+    css = (S.ASSETS / "reqmap.css").read_text(encoding="utf-8")
+    assert ".tip .rm-gaptip{" in css, "the bubble lives on <body>, outside .reqmap"
 
 
 def test_the_card_says_pr_only_when_there_is_a_pull_request(tmp_path):
@@ -519,8 +519,8 @@ def test_the_card_says_pr_only_when_there_is_a_pull_request(tmp_path):
     S.write_fragment(spec, review, root)
     frag = (review / S.FRAGMENT).read_text()
     assert T.COVCARD_WHO in frag and "in this PR" not in frag
-    # Victor, 4 Oct 2026: "Covering tests", which names no PR either way.
-    assert T.COVCARD_WHO == T.COVCARD_WHO_PR == "Covering tests"
+    # Victor, 5 Oct 2026: "Tests covering the change set", which names no PR either way.
+    assert T.COVCARD_WHO == T.COVCARD_WHO_PR == "Tests covering the change set"
     spec["pr"]["number"] = 12
     S.write_fragment(spec, review, root)
     assert T.COVCARD_WHO_PR in (review / S.FRAGMENT).read_text()
@@ -556,9 +556,9 @@ def test_a_sentence_nobody_paired_is_not_called_missing(tmp_path):
     g = S.gather(S._spec(review), review, root)
     entries = S.merge(g["sentences"], g["scripted"], None)
     page = S.render(g["ticket"], g["blocks"], g["rows"], entries, root)
-    # One sentence wears it; the tally over the ticket counts it in the same words.
+    # One sentence wears it, and nothing calls it missing.
     assert page.count('data-cov="unmapped" role=') == 1
-    assert '>1 not paired yet</a>' in page and ">1 missing<" not in page
+    assert 'data-cov="missing" role=' not in page
     assert S.split_counts(entries)["sentences"]["unmapped"] == 1
 
 
@@ -594,7 +594,7 @@ def test_the_build_relays_a_scripted_matrix_without_rewording_its_card(tmp_path)
     S.write_fragment(S._spec(review), review, root)
     T = importlib.import_module("hrbuild.tabs.tests")
     out = T.reqmap_layout((review / S.FRAGMENT).read_text(), S._spec(review), review, root)
-    assert 'class="rm-head"' in out and "Issue <span class=\"rm-num\">#7</span>" in out
+    assert 'class="tabtitle rm-head"' in out and "Issue <span class=\"rm-num\">#7</span>" in out
     assert T.COVCARD_WHO in out and T.CARD_WHO not in out
 
 

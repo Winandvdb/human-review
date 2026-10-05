@@ -93,7 +93,8 @@ def test_the_colour_legend_moves_under_the_ticket_it_explains(tmp_path):
 def test_the_surface_key_moves_onto_the_title_row_as_a_filter(tmp_path):
     """Over the card, level with the ticket's title, and each kind a checked checkbox."""
     out = _laid_out(tmp_path)
-    head, cats, side = _order(out, 'class="rm-head"', 'class="rm-cats"', 'class="rm-side"')
+    head, cats, side = _order(out, 'class="tabtitle rm-head"', 'class="rm-cats"',
+                              'class="rm-side"')
     assert head < cats < side
     assert '<label class="rm-catf"><input type="checkbox" checked data-cat="e2e">' in out
     assert ".reqmap .rm-t[data-catoff=yes]{display:none}" in out
@@ -106,7 +107,7 @@ def test_the_ticket_title_is_a_link_over_the_ticket(tmp_path):
     out = _laid_out(tmp_path)
     assert ('<a class="rm-title" href="https://github.com/victorrentea/petclinic/issues/37">'
             'Issue <span class="rm-num">#37</span>: Link Visit with Vet</a>') in out
-    head, ticket = _order(out, 'class="rm-head"', 'class="rm-ticket"')
+    head, ticket = _order(out, 'class="tabtitle rm-head"', 'class="rm-ticket"')
     assert head < ticket
 
 
@@ -118,7 +119,7 @@ def test_the_title_is_a_row_of_the_grid_and_not_a_child_of_the_left_column(tmp_p
     together — at any width, with no measured constant to keep in step."""
     out = _laid_out(tmp_path)
     body = out.index('<div class="rm-body">')
-    head = out.index('class="rm-head"')
+    head = out.index('class="tabtitle rm-head"')
     text = out.index('class="rm-text"')
     assert body < head < text
     css = out[out.rindex("<style>"):]
@@ -259,7 +260,7 @@ def test_a_ticket_nobody_can_resolve_costs_a_heading_and_not_the_tab(monkeypatch
     assert 'class="rm-title"' not in out and 'class="rm-num"' not in out
     # The row itself stays: the coverage switch lives on it and must not come and go
     # with `gh`'s mood.
-    assert 'class="rm-head"' in out
+    assert 'class="tabtitle rm-head"' in out
     # …and the columns are still laid out, which is what keeps them level.
     assert "grid-template-columns:1fr 50%" in out
 
@@ -353,10 +354,11 @@ def test_the_coverage_switch_sits_on_the_ticket_header_and_starts_checked(tmp_pa
     ticket as its author wrote it. The stylesheet takes the fills off under
     `data-semcov="off"`, which the one listener sets and clears."""
     out = _laid_out(tmp_path)
-    head = out[out.index('class="rm-head"'):out.index('class="rm-text"')]
+    head = out[out.index('class="tabtitle rm-head"'):out.index('class="rm-text"')]
     assert "rm-semcov" not in head, "not on the title row any more"
-    assert ('opened on Jun 13, 2026</span><label class="rm-semcov"><input type="checkbox" '
-            'checked> Semantic Test Coverage</label></div>') in out
+    assert ('opened on Jun 13, 2026</span><label class="rm-semcov" data-tip="Claim ↔ test '
+            'matching as inferred by AI: a judgement, not a measurement"><input '
+            'type="checkbox" checked> Semantic Test Coverage</label></div>') in out
     assert out.count('class="rm-semcov"') == 1, "only the ticket's header, not the tests'"
     css = out[out.rindex("<style>"):]
     assert ".reqmap[data-semcov=off] .rm-f[data-cov]{background:none}" in css

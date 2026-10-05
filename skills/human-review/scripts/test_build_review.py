@@ -1999,9 +1999,11 @@ def test_the_ledger_is_one_line_of_counts_with_the_lists_folded_under_it():
     assert out.startswith('<details class="tledger" id="test-ledger"><summary')
     assert "<details class=\"tledger\" id=\"test-ledger\" open" not in out, "folded"
     face = out[out.index("<summary"):out.index("</summary>")]
-    assert ('<span class="toff">1 stopped running</span> · <span class="added">+1 new</span>'
-            ' · <span class="removed">\u22122 gone</span> · '
-            f'<span class="changed">{build.PENCIL}1 edited</span>') in face
+    # Signs and counts only (Victor, 5 Oct 2026); the word each stands for is its hover.
+    assert ('<span class="toff">1 stopped running</span> · '
+            '<span class="added" data-tip="1 new test">+1</span> '
+            '<span class="removed" data-tip="2 tests gone">\u22122</span> '
+            f'<span class="changed" data-tip="1 test edited">{build.PENCIL}1</span>') in face
     # The untouched rest is a hover on the counts, not a sentence under them.
     assert 'data-tip="1 more test in the files this change set touched' in face
     assert '<p class="sub">' not in out and "<p" not in out

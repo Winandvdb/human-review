@@ -352,18 +352,31 @@
   svg.setAttribute('class','rm-wires');svg.setAttribute('aria-hidden','true');
   wrap.appendChild(svg);
 
-  // Each column scrolls on its own (tests.py REQMAP_CSS). A click on one side brings the
-  // other side's matches into view: as many of them as fit, the first at the top. Nothing
-  // moves when they are all on screen already, or when the column does not scroll
-  // (stacked, under 900px, the page scrolls both).
+  // Each column scrolls on its own (tests.py REQMAP_CSS) - under its header strip, which
+  // stays put: what scrolls is the ticket's prose (`.rm-issue`) and the card's list
+  // (`.rm-list`), not the column. A click on one side brings the other side's matches into
+  // view: as many of them as fit, the first at the top. Nothing moves when they are all
+  // on screen already, or when nothing in the column scrolls (stacked, under 900px, the
+  // page scrolls both).
   var textCol=root.querySelector('.rm-text');
+  function scroller(pane){
+    if(!pane)return null;
+    var c=[pane].concat(Array.prototype.slice.call(pane.querySelectorAll('.rm-issue,.rm-list')));
+    for(var i=0;i<c.length;i++)
+      if(c[i].scrollHeight>c[i].clientHeight+1&&/auto|scroll/.test(getComputedStyle(c[i]).overflowY))
+        return c[i];
+    return null;
+  }
+  // The part of a column a reader can see things in: its scroller, or the column itself.
+  function view(pane){var sc=scroller(pane);return (sc||pane).getBoundingClientRect();}
   function bringIn(pane,els){
     els=els.filter(function(e){return e&&e.getClientRects().length;});
-    if(!pane||!els.length||pane.scrollHeight<=pane.clientHeight)return;
-    var p=pane.getBoundingClientRect(),top=Infinity,inView=true;
+    var sc=scroller(pane);
+    if(!sc||!els.length)return;
+    var p=sc.getBoundingClientRect(),top=Infinity,inView=true;
     els.forEach(function(e){var r=e.getBoundingClientRect();
       top=Math.min(top,r.top);if(r.top<p.top||r.bottom>p.bottom)inView=false;});
-    if(!inView)pane.scrollBy({top:top-p.top-8,behavior:'smooth'});
+    if(!inView)sc.scrollBy({top:top-p.top-8,behavior:'smooth'});
   }
 
   function draw(){
@@ -383,8 +396,9 @@
         // The card scrolls inside itself, so the row can be above or below what it shows.
         // The wire then lands on the card's edge at the point the row left it, which is
         // the direction the reader has to scroll.
-        ay=Math.min(Math.max((r.top+r.bottom)/2,Math.max(c.top,sd.top)+8),
-                    Math.min(c.bottom,sd.bottom)-8)-base.top,d='';
+        sv=view(sideCol),
+        ay=Math.min(Math.max((r.top+r.bottom)/2,Math.max(c.top,sv.top)+8),
+                    Math.min(c.bottom,sv.bottom)-8)-base.top,d='';
     (COVERS[wired]||[]).forEach(function(sid){
       var f=root.querySelector('.rm-f[data-s="'+sid+'"]');if(!f)return;
       // A sentence that wraps is several rectangles, and the wire leaves from the middle
@@ -397,7 +411,7 @@
       // the dot is what makes that a landing rather than a line running out of page.
       // The ticket scrolls inside its column too: a sentence above or below what it shows
       // gets its wire on the column's edge, the way the card's rows do.
-      var tc=textCol?textCol.getBoundingClientRect():t,
+      var tc=textCol?view(textCol):t,
           mid=Math.min(Math.max((top+bot)/2,tc.top+8),tc.bottom-8)-base.top,
           dx=Math.max(12,Math.abs(ay-mid)*0.16);
       d+='<path class="rm-wire" d="M'+x0+' '+mid+'C'+(x0+dx)+' '+mid+' '
@@ -536,22 +550,6 @@
   }
   root.addEventListener('click',function(e){
     var f=e.target.closest('.rm-f');if(f&&root.contains(f))open(f.dataset.s);});
-  // semcov: the tally over the ticket - "1 missing", "4 partially" - jumps to the sentences
-  // it counts. Each press moves on to the next of that state, wrapping, and selects it the
-  // way a click on the sentence would, so its tests and its blind spot come up at once.
-  // The href is the first one, for a reader with no script; with one, the page's own
-  // hash is left alone (a `#rm-s-…` in the URL would fight the tab router).
-  root.addEventListener('click',function(e){
-    var j=e.target.closest&&e.target.closest('.rm-jump');if(!j||!root.contains(j))return;
-    var all=root.querySelectorAll('.rm-issue .rm-f[data-cov="'+j.dataset.cov+'"]');
-    if(!all.length)return;
-    e.preventDefault();
-    var i=(+(j.dataset.i||-1)+1)%all.length;j.dataset.i=i;
-    all[i].scrollIntoView({block:'center',behavior:'smooth'});
-    // `open` on the sentence already picked would put it down again; a jump never does.
-    if(!(cur&&cur.dataset.s===all[i].dataset.s))open(all[i].dataset.s);
-    try{all[i].focus({preventScroll:true});}catch(_){}
-  });
   root.addEventListener('keydown',function(e){
     var f=e.target.closest&&e.target.closest('.rm-f');
     if(f&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(f.dataset.s);}});
@@ -572,6 +570,11 @@
         :s.cov==='narrowed'?'<span class="rm-do"> \u00B7 narrowed by '
           +(s.decisionName?esc(s.decisionName):'a recorded decision')+'</span>'
         :'<span class="rm-do"> \u00B7 '+(s.by==='model'?'🤖 checked by AI':'paired by script')+'</span>';
+    // What a partial or narrowed sentence lacks, in the matching pass's own words (its
+    // `gap`): the hatch says "not all of it", and only the hover can say which part
+    // without a click (Victor, 5 Oct 2026).
+    if((s.cov==='partly'||s.cov==='narrowed')&&s.gap)
+      tip+='<span class="rm-gaptip">'+esc(s.gap)+'</span>';
     f.setAttribute('data-tip-html',tip);
     f.removeAttribute('data-tip');
   });

@@ -1956,16 +1956,10 @@ def _sentence_html(s: dict, entry: dict) -> str:
         tip += " — by " + decision_name(entry)
     src = ' data-src="model"' if entry.get("by") == "model" else ""
     # The `id` goes last: `class="rm-f" data-s=` is the shape two readers parse
-    # (`tests.py:model_pairing`, `reference_pairs`); the id is what the tally jumps to.
+    # (`tests.py:model_pairing`, `reference_pairs`); the id is a sentence's anchor.
     return (f'<span class="rm-f" data-s="{s["id"]}" data-cov="{COV_ATTR[cov]}"{src} '
             f'role="button" tabindex="0" data-tip="{html.escape(tip, quote=True)}" '
             f'id="rm-s-{s["id"]}">{inner}</span>')
-
-
-#: Who read the tests, said once — on the hover of the tally line, never as a line of its
-#: own (eval run 11: the reviewer is busy, and a line that only says where the colours came
-#: from changes no decision) — instead of a 🤖 after every sentence.
-AI_NOTE = "🤖 AI-checked; hover a sentence for details"
 
 
 def _ticket_html(ticket: dict, blocks: list[dict], entries: dict) -> str:
@@ -1999,58 +1993,18 @@ def _ticket_html(ticket: dict, blocks: list[dict], entries: dict) -> str:
     # under the header strip. It used to sit *in* the strip as "Requirement text: GitHub
     # issue #25, named by content.json pr.ticket" — a file and a key a reviewer never needs,
     # squeezing the author and the date into a four-line column beside it.
-    # Who coloured the sentences, said once and on a hover: a sentence's own hover says
-    # whether AI read its tests or the script paired it — a robot after every clause
-    # (thirty on eval run 8) made the column unreadable, and a line of its own (run 11) was
-    # one more line between the reviewer and the ticket.
-    ai = AI_NOTE if any(e.get("by") == "model" for e in entries.values()) else ""
+    # Who coloured the sentences is said on each sentence's own hover — whether AI read
+    # its tests or the script paired it. A robot after every clause (thirty on eval run 8)
+    # made the column unreadable, and a line of its own (run 11) was one more line between
+    # the reviewer and the ticket.
+    # No count of the sentences that are not green over the prose either (Victor, 5 Oct
+    # 2026): "8 of 27 claims not fully covered: 1 missing · 6 partially · 1 narrowed" was
+    # one more strip pinned over the ticket once the column scrolls on its own, and the
+    # colours in the prose already say it where the reader is looking.
     src = (f'<p class="rm-src">{html.escape(ticket.get("origin") or "")}</p>'
            if ticket.get("origin") else "")
     return ('<div class="rm-ticket"><div class="rm-tkhead">' + head + '</div>' + src
-            + tally_html(blocks, entries, ai)
             + '<div class="rm-issue">' + "".join(body) + "</div></div>")
-
-
-#: The states a sentence can be in that are not "a test asserts all of it", worst first,
-#: with the word the tally says — the legend's own word, so the two read as one key.
-TALLY = (("missing", "missing"), ("partial", "partially"), ("exercised", "executed"),
-         ("unconfirmed", "unconfirmed"), ("unmapped", "not paired yet"),
-         ("narrowed", "narrowed"))
-
-
-def tally_html(blocks: list[dict], entries: dict, who: str = "") -> str:
-    """One line at the top of the ticket frame counting the sentences that are NOT solid
-    green, each count a link that jumps to the first of them (and, in `reqmap.js`, on to
-    the next one per press).
-
-    Eval run 10: the top of the column read solid green, and the one `missing` and four
-    `partly` sentences took a scroll to find — nothing above the fold said they existed.
-    Said when everything is green too, so a reader can tell "none" from "not counted".
-    Inside the frame, under its header strip, so the ticket and the card still start on
-    one line."""
-    order = [s["id"] for s in ticket_sentences(blocks)]
-    claims = [entries[sid] for sid in order if sid in entries
-              and entries[sid]["coverage"] != "n/a"]
-    if not claims:
-        return ""
-    parts = []
-    for cov, word in TALLY:
-        hit = [e for e in claims if e["coverage"] == cov]
-        if hit:
-            tip = ("Jump to it" if len(hit) == 1
-                   else "Jump to the first — press again for the next")
-            parts.append(f'<a class="rm-lg rm-jump" data-cov="{COV_ATTR[cov]}" '
-                         f'href="#rm-s-{hit[0]["id"]}" data-tip="{tip}">'
-                         f'{len(hit)} {word}</a>')
-    n = len(claims)
-    # `who` read the tests (`AI_NOTE`), on the hover of the line's own words.
-    tip = f' data-tip="{html.escape(who, quote=True)}"' if who else ""
-    if not parts:
-        return (f'<p class="rm-tally" data-all="yes"{tip}>All {n} claim{"s" if n != 1 else ""} '
-                "fully covered by a test.</p>")
-    off = n - sum(1 for e in claims if e["coverage"] == "covered")
-    return (f'<p class="rm-tally"><span class="rm-tallyt"{tip}>{off} of {n} claims not fully '
-            f'covered:</span> ' + " ".join(parts) + "</p>")
 
 
 def _sentence_data(entry: dict, rows_by: dict) -> dict:

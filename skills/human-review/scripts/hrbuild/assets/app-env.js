@@ -193,11 +193,11 @@
            + (about ? ': ' + about : ' — a named set of extra demo rows this '
                                      + 'environment ships');
   }
-  // With fixtures the group is one verb and its arguments — "Reset DB to: [seed]
-  // [seed + green]" — and without, the seed's button says the whole thing on its own.
+  // With fixtures the group is one verb and its arguments — "DB Fixture: [Default]
+  // [green]" — and without, the seed's button says the whole thing on its own.
   function nameResets(any) {
     if (resetsTo) resetsTo.hidden = !any;
-    if (reset) reset.textContent = any ? 'seed' : 'Reset DB';
+    if (reset) reset.textContent = any ? 'Default' : 'Reset DB';
   }
   // A fixture as the environment lists it: a bare name, or `{name, about}` — and a
   // top-level `about: {name: text}` map is read too, so a sidecar can describe its
@@ -232,9 +232,10 @@
         btn.className = 'appenv-reset';
         btn.dataset.fixture = f.name;
         if (f.about) btn.dataset.about = f.about;
-        // "seed + green", not "green": the button restores the seed and adds the
-        // fixture's rows to it, and the face says so before anybody hovers.
-        btn.textContent = 'seed + ' + f.name;
+        // The bare name: "DB Fixture:" in front of it already says what it is, and that
+        // it lands on top of the seed is in the hover (5 Oct 2026: "seed + green" was the
+        // same word "seed" on every button). The name sent on click is data-fixture.
+        btn.textContent = f.name;
         gate(btn, true, resetTip(btn));
         resets.appendChild(btn);
       });

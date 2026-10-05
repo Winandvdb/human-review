@@ -335,6 +335,25 @@ def test_each_voice_the_recorder_cut_is_a_radio_button_under_the_player(tmp_path
     assert out.count("data-tip=") == 1
 
 
+def test_with_a_deployed_app_row_the_voices_sit_at_its_right_end(tmp_path):
+    """Under the player the radios were a line of their own, height the film and its
+    transcript did not get; the row above the film has an empty right half."""
+    s = _video_dir(tmp_path, filmed=True)
+    s["runtime"] = {"command": "up", "stop": "down", "reset": "/__reset"}
+    (tmp_path / "assets" / "f.voice-discovery.webm").write_bytes(b"\x1aE\xdf\xa3")
+    (tmp_path / "assets" / "f.voices.json").write_text(json.dumps([
+        {"key": "discovery", "label": "Discovery", "video": "f.voice-discovery.webm"}]),
+        encoding="utf-8")
+    out = build.video_html(s, tmp_path)
+    assert out.count('class="voice-switch"') == 1
+    assert out.index("appenv-reset") < out.index('class="voice-switch"') < out.index("vidwrap")
+    assert "vidcol" not in out, "nothing left under the player"
+    rule = build.CSS[build.CSS.index(".appenv .voice-switch"):]
+    assert "margin:0 0 0 auto" in rule[:rule.index("}")], "pushed to the right end"
+    # caption.js finds the group by the film it switches, not as a child of the wrap.
+    assert "wrap.querySelectorAll('.voice-switch" not in build.CAPTION_JS
+
+
 def test_a_voice_declares_its_own_hover_name(tmp_path):
     s = _video_dir(tmp_path, filmed=True)
     (tmp_path / "assets" / "f.voice-discovery.webm").write_bytes(b"\x1aE\xdf\xa3")

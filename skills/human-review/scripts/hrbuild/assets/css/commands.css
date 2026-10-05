@@ -390,9 +390,14 @@ button.chip-rerun-ai .rr-ico { font-size:1em; vertical-align:-.05em; }
 .appenv button { font:inherit; cursor:pointer; border:1px solid var(--line); border-radius:4px;
     background:var(--bg); color:var(--fg); padding:.2rem .55rem; white-space:nowrap; }
 .appenv button:hover { background:var(--accent-soft); }
+/* One size for the whole row, the bar's own 12.5px: Start and Stop otherwise shrink to the
+    command pills' .92em, their mark grows to 1.1em and the address drops to a 12px mono —
+    four sizes on one line. */
+.appenv .cmd .cmd-run.has-word, .appenv .cmd .cmd-copy.has-word,
+.appenv .cmd .has-word .cmd-ico { font-size:inherit; }
 /* The address *is* the link — one thing to read and one thing to click, carrying the
     port this instance happened to get. Shown only while something answers there. */
-.appenv .appenv-url { font:12px/1.6 ui-monospace,Menlo,monospace; color:var(--link);
+.appenv .appenv-url { font:1em/1.6 ui-monospace,Menlo,monospace; color:var(--link);
     text-decoration:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .appenv .appenv-url:hover { text-decoration:underline; }
 /* Reset is the exception to the row's one-control-per-verb rule and the only thing in it
@@ -400,11 +405,11 @@ button.chip-rerun-ai .rr-ico { font-size:1em; vertical-align:-.05em; }
     answers — so there is no line for anybody to paste and nothing for a clipboard to be
     the honest form of. A button that always fails is worse than an absent one. */
 .appenv:not(.appenv-served) .appenv-resets { display:none; }
-/* "Reset DB to:", then the seed and one button per fixture the environment reported. One
+/* "DB Fixture:", then the seed and one button per fixture the environment reported. One
     group, because they are one verb with an argument. The lead words explain the buttons
-    on hover, and look it: dotted underline, help cursor. */
+    on hover; no dotted underline, which in this row read as one more link. */
 .appenv .appenv-resets { display:inline-flex; flex-wrap:wrap; gap:.3rem; align-items:center; }
-.appenv .appenv-resets-to[data-tip] { border-bottom:1px dotted currentColor; cursor:help; }
+.appenv .appenv-resets-to[data-tip] { cursor:help; }
 /* Three states, and the page must never claim the third without having asked: unknown
     until the probe answers, then live — where the address speaks for it and the pill
     steps out of the way — or down, where "Offline" is the whole truth there is. */

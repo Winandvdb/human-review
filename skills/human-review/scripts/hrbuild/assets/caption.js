@@ -27,11 +27,20 @@ document.querySelectorAll('.vidwrap').forEach(function (wrap) {
     });
   };
 
-  // The voice switch: the same take in another voice, one radio button per film under the
-  // player. The swap lands on the same caption, as far into it as the reader was, and
-  // playing stays playing. The choice is remembered per browser — whoever picked a voice
-  // once wants it on the next review too.
-  var radios = Array.prototype.slice.call(wrap.querySelectorAll('.voice-switch input'));
+  // The voice switch: the same take in another voice, one radio button per film. The swap
+  // lands on the same caption, as far into it as the reader was, and playing stays
+  // playing. The choice is remembered per browser — whoever picked a voice once wants it
+  // on the next review too.
+  // It sits in the Deployed app row above this wrap (under the player only when there is
+  // no row), so it is found by what it switches, not by where it is: the group whose
+  // standard radio plays this film's own src.
+  var src = video.getAttribute('src');
+  var group = Array.prototype.filter.call(
+    (wrap.closest('.panel') || document).querySelectorAll('.voice-switch'), function (g) {
+      var std = g.querySelector('input[value=""]');
+      return std && std.dataset.src === src;
+    })[0];
+  var radios = group ? Array.prototype.slice.call(group.querySelectorAll('input')) : [];
   if (radios.length) {
     var swap = function (radio) {
       var t = video.currentTime, playing = !video.paused;

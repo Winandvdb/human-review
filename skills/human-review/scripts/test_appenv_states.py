@@ -192,12 +192,15 @@ def test_live_draws_one_reset_button_per_fixture_the_environment_lists(row):
     so a SQL file added to the project is a button on the next probe, with no rebuild."""
     seen = row(served=True, live=True,
                fixtures={"ok": True, "fixtures": ["green", "busy-day"], "current": "green"})
-    # "Reset DB to: [seed] [seed + green] [seed + busy-day]" — one verb, and its arguments;
-    # each fixture's face says it lands on top of the seed (eval run 6: "green" alone was
-    # a word nothing on the page explained).
-    assert seen["to"] == "Reset DB to:"
-    assert seen["reset"] == "seed"
-    assert seen["fixtures"] == ["seed + green", "seed + busy-day"]
+    # "DB Fixture: [Default] [green] [busy-day]" — one verb, and its arguments. The face is
+    # the bare name the environment gave; that it lands on top of the seed is the hover.
+    assert seen["to"] == "DB Fixture:"
+    assert seen["reset"] == "Default"
+    assert seen["fixtures"] == ["green", "busy-day"]
+    # Only the face changed: the click still sends the name the environment listed.
+    sent = row.page.evaluate("[...document.querySelectorAll('.appenv-reset')]"
+                             ".map(b => b.dataset.fixture)")
+    assert sent == ["", "green", "busy-day"]
 
 
 def test_a_fixture_the_environment_describes_carries_its_description(row):
@@ -209,8 +212,9 @@ def test_a_fixture_the_environment_describes_carries_its_description(row):
                                                        "busy-day", "bare"]})
     tips = row.page.evaluate("""() => [...document.querySelectorAll('.appenv-reset')]
         .map(b => [b.textContent, b.getAttribute('data-tip')])""")
-    assert tips[0] == ["seed", "Back to the starting data"]
-    assert tips[1][0] == "seed + green" and tips[1][1].endswith(": the Weasley household")
+    assert tips[0] == ["Default", "Back to the starting data"]
+    assert tips[1][0] == "green" and tips[1][1].endswith(": the Weasley household")
+    assert "on top of it" in tips[1][1], "the hover still says it lands on the seed"
     assert tips[2][1].endswith(": 40 visits today")
     assert "a named set of extra demo rows" in tips[3][1]
     lead = row.page.evaluate("document.querySelector('.appenv-resets-to').dataset.tip")

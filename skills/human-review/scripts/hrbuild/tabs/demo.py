@@ -162,7 +162,7 @@ def voice_films(rel: str, out_dir: Path) -> list[tuple[str, str, str, list, str]
 
 def voice_switch(rel: str, voices: list[tuple[str, str, str, list, str]],
                  times: list | None = None) -> str:
-    """The radio buttons under the player: the offline voice first, then each cloned one.
+    """The voice radio buttons: the offline voice first, then each cloned one.
     `data-ts` is that film's cue times, which caption.js maps the reader's moment through."""
     if not voices:
         return ""
@@ -319,7 +319,6 @@ def video_html(s, out_dir: Path) -> str:
     voices = voice_films(rel, out_dir) if (out_dir / rel).is_file() else []
     # The same take, cue for cue, in every voice, so caption.js swaps the source and keeps
     # the second the reader was at; the transcript and its timestamps are shared by all.
-    # The radio buttons sit right under the player they switch.
     switch = voice_switch(rel, voices, [c["t"] for c in cues if "t" in c]
                           if any(v[3] for v in voices) else [])
     player = (f'<video controls preload="metadata" src="{html.escape(rel)}"></video>'
@@ -345,8 +344,11 @@ def video_html(s, out_dir: Path) -> str:
     # two-column grid, so a band emitted as one of its children takes a column and stands
     # next to the picture instead of across the top of it. What it contradicts is the
     # picture, so it has to be the thing read first, full width.
-    head = runtime_html(rt) if rt else ""
-    if switch:
+    # The voices ride at the right end of the Deployed app row: under the player they were
+    # a line of their own, height the film and its transcript did not get (5 Oct 2026). A
+    # page with no such row keeps them under the player, the one place left for them.
+    head = runtime_html(rt, switch) if rt else ""
+    if switch and not rt:
         player = f'<div class="vidcol">{player}{switch}</div>'
     return (head + video_verdict_html(rel, out_dir)
             + f'<div class="vidwrap">{player}<ol class="transcript">{items}</ol></div>')

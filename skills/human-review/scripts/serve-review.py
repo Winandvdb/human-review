@@ -356,9 +356,32 @@ def owning_windows(target: Path):
     return [(e, i) for _, e, i in ranked]
 
 
-def open_in_editor(path, line):
+# The longest `path:from-to` a click may ask the editor to select and fade the rest around.
+# A range wider than this is a whole file in all but name; it opens at its first line.
+MAX_SPAN = 2000
+
+
+def line_span(q: dict) -> tuple[int, int | None]:
+    """`(line, endLine)` from a click's query: `line` defaulting to 1, `endLine` only for a
+    real range — a positive int past `line`, no wider than `MAX_SPAN` lines. Anything else
+    drops the end and keeps the line, because a malformed range is still a good line."""
+    def num(key):
+        raw = (q.get(key) or [""])[0]
+        return int(raw) if raw.isdigit() and int(raw) > 0 else None
+    line = num("line") or 1
+    end = num("endLine")
+    if end is None or end <= line or end - line + 1 > MAX_SPAN:
+        return line, None
+    return line, end
+
+
+def open_in_editor(path, line, end_line=None):
     """Land the reader in the class. Through the VS Code window that has this file's
     folder open where the bridge is installed, and through the OS otherwise.
+
+    `end_line` makes it a range: the bridge selects `line..end_line`, highlights it and
+    fades the rest until the reader moves. Sent only when there is one, so a bridge too
+    old to know it still gets the request it always did. The OS route cannot carry it.
 
     The page cannot do this itself: its references are `vscode://file/...` links, and the
     embedded browser's iframe is sandboxed under a `frame-src *` CSP, so a webview cannot
@@ -379,7 +402,8 @@ def open_in_editor(path, line):
                     # Measured — the file opened and the frontmost app never changed, so
                     # the click read as a no-op and the file waited to be found by
                     # accident. The bridge raises the window natively.
-                    data=json.dumps({"path": str(path), "line": line, "focus": True}).encode(),
+                    data=json.dumps({"path": str(path), "line": line, "focus": True,
+                                     **({"endLine": end_line} if end_line else {})}).encode(),
                     headers={"x-relay-token": entry["token"], "Content-Type": "application/json"})
                 urllib.request.urlopen(req, timeout=5).read()
                 return "relay"
@@ -397,7 +421,7 @@ def open_in_editor(path, line):
     return "os"
 
 
-def review_open(path, line, sha, root, branch):
+def review_open(path, line, sha, root, branch, end_line=None):
     """Ask the editor bridge to open `path` in a window holding the *reviewed* version of it.
 
     Any window will do as the one asked: the extension compares the file at each window's
@@ -406,7 +430,8 @@ def review_open(path, line, sha, root, branch):
     window that answers, or None when no bridge is listening — then the caller opens the file
     the way it always has, because without the bridge there is nothing to check against."""
     payload = json.dumps({"file": str(path), "line": line, "sha": sha, "root": root,
-                          "branch": branch}).encode()
+                          "branch": branch,
+                          **({"endLine": end_line} if end_line else {})}).encode()
     for f in sorted((Path.home() / ".walkie-talkie" / "ide").glob("vscode-*.json")):
         try:
             entry = json.loads(f.read_text())
@@ -1707,7 +1732,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.split("?")[0] == OPEN:
             q = urllib.parse.parse_qs(self.path.partition("?")[2])
             target = Path(q.get("path", [""])[0])
-            line = int(q.get("line", ["1"])[0] or 1)
+            line, end = line_span(q)
+            # Only a range travels with an end; a single line goes out exactly as before.
+            span = {"end_line": end} if end else {}
             ok = ROOT is not None and target.is_file()
             if ok:
                 try:
@@ -1718,7 +1745,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # for whatever is at this path now; the bridge's answer goes back as it is.
             sha = q.get("sha", [""])[0]
             answer = ok and sha and review_open(target, line, sha, q.get("root", [""])[0],
-                                                q.get("branch", [""])[0])
+                                                q.get("branch", [""])[0], **span)
             if answer:
                 status, body = answer
                 if status == 200:
@@ -1735,7 +1762,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 # night this was written, it could not be seen from *inside* either,
                 # because a 3am screenshot of a sleeping display is a black rectangle.
                 Handler.opens += 1
-                open_in_editor(target, line)
+                open_in_editor(target, line, **span)
             # 204 either way: the click must never navigate the panel away from the
             # guide, and a reader who clicked a stale reference wants the page they
             # were reading, not an error document in place of it.

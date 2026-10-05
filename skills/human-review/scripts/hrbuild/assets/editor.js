@@ -89,6 +89,26 @@
     return m ? { path: m[1], line: m[2] || '1' } : null;
   }
 
+  // The href can only carry a line, but the face often names a range: `VisitMapper.java:51-53`,
+  // or a multi-span quote's `89,93-95`. Its last number is where the reference ends, sent as
+  // `endLine` so the editor selects the whole range and fades the rest. Only when the face
+  // starts on the very line the href opens at — a face that says something else is not
+  // describing this link, and a single-line reference sends just its line.
+  function endOf(link, line) {
+    var said = [link.textContent || '', link.getAttribute('data-tip') || ''];
+    for (var i = 0; i < said.length; i++) {
+      var m = /:(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)\s*$/.exec(said[i].trim());
+      if (!m) continue;
+      var n = m[1].split(/[-,]/);
+      if (n[0] === String(line) && Number(n[n.length - 1]) > Number(line)) return n[n.length - 1];
+    }
+    return null;
+  }
+  function endQuery(link, line) {
+    var end = endOf(link, line);
+    return end ? '&endLine=' + end : '';
+  }
+
   // The one button on the page that copies something that is not a source reference:
   // the command that re-renders the hand-drawn diagram. It lives in this handler because
   // `copy` and `flash` do, and a second clipboard-and-toast implementation for one button
@@ -282,13 +302,14 @@
       && parse(link.getAttribute('href'));
     if (aimed) {
       window.location.href = 'vscode://' + STAMP.hrOpenUri + '/review-open?file='
-        + encodeURIComponent(aimed.path) + '&line=' + aimed.line + '&' + commitQuery();
+        + encodeURIComponent(aimed.path) + '&line=' + aimed.line + endQuery(link, aimed.line)
+        + '&' + commitQuery();
       return;
     }
     var ref2 = SERVED && parse(link.getAttribute('href'));
     if (ref2) {
       fetch('/__open__?path=' + encodeURIComponent(ref2.path) + '&line=' + ref2.line
-            + (STAMP.hrHead ? '&' + commitQuery() : ''))
+            + endQuery(link, ref2.line) + (STAMP.hrHead ? '&' + commitQuery() : ''))
         .then(function (r) {
           if (r.status === 204) return;
           return r.text().then(function (t) {

@@ -134,6 +134,12 @@ button.diskpath { border:0; background:none; color:var(--muted); cursor:pointer;
                   overflow-wrap:anywhere; }
 button.diskpath:hover { color:var(--fg); }
 footer .diskline { text-align:center; margin-top:.9rem; }
+/* Adopt this tab: a prompt for the reader's own agent, at the foot of every panel, on the
+   right -- where the eye lands once the tab is read, and out of the way until then. */
+.adoptline { text-align:right; margin-top:1rem; }
+button.adopt { border:1px solid var(--line); background:none; color:var(--muted); cursor:pointer;
+               border-radius:999px; font:600 .74rem/1.9 inherit; padding:0 .7rem; }
+button.adopt:hover { color:var(--fg); border-color:var(--link); }
 .panel[hidden] { display:none; }
 /* The moment before the strip runs. Every panel is in the document and *visible* while
    the earlier scripts measure it -- TABS_JS says why: getBBox() inside a display:none

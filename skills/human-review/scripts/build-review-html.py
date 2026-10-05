@@ -119,6 +119,7 @@ from hrbuild.shared.masthead import (
     title_ticket_ref, OUTSIDE_ID, outside_badge, _outside_where, _split_outside,
     _picked_outside
 )
+from hrbuild.shared.adopt import ADOPT, adopt_html, adopt_prompt
 from hrbuild.shared.footer import (
     DEMO_DOCKER_URL, DEMO_PAGES_URL, DEMO_ZIP_URL, FOOTER_BOILERPLATE, HOME_URL, INVITATION,
     ISSUES_URL, PAST_INVITATIONS, PROVENANCE, RUNNING_STACK, TAKEAWAY, _link_home
@@ -1165,7 +1166,8 @@ def _main(argv=None) -> int:
                 f'aria-labelledby="tabbtn-{tid}">'
                 f'<p class="paneltag">{html.escape(tab["label"])}</p>'
                 + (QUIET_LINE if still else "")
-                + f'{tab.get("intro", "")}{body}</section>'
+                + f'{tab.get("intro", "")}{body}'
+                + adopt_html(tab["id"], tab["label"]) + '</section>'
             )
             emitted.append(tab)
         # A diagram in the manifest that no tab claimed would vanish without a word —
@@ -1213,7 +1215,7 @@ def _main(argv=None) -> int:
                 f'<section class="panel" id="{COST_TAB_ID}" role="tabpanel" '
                 f'aria-labelledby="tabbtn-{COST_TAB_ID}">'
                 '<p class="paneltag">Cost</p>'
-                f'{cost_tab_body}</section>')
+                f'{cost_tab_body}{adopt_html(COST_TAB_ID, "Cost")}</section>')
 
         # The strip leaves the body: it belongs to the masthead now, and the masthead is
         # assembled around it below. `body_html` is the panels alone, which is what every
@@ -1244,7 +1246,9 @@ def _main(argv=None) -> int:
         # rather than assume it, which is what the `$(…)` is. Absolute paths on purpose:
         # this is a fact about the machine the page was built on, like the show-trace
         # command on every trace row, and a reader on another machine has the zip's own
-        # README for the general recipe.
+        # README for the general recipe. And `exit` last: the server is detached
+        # (`start_new_session`), so the terminal it was typed into has nothing left to do
+        # and closes — only on success, so a failure stays on screen to be read.
         try:
             here = out_dir.resolve().relative_to(root.resolve())
         except ValueError:
@@ -1252,7 +1256,7 @@ def _main(argv=None) -> int:
         serve_cmd = (f'cd {shlex.quote(str(root.resolve()))} && u="$('
                      f'{shlex.quote(str(HERE / "serve-review.py"))} {shlex.quote(str(here))}'
                      f' --page {shlex.quote(out_path.name)})" && (open "$u" 2>/dev/null'
-                     ' || xdg-open "$u")')
+                     ' || xdg-open "$u") && exit')
         # Two chips, not one. `static` only says what this copy is, so it has no hover;
         # `Serve` is the thing to do about it, and it is the one that explains why.
         # VSC first, hidden: only the served page can ask the editor bridges whether a

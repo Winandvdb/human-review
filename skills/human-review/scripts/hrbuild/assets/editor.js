@@ -128,14 +128,14 @@
     // and wants a reload, but one that starts the server and opens the page from it.
     var serve = cmd.id === 'hr-serve';
     copy(cmd.getAttribute('data-copy') || '')
-      .then(function () { flash(serve
+      .then(function () { flash(cmd.getAttribute('data-say') || (serve
         ? 'Copied \u2014 run it in a terminal: it starts the review server and opens this page served'
         : runhere
         ? 'Copied \u2014 this copy of the report cannot run it, so run it in a terminal'
         // The glyph, on a page that may or may not have a server. "…then reload this
         // page" used to ride along here and was only ever true of some of the commands
         // this renders. Where a reload *is* part of the job, the play glyph does it.
-        : 'Copied \u2014 paste it in a terminal'); });
+        : 'Copied \u2014 paste it in a terminal')); });
   });
 
   // Where a running command says what it is doing: a line under the control that started

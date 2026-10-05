@@ -37,7 +37,7 @@
   "tested_against": "traced sequence diagrams",
   "rerun": {
     "cwd": "/Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated",
-    "command": "/Users/victorrentea/workspace/human-review/skills/human-review/scripts/drawio-diff.py --base 953025046dffc353a4e99d094c9dbe786bdb4e8f --diagram petclinic-backend/docs/Deployment.drawio.png --out-dir .human-review/assets --name deployment --traces .human-review/assets/c2/C2-Containers.json --tested-against 'traced sequence diagrams'"
+    "command": "/Users/victorrentea/.claude/plugins/cache/human-review/human-review/15f042eb4922/skills/human-review/scripts/drawio-diff.py --base 7a75ccf2148c7e0df6600ca8141bac46ea40400c --diagram petclinic-backend/docs/Deployment.drawio.png --out-dir .human-review/assets --name deployment --traces .human-review/assets/c2/C2-Containers.json --tested-against 'traced sequence diagrams'"
   },
   "revert": {
     "cwd": "/Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated",

@@ -3,47 +3,47 @@
 hide footbox
 skinparam hyperlinkUnderline false
 skinparam hyperlinkColor #1A4FA0
-title [[src://petclinic-test/src/owner-search.feature:38{Click to open the test} Sorting by city, descending]]
+title [[src://petclinic-test/src/owner-search.feature:38{Click to open the test} Sorting by City, descending]]
 footer traced because this branch wrote it in src/owner-search.feature — generated from real traces of end-to-end test runs, do not edit ❗
 participant Browser
 participant Backend
 participant DB
-Browser -> Backend: List one page of owners, optionally filtered by last name\nGET /api/owners
+Browser -> Backend: List owners\nGET /api/owners
 activate Backend
 Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petclinic/repository/OwnerRepository.java:15{Click to open OwnerRepository.findByLastNameStartingWith} OwnerRepository.findByLastNameStartingWith ↗]]
 activate Backend
 Backend -> DB: [[genseq://06lhb5c{Click for the statement behind this call} OwnerRepository.findByLastNameStartingWith ⊕]]
 Backend -> DB: [[genseq://0rcs8yy{Click for the statement behind this call} OwnerRepository.findByLastNameStartingWith ⊕]]
 deactivate Backend
-Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petclinic/repository/OwnerRepository.java:24{Click to open OwnerRepository.findAllByIdFetchingPetsAndVisits} OwnerRepository.findAllByIdFetchingPetsAndVisits ↗]]
+Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petclinic/repository/OwnerRepository.java:26{Click to open OwnerRepository.findAllByIdFetchingPetsAndVisits} OwnerRepository.findAllByIdFetchingPetsAndVisits ↗]]
 activate Backend
-Backend -> DB: [[genseq://1cn3tpo{Click for the statement behind this call} SELECT DISTINCT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH … ⊕]]
+Backend -> DB: [[genseq://075m496{Click for the statement behind this call} SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type … ⊕]]
 deactivate Backend
-Backend --> Browser: [[genseq://063qnos{Click for this call’s JSON body} 200 ⊕]]
+Backend --> Browser: [[genseq://0zske0a{Click for this call’s JSON body} 200 ⊕]]
 deactivate Backend
-Browser -> Backend: List one page of owners, optionally filtered by last name\nGET /api/owners
+Browser -> Backend: List owners\nGET /api/owners
 activate Backend
 Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petclinic/repository/OwnerRepository.java:15{Click to open OwnerRepository.findByLastNameStartingWith} OwnerRepository.findByLastNameStartingWith ↗]]
 activate Backend
 Backend -> DB: [[genseq://1vgs1oi{Click for the statement behind this call} OwnerRepository.findByLastNameStartingWith ⊕]]
 Backend -> DB: [[genseq://0rcs8yy{Click for the statement behind this call} OwnerRepository.findByLastNameStartingWith ⊕]]
 deactivate Backend
-Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petclinic/repository/OwnerRepository.java:24{Click to open OwnerRepository.findAllByIdFetchingPetsAndVisits} OwnerRepository.findAllByIdFetchingPetsAndVisits ↗]]
+Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petclinic/repository/OwnerRepository.java:26{Click to open OwnerRepository.findAllByIdFetchingPetsAndVisits} OwnerRepository.findAllByIdFetchingPetsAndVisits ↗]]
 activate Backend
-Backend -> DB: [[genseq://1ymvmnp{Click for the statement behind this call} SELECT DISTINCT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH … ⊕]]
+Backend -> DB: [[genseq://0osklar{Click for the statement behind this call} SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type … ⊕]]
 deactivate Backend
-Backend --> Browser: [[genseq://1539r2o{Click for this call’s JSON body} 200 ⊕]]
+Backend --> Browser: [[genseq://0oum2s9{Click for this call’s JSON body} 200 ⊕]]
 deactivate Backend
-Browser -> Backend: List one page of owners, optionally filtered by last name\nGET /api/owners
+Browser -> Backend: List owners\nGET /api/owners
 activate Backend
 Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petclinic/repository/OwnerRepository.java:15{Click to open OwnerRepository.findByLastNameStartingWith} OwnerRepository.findByLastNameStartingWith ↗]]
 activate Backend
 Backend -> DB: [[genseq://0dryp8m{Click for the statement behind this call} OwnerRepository.findByLastNameStartingWith ⊕]]
 Backend -> DB: [[genseq://0rcs8yy{Click for the statement behind this call} OwnerRepository.findByLastNameStartingWith ⊕]]
 deactivate Backend
-Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petclinic/repository/OwnerRepository.java:24{Click to open OwnerRepository.findAllByIdFetchingPetsAndVisits} OwnerRepository.findAllByIdFetchingPetsAndVisits ↗]]
+Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petclinic/repository/OwnerRepository.java:26{Click to open OwnerRepository.findAllByIdFetchingPetsAndVisits} OwnerRepository.findAllByIdFetchingPetsAndVisits ↗]]
 activate Backend
-Backend -> DB: [[genseq://17z3wgk{Click for the statement behind this call} SELECT DISTINCT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH … ⊕]]
+Backend -> DB: [[genseq://0zq3lu6{Click for the statement behind this call} SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type … ⊕]]
 deactivate Backend
 Backend --> Browser: [[genseq://11n32vm{Click for this call’s JSON body} 200 ⊕]]
 deactivate Backend

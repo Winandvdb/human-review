@@ -1,40 +1,25 @@
 {
  "schema": "test-mapping/1",
- "note": "0 links by script (unconfirmed), 71 by model, 45 script links rejected by the model; 0 sentences not paired yet",
+ "note": "0 links by script (unconfirmed), 62 by model, 63 script links rejected by the model; 0 sentences not paired yet",
  "sentences": [
   {
    "id": "s0dda55",
    "coverage": "narrowed",
-   "decision": "d21",
+   "decision": "d17",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:78",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:107",
      "strength": "asserted",
-     "why": "asserts only Name and City headers carry sorting controls",
-     "line": "expect(await Promise.all(headers.map(h => h.getLabel()))).toEqual(['Name', 'City']);",
+     "why": "asserts only the Name and City headers are sortable and Address, Telephone, Pets are not",
+     "line": "expect(texts('#ownersTable th[mat-sort-header]')).toEqual(['Name', 'City']);",
      "by": "model"
     },
     {
-     "id": "petclinic-test/src/owner-search.feature:38",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:140",
      "strength": "asserted",
-     "why": "sorts City descending in the UI and compares the listed names to the API's city,desc page",
-     "line": "expect(await listedNames(this)).toEqual(content.map(fullName));",
-     "by": "model",
-     "evidence": [
-      "sort (name)",
-      "column (assert)"
-     ]
-    },
-    {
-     "id": "petclinic-test/src/owner-search.feature:49",
-     "strength": "exercised",
-     "why": "sorts City ascending and searches, but asserts the search result rather than the sorting itself",
-     "line": "expect(await listedNames(this)).toEqual(namesIn(owners));",
-     "by": "model",
-     "evidence": [
-      "sort (name)",
-      "column (assert)"
-     ]
+     "why": "asserts that clicking the City header requests sort=city,asc",
+     "line": ".toEqual({lastName: '', page: 0, size: 10, sort: 'city,asc'});",
+     "by": "model"
     }
    ],
    "gap": "Sorting is limited to Name and City; the ticket asks for any column.",
@@ -52,59 +37,103 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:68",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:86",
      "strength": "asserted",
-     "why": "asserts the paginator offers sizes 5, 10 and 20 and defaults to 10",
-     "line": "expect(component.pageSizes).toEqual([5, 10, 20]);",
+     "why": "requests size=5, 10 and 20 and asserts the content holds exactly that many rows",
+     "line": "assertThat(list(\"/api/owners?size=\" + size).get(\"content\")).hasSize(size);",
      "by": "model"
     },
     {
-     "id": "petclinic-test/src/owner-search.feature:43",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
      "strength": "asserted",
-     "why": "picks size 5 in the real paginator and asserts the range label reads 1 – 5 of the total",
-     "line": "await expect(rangeLabel(this)).toHaveText(`${range} of ${this.requireAllOwnerNames().length}`);",
-     "by": "model"
+     "why": "asserts the paginator offers exactly 5, 10 and 20",
+     "line": "expect(paginator().pageSizeOptions).toEqual([5, 10, 20]);",
+     "by": "model",
+     "evidence": [
+      "≈page (assert)",
+      "page (assert)",
+      "5 (name)"
+     ]
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:80",
+     "id": "petclinic-test/src/owner-search.feature:44",
      "strength": "asserted",
-     "why": "requests size 5, 10 and 20 and asserts the content holds exactly that many owners",
-     "line": "assertThat(page.path(\"content\")).hasSize(size);",
-     "by": "model"
+     "why": "picks 5 per page in the browser and asserts the range label reads 1 – 5 of the total",
+     "line": "await expect(rangeLabel(this)).toHaveText(`${from} – ${to} of ${this.requireAllOwners().length}`);",
+     "by": "model",
+     "evidence": [
+      "≈page (body)",
+      "page (name)",
+      "5 (assert)"
+     ]
+    },
+    {
+     "id": "petclinic-test/src/owner-search.feature:32",
+     "strength": "asserted",
+     "why": "pages through the grid at 20 per page and asserts every owner appears exactly once",
+     "line": "expect(this.pagedOwnerIds).toEqual(this.requireAllOwners().map((o) => o.id));",
+     "by": "model",
+     "evidence": [
+      "≈page (name)",
+      "page (assert)",
+      "5 (covered change)"
+     ]
     }
    ],
-   "by": "model"
+   "by": "model",
+   "rejected": [
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:115",
+     "why": "checks that invalid paging input gives 400, not that pages hold 5/10/20 rows"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:172",
+     "why": "checks the submitted prefix survives paging, not page sizes"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:215",
+     "why": "checks the no-match message and the hidden paginator"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:225",
+     "why": "checks an empty page of a non-empty result, not page sizes"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:244",
+     "why": "checks that Try again repeats the failed query"
+    }
+   ]
   },
   {
    "id": "s826bb0",
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:46",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:74",
      "strength": "asserted",
-     "why": "asserts the response fields are exactly content and totalElements",
-     "line": "assertThat(fieldNames(page)).containsExactlyInAnyOrder(\"content\", \"totalElements\");",
+     "why": "asserts the response object has exactly the fields content and totalElements",
+     "line": "assertThat(fields).containsExactlyInAnyOrder(\"content\", \"totalElements\");",
      "by": "model"
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:58",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:203",
      "strength": "asserted",
-     "why": "asserts an owner's pet carries its type and two visits",
-     "line": "assertThat(cheshire.path(\"visits\")).hasSize(2);",
+     "why": "asserts a listed owner equals the detail endpoint's DTO, with its pets and visits, and an owner without pets has an empty pets list",
+     "line": "assertThat(page.get(\"content\").get(1)).isEqualTo(detail(withPets.getId()));",
      "by": "model"
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:88",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:91",
      "strength": "asserted",
-     "why": "asserts totalElements still counts every owner on page 1 of size 5",
-     "line": "assertThat(page.path(\"totalElements\").asLong()).isEqualTo(SEEDED_OWNERS);",
+     "why": "asserts totalElements is 26 although only 5 rows are returned",
+     "line": "assertThat(page.get(\"totalElements\").asLong()).isEqualTo(26);",
      "by": "model"
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListPagingTest.java:132",
+     "id": "petclinic-backend/src/test/resources/features/functional/owners.feature:8",
      "strength": "asserted",
-     "why": "asserts each owner on a page has all its pets",
-     "line": "assertThat(pets).hasSize(petCountByOwnerId.get(owner.path(\"id\").asInt()));",
+     "why": "asserts the response status is 200 for the search",
+     "line": "assertThat(http.getLastResponse().statusCode()).isEqualTo(expected);",
      "by": "model"
     }
    ],
@@ -115,38 +144,50 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:46",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:64",
      "strength": "asserted",
-     "why": "with no parameters asserts 10 owners, which is default page 0 and size 10",
-     "line": "assertThat(lastNames(page)).hasSize(10)",
+     "why": "with no parameters asserts the first 10 owners by name are returned",
+     "line": "assertThat(ids(page)).containsExactlyElementsOf(expectedIds);",
      "by": "model",
      "evidence": [
-      "size (assert)",
+      "size (covered change)",
       "default (name)",
-      "10 (assert)"
+      "10 (body)"
      ]
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:88",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:91",
      "strength": "asserted",
-     "why": "asserts page=1&size=5 returns positions 6 to 10 of the first ten, so page is zero-based",
-     "line": "assertThat(lastNames(page)).isEqualTo(firstTen.subList(5, 10));",
+     "why": "asserts page=1&size=5 returns the owners at offset 5, so page is zero-based",
+     "line": "assertThat(ids(page)).containsExactlyElementsOf(expectedIds);",
      "by": "model"
     }
    ],
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:172",
-     "why": "checks prefix matching only, never page or size"
-    },
-    {
      "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:54",
-     "why": "checks the client sends no params, not what the API defaults to"
+     "why": "only checks the client sends no query parameters; the API's defaults are not exercised"
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:114",
-     "why": "checks a no-match filter returns empty content, not the paging defaults"
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:135",
+     "why": "tests prefix filtering, not paging defaults"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:186",
+     "why": "tests a late response being ignored"
+    },
+    {
+     "id": "petclinic-test/src/owner-search.feature:44",
+     "why": "tests that a page-size change resets the page, not the API defaults"
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:86",
+     "why": "passes explicit sizes and never checks the default"
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:105",
+     "why": "tests a page beyond the last page and its query counts"
     }
    ]
   },
@@ -155,79 +196,62 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:127",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:86",
      "strength": "asserted",
-     "why": "size=7, 0, -5 and abc all must return 400",
+     "why": "asserts sizes 5, 10 and 20 each return that many rows",
+     "line": "assertThat(list(\"/api/owners?size=\" + size).get(\"content\")).hasSize(size);",
+     "by": "model"
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:115",
+     "strength": "asserted",
+     "why": "asserts size=7, 0, -5 and abc are rejected with 400",
      "line": ".andExpect(status().isBadRequest())",
      "by": "model"
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:80",
-     "strength": "asserted",
-     "why": "sizes 5, 10 and 20 each return exactly that many owners",
-     "line": "assertThat(page.path(\"content\")).hasSize(size);",
-     "by": "model"
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:68",
-     "strength": "asserted",
-     "why": "asserts the screen's page sizes are exactly [5, 10, 20]",
-     "line": "expect(component.pageSizes).toEqual([5, 10, 20]);",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
+     "strength": "exercised",
+     "why": "asserts the paginator offers [5, 10, 20], but that is the screen, not the API's validity rule",
      "by": "model",
      "evidence": [
-      "page (name)",
+      "page (assert)",
       "size (name)",
       "5 (name)",
       "10 (name)",
       "20 (name)"
-     ]
-    },
-    {
-     "id": "petclinic-test/src/owner-search.feature:43",
-     "strength": "exercised",
-     "why": "selects size 5 in the paginator and asserts the range, but does not check other sizes are absent",
-     "line": "await expect(rangeLabel(this)).toHaveText(`${range} of ${this.requireAllOwnerNames().length}`);",
-     "by": "model",
-     "evidence": [
-      "page (name)",
-      "size (name)",
-      "5 (assert)",
-      "10 (covered change)",
-      "20 (covered change)"
-     ]
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:119",
-     "strength": "exercised",
-     "why": "selects size 20 and asserts the request, without checking the set of valid sizes",
-     "line": "expect(getOwnerPage.calls.allArgs()).toEqual([[{...FIRST_PAGE, size: 20, page: 0}]]);",
-     "by": "model",
-     "evidence": [
-      "page (name)",
-      "size (name)",
-      "5 (covered change)",
-      "10 (covered change)",
-      "20 (assert)"
      ]
     }
    ],
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
-     "why": "checks next page keeps the existing size, not which sizes are valid"
+     "id": "petclinic-test/src/owner-search.feature:44",
+     "why": "tests a page reset, not which sizes are valid"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:157",
-     "why": "checks a search keeps the sort; size 10 is incidental"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:132",
+     "why": "tests the page reset when size changes"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:238",
-     "why": "checks an empty page beyond the total, not page sizes"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:126",
+     "why": "tests the next-page request"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:261",
-     "why": "checks a failed page load keeps the old page, not page sizes"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:244",
+     "why": "tests retrying a failed request"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:140",
+     "why": "tests sort changes"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:160",
+     "why": "tests that a search keeps the sort"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:92",
+     "why": "tests the initial request, not the valid sizes"
     }
    ]
   },
@@ -236,211 +260,208 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:127",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:115",
      "strength": "asserted",
-     "why": "page=-1, abc, 1.5, 99999999999 and sizes 7, 0, abc each must return 400",
+     "why": "asserts page=-1, abc, 1.5, 99999999999 and 2147483647 and size=7, 0, -5, abc all give 400",
      "line": ".andExpect(status().isBadRequest())",
      "by": "model",
      "evidence": [
       "invalid (name)",
       "size (body)",
+      "http (covered change)",
       "400 (name)"
      ]
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:135",
-     "strength": "asserted",
-     "why": "a non-integer page returns 400 with a fixed detail message",
-     "line": ".andExpect(status().isBadRequest())",
-     "by": "model"
     }
    ],
-   "by": "model"
+   "by": "model",
+   "rejected": [
+    {
+     "id": "petclinic-test/src/owner-search.feature:26",
+     "why": "searches with an empty last name; no invalid input is sent"
+    }
+   ]
   },
   {
    "id": "s1d9532",
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:143",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:169",
      "strength": "asserted",
-     "why": "each of the four allowed sorts returns a full page of 10",
-     "line": "assertThat(page.path(\"content\")).hasSize(10);",
+     "why": "asserts name,asc and name,desc return the expected order",
+     "line": ".containsExactlyElementsOf(idsSortedBy(owners, BY_NAME));",
      "by": "model"
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:127",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:186",
      "strength": "asserted",
-     "why": "lastName,asc, telephone,asc, name, name,up and NAME,asc must each return 400",
-     "line": ".andExpect(status().isBadRequest())",
-     "by": "model"
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:46",
-     "strength": "asserted",
-     "why": "with no sort parameter the first ten come back in last-name order, so name,asc is the default",
-     "line": "assertThat(lastNames(page)).hasSize(10)",
-     "by": "model"
-    },
-    {
-     "id": "petclinic-test/src/owner-search.feature:38",
-     "strength": "exercised",
-     "why": "UI sorts by city,desc and compares to the API page, without asserting rejection of other keys",
-     "line": "expect(await listedNames(this)).toEqual(content.map(fullName));",
+     "why": "asserts city,asc and city,desc return the expected order",
+     "line": ".containsExactlyElementsOf(idsSortedBy(owners, BY_CITY));",
      "by": "model",
      "evidence": [
       "key (covered change)",
       "sort (name)",
-      "name (assert)",
-      "asc (covered change)",
+      "name (name)",
+      "asc (assert)",
       "desc (assert)",
       "city (name)",
-      "≈initial (body)"
+      "≈initial (covered change)"
      ]
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:64",
+     "strength": "asserted",
+     "why": "asserts the default with no sort parameter is the name order",
+     "line": "assertThat(ids(page)).containsExactlyElementsOf(expectedIds);",
+     "by": "model"
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:115",
+     "strength": "asserted",
+     "why": "asserts lastName,asc, telephone,asc, name, name,up and the other bad sorts give 400",
+     "line": ".andExpect(status().isBadRequest())",
+     "by": "model"
     }
    ],
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:172",
-     "why": "checks lastName prefix matching, never the sort parameter"
+     "id": "petclinic-test/src/owner-search.feature:38",
+     "why": "compares the grid with the API's own answer; nothing asserts which keys the API accepts"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:54",
+     "why": "checks the client sends no query parameters"
     }
    ]
   },
   {
    "id": "sd01dc8",
-   "coverage": "partial",
+   "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:46",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:169",
      "strength": "asserted",
-     "why": "asserts two Darlings come back ordered by first name George then Wendy under default Name sort",
-     "line": "assertThat(firstNames(page).subList(2, 4)).containsExactly(\"George\", \"Wendy\");",
+     "why": "asserts the Name order, including full-name ties broken on id, against a comparator",
+     "line": ".containsExactlyElementsOf(idsSortedBy(owners, BY_NAME));",
      "by": "model"
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:160",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:186",
      "strength": "asserted",
-     "why": "asserts London owners ties are ordered by last then first name under City sort",
-     "line": ".containsExactly(\"George\", \"Wendy\", \"Sherlock\", \"Roger\", \"Newt\");",
+     "why": "asserts the City order, with ties on city, last name, first name and id, against a comparator",
+     "line": ".containsExactlyElementsOf(idsSortedBy(owners, BY_CITY));",
      "by": "model",
      "evidence": [
       "name (name)",
-      "≈sort (name)",
+      "order (name)",
       "owner (name)",
       "city (name)"
      ]
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:150",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:91",
      "strength": "asserted",
-     "why": "asserts name,desc equals the reverse of the end of name,asc by last name",
-     "line": "assertThat(lastNames(page)).containsExactlyElementsOf(lastPageAscending.reversed());",
-     "by": "model"
-    },
-    {
-     "id": "petclinic-test/src/owner-search.feature:38",
-     "strength": "exercised",
-     "why": "compares the grid's city,desc order to the API without asserting the tie-break chain",
-     "line": "expect(await listedNames(this)).toEqual(content.map(fullName));",
-     "by": "model",
-     "evidence": [
-      "name (assert)",
-      "≈sort (name)",
-      "owner (name)",
-      "city (name)"
-     ]
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListPagingTest.java:110",
-     "strength": "exercised",
-     "why": "traverses all pages for name and city in both directions; its assertions are not visible in the body shown",
-     "line": "",
+     "why": "compares the page with SQL ORDER BY last_name, first_name, id",
+     "line": "assertThat(ids(page)).containsExactlyElementsOf(expectedIds);",
      "by": "model",
      "evidence": [
       "≈show (name)",
       "order (name)",
-      "owner (name)",
-      "city (body)"
+      "owner (name)"
      ]
     }
    ],
-   "gap": "The owner-ID tie-break for owners sharing last and first name is not asserted for either sort.",
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:78",
-     "why": "checks header labels and initial direction, not the ordering chain"
+     "id": "petclinic-test/src/owner-search.feature:38",
+     "why": "compares the grid with what the API returns, so it proves no field order"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:130",
-     "why": "checks the request sort key sent on toggling, not how rows are ordered"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:140",
+     "why": "checks the sort parameter sent, not the order the API applies"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:157",
-     "why": "checks the request keeps city,desc, not the order of fields"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:160",
+     "why": "checks the sort parameter sent, not the order the API applies"
     },
     {
-     "id": "petclinic-test/src/owner-search.feature:49",
-     "why": "asserts a prefix search result and its range, not the sort chain"
+     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:65",
+     "why": "checks the URL query string, not the order"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:64",
-     "why": "checks the query string of the HTTP call, not ordering"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:107",
+     "why": "checks which headers are sortable"
     }
    ]
   },
   {
    "id": "sda2a39",
-   "coverage": "partial",
+   "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:150",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:169",
      "strength": "asserted",
-     "why": "asserts name,desc last names are the exact reverse of name,asc",
-     "line": "assertThat(lastNames(page)).containsExactlyElementsOf(lastPageAscending.reversed());",
-     "by": "model"
+     "why": "asserts name,desc equals the whole reversed name-then-id comparator",
+     "line": ".containsExactlyElementsOf(idsSortedBy(owners, BY_NAME.reversed()));",
+     "by": "model",
+     "evidence": [
+      "≈choose (covered change)",
+      "direction (name)"
+     ]
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListPagingTest.java:110",
-     "strength": "exercised",
-     "why": "runs all pages in descending directions; assertions are not visible in the body shown",
-     "line": "",
-     "by": "model"
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:186",
+     "strength": "asserted",
+     "why": "asserts city,desc equals the whole reversed city-name-id comparator",
+     "line": ".containsExactlyElementsOf(idsSortedBy(owners, BY_CITY.reversed()));",
+     "by": "model",
+     "evidence": [
+      "≈choose (covered change)",
+      "direction (name)"
+     ]
     }
    ],
-   "gap": "Only the last-name field is compared in descending order; descending first name, ID and city ties are not asserted.",
-   "by": "model"
+   "by": "model",
+   "rejected": [
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:81",
+     "why": "requests a sort direction but asserts only statement counts and sizes"
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:97",
+     "why": "asserts load counts, not order"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:140",
+     "why": "checks the sort parameter the screen sends"
+    }
+   ]
   },
   {
    "id": "s1b9958",
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:172",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:135",
      "strength": "asserted",
-     "why": "Pot matches Beatrix and Harry Potter; otter, Harry and potter have zero total",
-     "line": "assertThat(firstNames(list(\"/api/owners?lastName=Pot\"))).containsExactly(\"Beatrix\", \"Harry\");",
+     "why": "asserts Pot matches both Potters while otter, Harry and potter match nothing",
+     "line": "assertThat(list(\"/api/owners?lastName=potter\").get(\"totalElements\").asLong()).isZero();",
      "by": "model",
      "evidence": [
-      "name (name)",
+      "≈show (name)",
+      "filter (name)",
       "api (assert)",
       "sensitiv (name)",
       "prefix (name)"
      ]
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:199",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:159",
      "strength": "asserted",
-     "why": "Zq% matches only the owner whose name literally contains the percent sign",
-     "line": "assertThat(firstNames(listByLastName(\"Zq%\"))).containsExactly(\"Percent\");",
-     "by": "model"
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:187",
-     "strength": "asserted",
-     "why": "seven matching owners with size=5&page=1 return two and total 7",
-     "line": "assertThat(page.path(\"totalElements\").asLong()).isEqualTo(7);",
+     "why": "asserts % and _ in the prefix are matched literally",
+     "line": "assertThat(names(listByLastName(\"Qz%\"))).containsExactly(\"Percent Qz%a\");",
      "by": "model"
     }
    ],
@@ -451,17 +472,17 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:182",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:144",
      "strength": "asserted",
-     "why": "an empty lastName returns a total equal to all seeded owners",
-     "line": "assertThat(list(\"/api/owners?lastName=\").path(\"totalElements\").asLong()).isEqualTo(SEEDED_OWNERS);",
+     "why": "asserts an empty lastName gives totalElements of 26",
+     "line": "assertThat(list(\"/api/owners?lastName=\").get(\"totalElements\").asLong()).isEqualTo(26);",
      "by": "model"
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:46",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:64",
      "strength": "asserted",
-     "why": "an omitted lastName returns a total equal to all seeded owners",
-     "line": "assertThat(page.path(\"totalElements\").asLong()).isEqualTo(SEEDED_OWNERS);",
+     "why": "asserts an omitted lastName gives totalElements of 26",
+     "line": "assertThat(page.get(\"totalElements\").asLong()).isEqualTo(26);",
      "by": "model"
     }
    ],
@@ -469,63 +490,37 @@
   },
   {
    "id": "sef35ed",
-   "coverage": "covered",
+   "coverage": "partial",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:187",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:149",
      "strength": "asserted",
-     "why": "filtered page 1 of size 5 returns the last two matches and a total of 7",
-     "line": "assertThat(page.path(\"totalElements\").asLong()).isEqualTo(7);",
+     "why": "asserts page 1 of size 5 over 7 matches holds 2 rows and totalElements is 7",
+     "line": "assertThat(page.get(\"totalElements\").asLong()).isEqualTo(7);",
+     "by": "model",
+     "evidence": [
+      "sort (covered change)",
+      "filter (name)",
+      "set (name)"
+     ]
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:81",
+     "strength": "exercised",
+     "why": "sorts a filtered list but asserts only counts and nested data, not the order",
      "by": "model"
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:114",
-     "strength": "asserted",
-     "why": "a filter with no match yields a zero total",
-     "line": "assertThat(page.path(\"totalElements\").asLong()).isZero();",
-     "by": "model",
-     "evidence": [
-      "total (name)",
-      "element (assert)"
-     ]
-    },
-    {
-     "id": "petclinic-test/src/owner-search.feature:49",
-     "strength": "asserted",
-     "why": "after sorting by City, the search Pot shows 2 owners with range 1 – 2 of 2",
-     "line": "await expect(rangeLabel(this)).toHaveText(range);",
-     "by": "model",
-     "evidence": [
-      "sort (name)",
-      "≈filter (name)"
-     ]
     }
    ],
+   "gap": "No test asserts that sorting is applied to the filtered set rather than the whole table.",
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
-     "why": "only checks the next-page request arguments, not the filtered set or total"
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:64",
-     "why": "checks the HTTP query string, not filtered results or total"
+     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:65",
+     "why": "only checks the query string the client builds"
     },
     {
      "id": "petclinic-test/src/owner-search.feature:38",
-     "why": "sorts the unfiltered list, no filter involved"
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:157",
-     "why": "checks the request arguments of a search, not the filtered results or total"
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:106",
-     "why": "page beyond the last without any filter"
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:238",
-     "why": "checks an empty page beyond a nonzero total with no filter"
+     "why": "sorts without any filter"
     }
    ]
   },
@@ -534,10 +529,10 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListPagingTest.java:148",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:97",
      "strength": "asserted",
-     "why": "asserts at most three SELECTs, with the owner query paging in SQL and the pets query not paging",
-     "line": "assertThat(selects).hasSizeLessThanOrEqualTo(3);",
+     "why": "asserts only 5 Owner entities load for size=5",
+     "line": "assertThat(statistics.getEntityStatistics(Owner.class.getName()).getLoadCount()).isEqualTo(5);",
      "by": "model",
      "evidence": [
       "select (name)",
@@ -545,13 +540,19 @@
      ]
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListPagingTest.java:164",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:105",
      "strength": "asserted",
-     "why": "an empty page issues no SELECT touching pets or visits",
-     "line": ".noneMatch(sql -> sql.contains(\"pets\") || sql.contains(\"visits\"));",
+     "why": "asserts no Pet is loaded when the page is empty",
+     "line": "assertThat(statistics.getEntityStatistics(Pet.class.getName()).getLoadCount()).isZero();",
+     "by": "model"
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:81",
+     "strength": "exercised",
+     "why": "asserts at most three statements, which implies but does not prove that pagination happens in the database",
      "by": "model",
      "evidence": [
-      "select (assert)",
+      "select (name)",
       "owner (name)"
      ]
     }
@@ -559,8 +560,12 @@
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:78",
-     "why": "checks sort headers, not data access"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:107",
+     "why": "checks which headers are sortable"
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/repository/OwnerListIndexesMigrationTest.java:30",
+     "why": "checks a migration creates indexes"
     }
    ]
   },
@@ -569,31 +574,49 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListPagingTest.java:148",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:81",
      "strength": "asserted",
-     "why": "full pages of 20 and 5 owners with multiple pets and visits issue at most three SELECTs",
-     "line": "assertThat(selects).hasSizeLessThanOrEqualTo(3);",
-     "by": "model"
+     "why": "for sizes 5, 10 and 20 asserts at most 3 statements while the pets, visits and types are fully mapped",
+     "line": "assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(3);",
+     "by": "model",
+     "evidence": [
+      "full (name)",
+      "empty (covered change)",
+      "page (name)",
+      "thre (name)",
+      "select (name)",
+      "statement (assert)"
+     ]
     }
    ],
-   "by": "model"
+   "by": "model",
+   "rejected": [
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:116",
+     "why": "covers a page with no match, not a full non-empty page"
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListQueryBudgetTest.java:105",
+     "why": "covers an empty page beyond the last one"
+    }
+   ]
   },
   {
    "id": "s4f088a",
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:68",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
      "strength": "asserted",
-     "why": "asserts 10 rows, a range label of 1 – 10 of 26 and sizes 5, 10, 20",
-     "line": "expect(await pager.getRangeLabel()).toBe('1 – 10 of 26');",
+     "why": "asserts 10 rows, the range label, and the sizes 5, 10 and 20",
+     "line": "expect(paginator().pageSizeOptions).toEqual([5, 10, 20]);",
      "by": "model"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:78",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:107",
      "strength": "asserted",
-     "why": "only the Name and City headers have sorting controls",
-     "line": "expect(await Promise.all(headers.map(h => h.getLabel()))).toEqual(['Name', 'City']);",
+     "why": "asserts only Name and City are sortable and the other three columns are not",
+     "line": "expect(texts('#ownersTable th[mat-sort-header]')).toEqual(['Name', 'City']);",
      "by": "model"
     }
    ],
@@ -604,37 +627,41 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:62",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:92",
      "strength": "asserted",
-     "why": "asserts the first request is page 0, size 10 and name,asc, sent once",
-     "line": "expect(getOwnerPage.calls.allArgs()).toEqual([[FIRST_PAGE]]);",
+     "why": "asserts the first request is page 0, size 10, name,asc",
+     "line": "expect(lastQuery()).toEqual({lastName: '', page: 0, size: 10, sort: 'name,asc'});",
      "by": "model"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:78",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:64",
      "strength": "asserted",
-     "why": "asserts the Name header starts in ascending direction",
-     "line": "expect(await headers[0].getSortDirection()).toBe('asc');",
-     "by": "model"
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:46",
-     "strength": "asserted",
-     "why": "asserts the API default is 10 owners by last name ascending",
-     "line": "assertThat(lastNames(page)).hasSize(10)",
+     "why": "asserts the API's defaults are the first 10 by name, matching the grid's first request",
+     "line": "assertThat(ids(page)).containsExactlyElementsOf(expectedIds);",
      "by": "model",
      "evidence": [
       "≈initial (name)",
       "api (body)",
       "default (name)"
      ]
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
+     "strength": "asserted",
+     "why": "asserts the paginator starts at size 10",
+     "line": "expect(paginator().pageSize).toBe(10);",
+     "by": "model"
     }
    ],
    "by": "model",
    "rejected": [
     {
      "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:54",
-     "why": "checks the service sends no query params, not the grid's initial state"
+     "why": "checks the service sends no parameters, not the grid's initial state"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:186",
+     "why": "checks that a late response is ignored"
     }
    ]
   },
@@ -643,10 +670,10 @@
    "coverage": "partial",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:89",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:115",
      "strength": "asserted",
-     "why": "asserts the first row links to /owners/1 and the Add Owner button exists",
-     "line": "expect(rows()[0].query(By.css('a')).nativeElement.getAttribute('href')).toBe('/owners/1');",
+     "why": "asserts each row links to /owners/1",
+     "line": "expect(element('#ownersTable td.ownerFullName a')!.getAttribute('href')).toBe('/owners/1');",
      "by": "model",
      "evidence": [
       "add (name)",
@@ -654,49 +681,42 @@
      ]
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:226",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:235",
      "strength": "asserted",
-     "why": "asserts Add Owner remains present in the zero-match state",
-     "line": "expect(addOwnerButton()).toBeTruthy();",
+     "why": "asserts the Add Owner button is still present after a failed load",
+     "line": "expect(element('#addOwner')).toBeTruthy();",
      "by": "model",
      "evidence": [
-      "≈create (name)",
-      "owner (name)"
-     ]
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:250",
-     "strength": "asserted",
-     "why": "asserts Add Owner remains present in the error state",
-     "line": "expect(addOwnerButton()).toBeTruthy();",
-     "by": "model",
-     "evidence": [
-      "add (assert)",
+      "add (name)",
       "owner (name)"
      ]
     },
     {
      "id": "petclinic-test/src/add-owner.spec.ts:47",
      "strength": "asserted",
-     "why": "adds an owner through the form and finds them by last name in the grid",
+     "why": "adds an owner through the form and asserts they are found in the grid by last name",
      "line": "await expect(rows.first()).toContainText(`Ada ${lastName}`);",
      "by": "model"
     }
    ],
-   "gap": "Bootstrap styling is not asserted by any test.",
+   "gap": "Nothing asserts the Bootstrap styling is preserved.",
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerCreateTest.java:90",
-     "why": "tests the create endpoint, not the screen's Add Owner behaviour"
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/repository/OwnerListIndexesMigrationTest.java:30",
+     "why": "checks a migration on an existing database, nothing about the grid"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:169",
-     "why": "checks paging uses the submitted prefix, not links or Add Owner"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:172",
+     "why": "checks the prefix is kept while paging"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:238",
-     "why": "checks an empty page beyond a nonzero total, not links or Add Owner"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:215",
+     "why": "checks the empty-result message"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:225",
+     "why": "checks an empty page of a non-empty result"
     }
    ]
   },
@@ -705,24 +725,48 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:157",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:132",
      "strength": "asserted",
-     "why": "after paging, a search sends a single request with page 0 and the kept sort",
-     "line": "expect(getOwnerPage.calls.allArgs()).toEqual([[{lastName: 'Fr', page: 0, size: 10, sort: 'city,desc'}]]);",
+     "why": "asserts a page-size change from page 1 requests page 0 with size 20",
+     "line": "expect(query).toEqual({lastName: '', page: 0, size: 20, sort: 'name,asc'});",
+     "by": "model",
+     "evidence": [
+      "page (name)",
+      "size (name)",
+      "chang (name)"
+     ]
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:140",
+     "strength": "asserted",
+     "why": "asserts a sort change from page 1 requests page 0",
+     "line": ".toEqual({lastName: '', page: 0, size: 10, sort: 'city,asc'});",
+     "by": "model",
+     "evidence": [
+      "page (name)",
+      "size (assert)",
+      "chang (name)"
+     ]
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:160",
+     "strength": "asserted",
+     "why": "asserts a search from a later page requests page 0",
+     "line": "expect(query).toEqual({lastName: 'Da', page: 0, size: 10, sort: 'city,desc'});",
      "by": "model",
      "evidence": [
       "sort (name)",
-      "chang (body)",
+      "chang (covered change)",
       "page (name)",
       "index (covered change)",
       "0 (name)"
      ]
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:119",
+     "id": "petclinic-test/src/owner-search.feature:44",
      "strength": "asserted",
-     "why": "after paging, a size change sends a single request with page 0",
-     "line": "expect(getOwnerPage.calls.allArgs()).toEqual([[{...FIRST_PAGE, size: 20, page: 0}]]);",
+     "why": "in the browser, a page-size change shows range 1 – 5",
+     "line": "await expect(rangeLabel(this)).toHaveText(`${from} – ${to} of ${this.requireAllOwners().length}`);",
      "by": "model",
      "evidence": [
       "page (name)",
@@ -731,43 +775,30 @@
      ]
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:130",
+     "id": "petclinic-test/src/owner-search.feature:50",
      "strength": "asserted",
-     "why": "after paging, each sort toggle sends a request with page 0",
-     "line": "expect(getOwnerPage.calls.allArgs()).toEqual([",
-     "by": "model",
-     "evidence": [
-      "page (name)",
-      "size (covered change)",
-      "chang (name)"
-     ]
-    },
-    {
-     "id": "petclinic-test/src/owner-search.feature:43",
-     "strength": "asserted",
-     "why": "after next page, changing size to 5 shows the range starting at 1 – 5",
-     "line": "await expect(rangeLabel(this)).toHaveText(`${range} of ${this.requireAllOwnerNames().length}`);",
-     "by": "model",
-     "evidence": [
-      "page (name)",
-      "size (name)",
-      "chang (name)"
-     ]
+     "why": "in the browser, a search from page 2 shows range 1 – 2 of 2",
+     "line": "await expect(rangeLabel(this)).toHaveText(`${from} – ${to} of ${total}`);",
+     "by": "model"
     }
    ],
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:169",
-     "why": "checks paging uses the submitted prefix, not a reset to page 0"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:172",
+     "why": "checks the submitted prefix survives next-page navigation"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:226",
-     "why": "checks the zero-match message, not the page index"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:215",
+     "why": "checks the no-match message"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
-     "why": "checks next page keeps filter, size and sort, going to page 1"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:126",
+     "why": "next page sends page 1, not a reset"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:244",
+     "why": "checks that retry repeats the failed query"
     }
    ]
   },
@@ -776,86 +807,51 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:157",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:160",
      "strength": "asserted",
-     "why": "a search after sorting by City descending sends sort city,desc",
-     "line": "expect(getOwnerPage.calls.allArgs()).toEqual([[{lastName: 'Fr', page: 0, size: 10, sort: 'city,desc'}]]);",
-     "by": "model",
-     "evidence": [
-      "search (name)",
-      "sort (name)"
-     ]
-    },
-    {
-     "id": "petclinic-test/src/owner-search.feature:49",
-     "strength": "asserted",
-     "why": "after sorting by City ascending and paging, searching Pot lists the owners in that order",
-     "line": "expect(await listedNames(this)).toEqual(namesIn(owners));",
-     "by": "model",
-     "evidence": [
-      "search (name)",
-      "sort (name)"
-     ]
+     "why": "asserts the request after a search keeps sort city,desc",
+     "line": "expect(query).toEqual({lastName: 'Da', page: 0, size: 10, sort: 'city,desc'});",
+     "by": "model"
     }
    ],
-   "by": "model",
-   "rejected": [
-    {
-     "id": "petclinic-test/src/owner-search.feature:38",
-     "why": "sorts without any search"
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
-     "why": "checks next-page arguments with no search"
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:64",
-     "why": "checks the service's query string, not the grid keeping the sort"
-    },
-    {
-     "id": "petclinic-test/src/owner-search.feature:32",
-     "why": "pages through every owner with no search or sort"
-    },
-    {
-     "id": "petclinic-backend/src/test/resources/features/functional/owners.feature:8",
-     "why": "searches by last name via the API with no sort"
-    },
-    {
-     "id": "petclinic-test/src/owner-search.feature:43",
-     "why": "changes page size, no search or sort"
-    }
-   ]
+   "by": "model"
   },
   {
    "id": "s5096c6",
    "coverage": "partial",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:169",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:172",
      "strength": "asserted",
-     "why": "after typing Dav following a submitted Fr, next page still queries lastName Fr",
-     "line": "expect(lastQuery()).toEqual({...FIRST_PAGE, lastName: 'Fr', page: 1});",
-     "by": "model"
+     "why": "types Zz without submitting, goes to the next page, and asserts the request still carries Fr",
+     "line": "expect(query.lastName).toBe('Fr');",
+     "by": "model",
+     "evidence": [
+      "sort (covered change)",
+      "navigation (body)",
+      "submit (name)",
+      "≈filter (assert)"
+     ]
     }
    ],
-   "gap": "Only page navigation is tested with unsubmitted input; a sort change with unsubmitted text is not.",
+   "gap": "Only page navigation is tested with an unsubmitted edit; a sort or page-size change with unsubmitted input is not.",
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:135",
-     "why": "checks a type-mismatch 400, not unsubmitted input"
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:125",
+     "why": "checks rejected input is not echoed back"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:238",
-     "why": "checks an empty page beyond the total, no unsubmitted edit"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:126",
+     "why": "uses an empty filter and never edits the input"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
-     "why": "next page with no unsubmitted edit involved"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:225",
+     "why": "checks an empty page of a non-empty result"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:130",
-     "why": "sort toggling with no unsubmitted edit involved"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:244",
+     "why": "retry reuses the failed query; no input is edited"
     }
    ]
   },
@@ -863,7 +859,7 @@
    "id": "s3f007d",
    "coverage": "missing",
    "tests": [],
-   "gap": "No test asserts that page state stays out of the URL.",
+   "gap": "No test checks that page, size or sort stay out of the URL.",
    "by": "model"
   },
   {
@@ -871,44 +867,69 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:193",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:186",
      "strength": "asserted",
-     "why": "a late earlier answer leaves the latest rows and total in place",
-     "line": "expect(component.owners.map(o => o.id)).toEqual([7]);",
+     "why": "a late answer to the first request leaves the Davis rows and the total of 2",
+     "line": "expect(element('.mat-mdc-paginator-range-label')!.textContent).toContain('of 2');",
      "by": "model"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:203",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:196",
      "strength": "asserted",
-     "why": "completion of the earlier request leaves loading true",
-     "line": "expect(component.loading).toBeTrue();",
-     "by": "model"
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:210",
-     "strength": "asserted",
-     "why": "a late failure of the earlier request shows no error",
-     "line": "expect(component.errorMessage).toBeFalsy();",
-     "by": "model"
+     "why": "a late failure of the older request shows no error and keeps loading true for the newer one",
+     "line": "expect(fixture.componentInstance.loading).toBe(true);",
+     "by": "model",
+     "evidence": [
+      "request (name)",
+      "list (name)",
+      "≈show (name)",
+      "load (name)",
+      "error (name)"
+     ]
     }
    ],
-   "by": "model"
+   "by": "model",
+   "rejected": [
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:86",
+     "why": "backend size test with no concurrency"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:140",
+     "why": "checks the sort request, not stale responses"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:132",
+     "why": "checks the size-change request, not stale responses"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:126",
+     "why": "checks the next-page request"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:115",
+     "why": "checks the row links and Add Owner"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:98",
+     "why": "checks the initial rows and paginator"
+    }
+   ]
   },
   {
    "id": "s6d987b",
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:218",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:207",
      "strength": "asserted",
-     "why": "destroying the component leaves the in-flight request with zero observers",
-     "line": "expect(latest.observers).toHaveSize(0);",
+     "why": "destroys the component and asserts the in-flight response has no observers",
+     "line": "expect(responses[0].observers.length).toBe(0);",
      "by": "model",
      "evidence": [
       "leav (name)",
       "screen (name)",
       "cancel (name)",
-      "outstand (name)",
       "list (name)"
      ]
     }
@@ -920,32 +941,15 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:226",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:215",
      "strength": "asserted",
-     "why": "a zero total shows a message containing the submitted prefix and no paginator",
-     "line": "expect(noOwnersMessage().nativeElement.textContent).toContain('\"Zzz\"');",
+     "why": "after an empty page with total 0, asserts the message names \"Zz\" and the paginator is gone",
+     "line": "expect(element('#ownersEmpty')!.textContent).toContain('\"Zz\"');",
      "by": "model",
      "evidence": [
       "≈show (name)",
       "≈none (name)",
       "owner (name)",
-      "messag (name)",
-      "contain (assert)",
-      "submit (name)",
-      "prefix (name)"
-     ]
-    },
-    {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:226",
-     "strength": "asserted",
-     "why": "the paginator is absent on a zero total",
-     "line": "expect(paginator()).toBeNull();",
-     "by": "model",
-     "evidence": [
-      "≈show (name)",
-      "≈none (name)",
-      "owner (name)",
-      "messag (name)",
       "contain (assert)",
       "submit (name)",
       "prefix (name)"
@@ -955,16 +959,24 @@
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:169",
-     "why": "checks the page request uses the submitted prefix, not the message"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:172",
+     "why": "checks the prefix is kept while paging"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:250",
-     "why": "covers the failure case, not a successful zero total"
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:74",
+     "why": "checks the shape of the response envelope"
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:210",
-     "why": "covers a late failure of an earlier request"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:196",
+     "why": "checks a stale failure, not an empty result"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:235",
+     "why": "checks the failure state, not the empty-success state"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:259",
+     "why": "checks the search form still works after a failure"
     }
    ]
   },
@@ -973,10 +985,10 @@
    "coverage": "covered",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:250",
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:235",
      "strength": "asserted",
-     "why": "a failed request shows the error text and no no-owners message",
-     "line": "expect(errorAlert().nativeElement.textContent).toContain('server returned code 500');",
+     "why": "after a failure asserts #ownersError is shown and #ownersEmpty is absent",
+     "line": "expect(element('#ownersEmpty')).toBeNull();",
      "by": "model",
      "evidence": [
       "request (covered change)",
@@ -988,13 +1000,12 @@
      ]
     },
     {
-     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:99",
-     "strength": "asserted",
-     "why": "a 500 reaches the subscriber's error handler instead of an empty page",
-     "line": "expect(failure).toBeDefined();",
+     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:97",
+     "strength": "exercised",
+     "why": "asserts the service errors instead of emitting an empty page, one layer below the screen",
+     "line": "expect(outcome.error).toHaveBeenCalled();",
      "by": "model",
      "evidence": [
-      "request (body)",
       "failur (name)",
       "≈show (name)",
       "error (assert)",
@@ -1006,8 +1017,12 @@
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:210",
-     "why": "checks a stale failure is ignored, not that failures are displayed"
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:196",
+     "why": "asserts a stale failure shows no error"
+    },
+    {
+     "id": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:259",
+     "why": "checks the search form works after a failure"
     }
    ]
   },
@@ -1016,61 +1031,38 @@
    "coverage": "partial",
    "tests": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerCreateTest.java:90",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:203",
      "strength": "asserted",
-     "why": "POST /api/owners returns 201 with a Location header",
-     "line": ".andExpect(status().isCreated())",
+     "why": "asserts the listed owner with nested pets and visits equals the detail endpoint's response",
+     "line": "assertThat(page.get(\"content\").get(1)).isEqualTo(detail(withPets.getId()));",
      "by": "model",
      "evidence": [
-      "owner (name)",
-      "exist (assert)",
-      "≈show (assert)"
+      "nest (name)",
+      "pet (assert)",
+      "visit (body)"
      ]
     },
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/AddVisitApiTest.java:75",
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/AddVisitApiTest.java:76",
      "strength": "asserted",
-     "why": "owner detail GET and visit booking POST return 200 and 201 and the visit shows on reload",
-     "line": ".andExpect(status().isCreated());",
+     "why": "books a visit through the existing endpoint and asserts the owner detail lists it",
+     "line": "assertThat(reloaded.path(\"pets\").get(0).path(\"visits\").toString())",
      "by": "model"
-    },
-    {
-     "id": "petclinic-test/src/add-visit.spec.ts:31",
-     "strength": "asserted",
-     "why": "books a visit from the owner detail page and asserts it appears in the pet's visit list",
-     "line": "await expect_pet_visit_list_contains(page, VISIT_DATE, description);",
-     "by": "model",
-     "evidence": [
-      "owner (name)",
-      "detail (name)"
-     ]
     },
     {
      "id": "petclinic-test/src/add-owner.spec.ts:59",
      "strength": "asserted",
-     "why": "edits an owner, then reads the new city back after a reload",
+     "why": "edits an owner and asserts the new city survives a reload",
      "line": "await expect(page.locator('table.table').first()).toContainText('Turin');",
      "by": "model"
     }
    ],
-   "gap": "Authorization, delete, count, and chatbot/MCP contracts are not asserted by any test.",
+   "gap": "No test covers authorization on the list, owner delete or count, or the chatbot and MCP contracts, and decision d3 records that /api/owners/abc now returns 400 instead of 500.",
    "by": "model",
    "rejected": [
     {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:58",
-     "why": "asserts the list's nested data, not the unchanged detail contracts"
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:127",
-     "why": "checks 400s for invalid list parameters, not the unchanged contracts"
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java:135",
-     "why": "checks a type-mismatch 400 on the list, not owner detail"
-    },
-    {
-     "id": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListPagingTest.java:164",
-     "why": "checks an empty list page loads no pets or visits"
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/repository/OwnerListIndexesMigrationTest.java:30",
+     "why": "checks a migration on an existing database, no owner contract"
     }
    ]
   },
@@ -1079,26 +1071,28 @@
    "coverage": "partial",
    "tests": [
     {
-     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:74",
+     "id": "petclinic-frontend/src/app/owners/owner.service.spec.ts:65",
      "strength": "asserted",
-     "why": "asserts the service yields an envelope with content and totalElements, not an array",
-     "line": "expect(Array.isArray(received)).toBe(false);",
-     "by": "model",
-     "evidence": [
-      "≈show (name)",
-      "page (name)",
-      "envelop (name)"
-     ]
+     "why": "asserts the frontend service reads content and totalElements from the page envelope",
+     "line": "expect(page.content).toEqual(expectedOwners);",
+     "by": "model"
     },
     {
-     "id": "petclinic-backend/src/test/resources/features/functional/owners.feature:3",
+     "id": "petclinic-backend/src/test/resources/features/functional/owners.feature:8",
      "strength": "asserted",
-     "why": "the owner-search step reads content.lastName from the envelope",
-     "line": "assertThat(lastNames).contains(lastName);",
+     "why": "the functional scenario reads content and totalElements from the response",
+     "line": "assertThat(page.getList(\"content\")).hasSize(onPage);",
+     "by": "model"
+    },
+    {
+     "id": "petclinic-backend/src/test/java/victor/training/petclinic/perf/OwnerSearchThroughLatencyProxyTest.java:54",
+     "strength": "asserted",
+     "why": "asserts the performance probe reads $.content as the envelope",
+     "line": ".andExpect(jsonPath(\"$.content\", hasSize(10)))",
      "by": "model"
     }
    ],
-   "gap": "Consumers outside the frontend service and the API steps, such as the chatbot or MCP tools, are not asserted.",
+   "gap": "No test shows that the chatbot or MCP tools and the other in-repository consumers read the page envelope.",
    "by": "model"
   }
  ]

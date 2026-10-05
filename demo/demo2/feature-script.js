@@ -1,4 +1,4 @@
-// Film script: Owners grid with server-side paging, Name/City sorting, prefix search, failure state.
+// Film script: Owners grid with server-side paging, page size, Name/City sorting, last-name search, failure + retry.
 // Screens are derived from the diff at film time (TypeScript AST), never listed by hand.
 const fs = require("fs");
 const path = require("path");
@@ -79,9 +79,9 @@ function deriveScreens() {
 
 module.exports = async ({page, say, pause, get, app, apiUrl}) => {
   const visited = [], missed = [], notFilmable = [];
+  const API = /\/api\/owners\?/;
 
-  const table = page.locator("#ownersTable");
-  const rows = page.locator("#ownersTable tbody td.ownerFullName");
+  const rows = page.locator("#ownersTable td.ownerFullName");
   const paginator = page.locator("mat-paginator");
   const rangeLabel = page.locator("mat-paginator .mat-mdc-paginator-range-label");
   const nameHeader = page.locator('#ownersTable th[mat-sort-header="name"]');
@@ -90,17 +90,18 @@ module.exports = async ({page, say, pause, get, app, apiUrl}) => {
   const findBtn = page.locator("#search-owner-form button[type=submit]");
   const lastName = page.locator("#lastName");
   const errorBox = page.locator("#ownersError");
+  const retryBtn = page.locator("#retryOwners");
 
   const range = async () => (await rangeLabel.innerText()).trim();
   const firstRow = async () => (await rows.first().innerText()).trim();
-  const idle = () => page.waitForFunction(() => {
+  const settled = () => page.waitForFunction(() => {
     const t = document.querySelector("#ownersTable");
     return t && t.getAttribute("aria-busy") !== "true" && t.querySelector("td.ownerFullName");
   }, null, {timeout: 10000});
-  // click, then wait for the first row to change and the grid to stop loading
-  const clickAndSettle = async btn => {
+  // click, then wait until the first row differs and the grid stopped loading
+  const clickAndSettle = async el => {
     const before = await firstRow();
-    await btn.click();
+    await el.click();
     await page.waitForFunction(b => {
       const t = document.querySelector("#ownersTable");
       const f = t && t.querySelector("td.ownerFullName");
@@ -110,15 +111,14 @@ module.exports = async ({page, say, pause, get, app, apiUrl}) => {
 
   const ownersScreen = async () => {
     await page.goto(`${app}/owners`);
-    await rows.first().waitFor();
+    await settled();
     await rangeLabel.waitFor();
-    await idle();
-    await say(`The Owners grid loads one page from the server: ${await range()}, ten per page.`, paginator);
+    await say(`The Owners grid now loads one page at a time from the server: ${await range()}.`, paginator);
     await pause(1500);
 
     await nextBtn.waitFor();
     await clickAndSettle(nextBtn);
-    await say(`Next fetches the following page: ${await range()}.`, rangeLabel);
+    await say(`Next asks the server for the following page: ${await range()}.`, rangeLabel);
     await pause(1200);
 
     const sizeSelect = page.locator("mat-paginator mat-select");
@@ -131,21 +131,23 @@ module.exports = async ({page, say, pause, get, app, apiUrl}) => {
       const t = document.querySelector("#ownersTable");
       return t && t.getAttribute("aria-busy") !== "true" && t.querySelectorAll("td.ownerFullName").length === 5;
     }, null, {timeout: 10000});
-    await say(`Page size is 5, 10 or 20, and changing it restarts at page one: ${await range()}.`, sizeSelect);
+    await say(`Page size is 5, 10 or 20; changing it goes back to page one: ${await range()}.`, sizeSelect);
     await pause(1500);
 
     await nameHeader.waitFor();
-    await clickAndSettle(nameHeader);   // default is Name ascending, one click flips it
-    await say("Name sorts on the server, here descending, back on page one.", nameHeader);
+    await clickAndSettle(nameHeader);   // Name ascending is the default, one click flips it
+    await say("Name sorts on the server, here descending, from page one.", nameHeader);
     await pause(1500);
 
     await cityHeader.waitFor();
     await clickAndSettle(cityHeader);
-    await pause(800);
+    await pause(600);
     await clickAndSettle(cityHeader);
     await say("City sorts the same way, ascending then descending.", cityHeader);
     await pause(1500);
 
+    // from page two, a new search must restart at page one
+    await clickAndSettle(nextBtn);
     await lastName.waitFor();
     await lastName.fill("M");
     await findBtn.click();
@@ -154,28 +156,27 @@ module.exports = async ({page, say, pause, get, app, apiUrl}) => {
       return t && t.getAttribute("aria-busy") !== "true"
         && [...t.querySelectorAll("td.ownerFullName")].every(td => /\sM/.test(td.innerText.trim()));
     }, null, {timeout: 10000});
-    await rows.first().waitFor();
-    await say(`Searching by last name restarts paging over the matches: ${await range()}.`, lastName);
+    const afterSearch = await range();
+    if (!/^1\s/.test(afterSearch)) throw new Error(`search did not restart at page one: ${afterSearch}`);
+    await say(`Searching by last name restarts at page one over the matches: ${afterSearch}.`, lastName);
     await pause(1800);
 
-    // failure: abort the next page request; the grid keeps the last good page and shows the error
+    // failure: the next page request is aborted, then let through for the retry
     await lastName.fill("");
     await findBtn.click();
-    await idle();
-    await page.waitForFunction(() => document.querySelectorAll("#ownersTable td.ownerFullName").length === 5, null, {timeout: 10000});
-    const goodRange = await range();
-    await page.route(/\/owners\?/, route => route.abort("failed"));
+    await settled();
+    await page.route(API, route => route.abort("failed"));
     await nextBtn.click();
     await errorBox.waitFor();
-    await say(`When a page fails to load, an error shows and the paginator still reads ${await range()}, matching the rows.`, errorBox);
-    if (goodRange !== await range()) throw new Error("paginator drifted from the rows shown after a failed load");
+    await say("If a page cannot be loaded, the grid gives way to an error instead of stale rows.", errorBox);
     await pause(1500);
-    await page.unroute(/\/owners\?/);
-
-    const addOwner = page.locator("#addOwner");
-    await addOwner.waitFor();
-    await say("Add Owner stays available under the grid.", addOwner);
-    await pause(1200);
+    await page.unroute(API);
+    await retryBtn.waitFor();
+    await retryBtn.click();
+    await settled();
+    await errorBox.waitFor({state: "detached"});
+    await say("Try again re-asks for the same page and the grid comes back.", rows.first());
+    await pause(1500);
   };
 
   const defaultBeat = async screen => {
@@ -203,7 +204,7 @@ module.exports = async ({page, say, pause, get, app, apiUrl}) => {
       visited.push(screen.route);
     } catch (e) {
       missed.push(`${screen.route} (${e.message.split("\n")[0]})`);
-      await page.unroute(/\/owners\?/).catch(() => {});
+      await page.unroute(API).catch(() => {});
     }
   }
 

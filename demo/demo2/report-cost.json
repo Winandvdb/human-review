@@ -1,7 +1,7 @@
 {
  "schema": "report-cost/1",
- "started": "2026-10-03T20:37:08+00:00",
- "recordedAt": "2026-10-03T20:51:29+00:00",
+ "started": "2026-10-05T17:48:30+00:00",
+ "recordedAt": "2026-10-05T18:00:59+00:00",
  "harness": "claude-code",
  "guide": {
   "key": "guide",
@@ -10,8 +10,8 @@
   "reason": null,
   "source": "recorded",
   "window": [
-   "2026-10-03T20:37:08+00:00",
-   "2026-10-03T20:51:29+00:00"
+   "2026-10-05T17:48:30+00:00",
+   "2026-10-05T18:00:59+00:00"
   ],
   "harnesses": [
    "claude-code"
@@ -19,21 +19,21 @@
   "entries": [
    {
     "harness": "claude-code",
-    "session": "04dd1c2a-5bf8-41be-9e80-f5296b3f0531",
+    "session": "1223564f-43ac-4d25-b819-80c959774b4a",
     "what": "the /human-review run",
     "window": [
-     "2026-10-03T20:36:37+00:00",
-     "2026-10-03T20:51:29+00:00"
+     "2026-10-05T17:48:14+00:00",
+     "2026-10-05T18:00:58+00:00"
     ],
-    "tokens": 2220303,
+    "tokens": 1146796,
     "models": {
-     "Opus 5.5": 1842000,
-     "Sonnet 5.5": 378303
+     "Opus 5.5": 728720,
+     "Sonnet 5.5": 418076
     },
-    "usd": 1.5112,
+    "usd": 1.0523,
     "aic": null,
-    "calls": 31,
-    "modelSeconds": 120.0,
+    "calls": 19,
+    "modelSeconds": 80.8,
     "subagentModels": [
      "Sonnet 5.5"
     ],
@@ -44,37 +44,44 @@
     "session": "claude -p (.model-runs.json)",
     "what": "requirements\u2194tests mapping (rerun-model.py)",
     "window": [
-     "2026-10-03T20:49:00+00:00",
-     "2026-10-03T20:51:24+00:00"
+     "2026-10-05T17:57:46+00:00",
+     "2026-10-05T18:00:40+00:00"
     ],
-    "tokens": 102631,
+    "tokens": 112553,
     "models": {
-     "Sonnet 5.5": 102631
+     "Sonnet 5.5": 112553
     },
-    "usd": 0.5516,
+    "usd": 0.62,
     "aic": null,
     "calls": 1,
-    "modelSeconds": 143.5,
+    "modelSeconds": 173.7,
     "program": "rerun-model.py"
    }
   ],
-  "tokens": 2322934,
-  "usd": 2.0628,
+  "tokens": 1259349,
+  "usd": 1.6723,
   "aic": null,
-  "modelSeconds": 263.5
+  "modelSeconds": 254.5
  },
  "wallclock": {
-  "started": "2026-10-03T20:37:08+00:00",
-  "ended": "2026-10-03T20:51:29+00:00",
-  "seconds": 861,
-  "modelSeconds": 263.5,
+  "started": "2026-10-05T17:48:30+00:00",
+  "ended": "2026-10-05T18:00:59+00:00",
+  "seconds": 749,
+  "modelSeconds": 254.5,
   "steps": [
    {
     "label": "sequence diagrams from traces",
     "tabs": [
      "sequence"
     ],
-    "seconds": 214
+    "seconds": 234
+   },
+   {
+    "label": "Code City capture",
+    "tabs": [
+     "city"
+    ],
+    "seconds": 106
    },
    {
     "label": "test change manifest",
@@ -84,59 +91,17 @@
     "seconds": 1
    },
    {
-    "label": "REST contract diff",
-    "tabs": [
-     "api"
-    ],
-    "seconds": 3
-   },
-   {
     "label": "diagram deltas",
     "tabs": [
      "data",
      "packages"
     ],
-    "seconds": 15
-   },
-   {
-    "label": "entry-point complexity",
-    "tabs": [
-     "complexity"
-    ],
-    "seconds": 2
-   },
-   {
-    "label": "assemble content.json and build the page",
-    "tabs": [
-     "guide"
-    ],
-    "seconds": 793
+    "seconds": 29
    },
    {
     "label": "review-points.md and the two commits",
     "tabs": [
      "review"
-    ],
-    "seconds": 1
-   },
-   {
-    "label": "codeowners check",
-    "tabs": [
-     "owners"
-    ],
-    "seconds": 1
-   },
-   {
-    "label": "structural logging scan",
-    "tabs": [
-     "logging"
-    ],
-    "seconds": 1
-   },
-   {
-    "label": "pb33f report",
-    "tabs": [
-     "api"
     ],
     "seconds": 1
    },
@@ -148,119 +113,89 @@
     "seconds": 0
    },
    {
-    "label": "container view projected from the sequences",
+    "label": "entry-point complexity",
     "tabs": [
-     "packages"
+     "complexity"
     ],
-    "seconds": 6
+    "seconds": 3
    },
    {
-    "label": "Code City capture",
+    "label": "REST contract diff",
     "tabs": [
-     "city"
+     "api"
     ],
-    "seconds": 45
+    "seconds": 3
+   },
+   {
+    "label": "pb33f report",
+    "tabs": [
+     "api"
+    ],
+    "seconds": 1
+   },
+   {
+    "label": "structural logging scan",
+    "tabs": [
+     "logging"
+    ],
+    "seconds": 1
+   },
+   {
+    "label": "codeowners check",
+    "tabs": [
+     "owners"
+    ],
+    "seconds": 1
    },
    {
     "label": "Playwright trace recordings",
     "tabs": [
      "requirements"
     ],
-    "seconds": 36
+    "seconds": 28
    },
    {
     "label": "feature recording",
     "tabs": [
      "behaviour"
     ],
-    "seconds": 233
+    "seconds": 226
    },
    {
     "label": "per-test coverage of the change",
     "tabs": [
      "requirements"
     ],
-    "seconds": 49
+    "seconds": 73
+   },
+   {
+    "label": "container view projected from the sequences",
+    "tabs": [
+     "packages"
+    ],
+    "seconds": 14
    },
    {
     "label": "design-system audit",
     "tabs": [
      "dsaudit"
     ],
-    "seconds": 40
+    "seconds": 41
+   },
+   {
+    "label": "assemble content.json and build the page",
+    "tabs": [
+     "guide"
+    ],
+    "seconds": 14
    }
   ],
-  "stepSeconds": 1441
+  "stepSeconds": 776
  },
  "refreshes": [
   {
-   "at": "2026-10-03T20:52:19+00:00",
-   "seconds": 50.1,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T21:18:58+00:00",
-   "seconds": 38.2,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T21:37:20+00:00",
-   "seconds": 37.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T21:46:56+00:00",
-   "seconds": 43.2,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T21:51:14+00:00",
-   "seconds": 45.5,
-   "steps": "tests"
-  },
-  {
-   "at": "2026-10-03T21:53:41+00:00",
-   "seconds": 42.1,
-   "steps": "owners"
-  },
-  {
-   "at": "2026-10-03T21:58:37+00:00",
-   "seconds": 42.8,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T22:05:26+00:00",
-   "seconds": 36.8,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T22:06:24+00:00",
-   "seconds": 36.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-03T22:20:27+00:00",
-   "seconds": 43.8,
-   "steps": "tests"
-  },
-  {
-   "at": "2026-10-04T07:59:49+00:00",
-   "seconds": 44.3,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-04T08:01:27+00:00",
-   "seconds": 43.0,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-04T08:20:36+00:00",
-   "seconds": 43.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-05T11:00:07+00:00",
-   "seconds": 43.1,
+   "at": "2026-10-05T18:02:01+00:00",
+   "seconds": 57.6,
    "steps": "none"
   }
  ]

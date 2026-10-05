@@ -1,17 +1,17 @@
-[video] the app cannot say which commit it is; this run started it itself, from 44c8da18a26129ea683df492beed502b1a54b285
+[video] the app cannot say which commit it is; this run started it itself, from d31998a7f71d103c6fe681a65fc1ededb388da10
 [video] title card: "Demo" / "Owners grid: paged and sorted by Name or City", 3.41s
 [video] feature-script.js: 1/1 changed screens filmed, 8 cues (8 with a box) -> /Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated/.human-review/assets/feature.raw.webm
 [video] viewport 1280x800 @ dpr 1
-[video] narration: 8/8 cues, 34.9s of speech, voice "Samantha"
-[video] cut 108.2s of still footage (22 stretches): 157.1s -> 48.9s
-[annotate] 177 caption states from 177 frames
+[video] narration: 8/8 cues, 33.8s of speech, voice "Samantha"
+[video] cut 87.3s of still footage (24 stretches): 139.1s -> 51.8s
+[annotate] 198 caption states from 198 frames
 [annotate] 8 captions, 8 spotlights, 8 spoken -> /Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated/.human-review/assets/feature.webm
-[video] cut 93.2s of still footage (22 stretches): 157.1s -> 63.9s
-[annotate] 202 caption states from 202 frames
+[video] cut 68.5s of still footage (19 stretches): 139.1s -> 70.5s
+[annotate] 226 caption states from 226 frames
 [annotate] 8 captions, 8 spotlights, 8 spoken -> /Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated/.human-review/assets/feature.voice-trump.webm
 [video] 🐘 voice -> /Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated/.human-review/assets/feature.voice-trump.webm
-[video] cut 82.8s of still footage (15 stretches): 157.1s -> 74.4s
-[annotate] 202 caption states from 202 frames
+[video] cut 66.8s of still footage (20 stretches): 139.1s -> 72.3s
+[annotate] 225 caption states from 225 frames
 [annotate] 8 captions, 8 spotlights, 8 spoken -> /Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated/.human-review/assets/feature.voice-discovery.webm
 [video] Discovery voice -> /Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated/.human-review/assets/feature.voice-discovery.webm
-[video] 48.888000s, 2.3M
+[video] 51.760000s, 2.3M

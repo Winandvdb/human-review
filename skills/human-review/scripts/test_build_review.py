@@ -4576,10 +4576,12 @@ def test_the_tab_opens_on_how_its_pictures_were_made_shut_and_without_a_shot_off
         "with one, the title's subtitle: right under it"
     how = _how(out)
     summary = how[how.index("<summary>"):how.index("</summary>")]
-    assert summary.startswith("<summary>How were these captured?"), "the question is the handle"
-    # Victor, 5 Oct 2026: the answer reads without opening the fold, on the question's line.
-    assert ('<span class="seqhow-ans">From <a href="https://opentelemetry.io/" target="_blank"'
-            ' rel="noopener">OpenTelemetry</a> recordings of end-to-end tests.</span>') in summary
+    # Victor, 5 Oct 2026: one sentence, the fold's handle, reading without being opened —
+    # and counting the tests the pictures came from. One pair here: singular.
+    assert summary == ('<summary><span class="seqhow-ans">These diagrams were captured from '
+                       '<a href="https://opentelemetry.io/" target="_blank" rel="noopener">'
+                       'OpenTelemetry</a> traces of 1 test.</span>'), summary
+    assert "How were these captured?" not in out
     assert how.count("<li>") == 3, "three steps, no more"
     assert "OpenTelemetry" in how and "<dfn>span</dfn>" in how and "<dfn>trace</dfn>" in how
     # No machinery in it: the reviewer is busy, and the two words are what they lack.
@@ -4587,6 +4589,22 @@ def test_the_tab_opens_on_how_its_pictures_were_made_shut_and_without_a_shot_off
     assert "seqhow-shot" not in out and "sequence.trace.png" not in out, \
         "no picture on disk, no fold offering one"
     assert weight == 1, "an explanation is not an exhibit"
+
+
+def test_the_subtitle_counts_every_test_the_tab_draws_in_the_plural(tmp_path):
+    review = _one_traced_pair(tmp_path)
+    feat = "petclinic-test/src/owner-search.feature"
+    other = SEARCH_PUML.replace("shows-the-first-page", "shows-the-second-page")
+    (tmp_path / other).write_text(_seq_puml(feat, 4, "Searching with an empty last name "
+                                                     "shows the first page"))
+    out = build.render_testpairs(TESTPAIRS, {}, [], tmp_path, review)[0]
+    pairs = out.count('<details class="testpair"')
+    assert pairs == 2, pairs
+    # Both diagrams name the same scenario line: one test, drawn twice, is still one test.
+    assert "OpenTelemetry</a> traces of 1 test." in _how(out)
+    (tmp_path / other).write_text(_seq_puml(feat, 9, "Another scenario"))
+    out = build.render_testpairs(TESTPAIRS, {}, [], tmp_path, review)[0]
+    assert "OpenTelemetry</a> traces of 2 tests." in _how(out)
 
 
 def test_the_trace_closes_the_fold_full_size_and_names_the_pair_it_was_drawn_as(
@@ -5136,6 +5154,22 @@ def test_a_page_that_means_something_else_by_the_picture_can_say_so(tmp_path):
     page, _ = _build(tmp_path, _city(tmp_path, title="Where the weight moved"))
     assert '<h2 class="tabtitle" id="codecity">Where the weight moved</h2>' in page
     assert build.CITY_HEADING not in page
+
+
+def test_the_sequence_tab_is_never_struck_through(tmp_path, monkeypatch):
+    """Victor, 5 Oct 2026: "The Sequence tab should never be crossed out. It isn't about the
+    diff, it's about the overview of what really happens." A tab of nothing but unchanged
+    pairs used to be struck; the pairs still count no delta, the pill just ignores it."""
+    review = _one_traced_pair(tmp_path)
+    monkeypatch.chdir(tmp_path)               # the build's root is the cwd's repository
+    page, err = _build(tmp_path, {**BARE, "tabs": BARE["tabs"] + [
+        {"id": "sequence", "label": "Sequence", "blocks": [TESTPAIRS]}]})
+    assert '<span class="badge sev-info">unchanged</span>' in page, "no delta on it"
+    pill = re.search(r'<button[^>]*id="tabbtn-sequence"[^>]*>', page).group(0)
+    assert "quiet" not in pill, pill
+    assert "Sequence" not in err.split("kept as context")[-1].split("\n")[0]
+    # Every other tab still is, by the same rule as before.
+    assert build.render_testpairs(TESTPAIRS, {}, [], tmp_path, review)[2] == 0
 
 
 def test_the_city_tab_is_never_struck_through(tmp_path):

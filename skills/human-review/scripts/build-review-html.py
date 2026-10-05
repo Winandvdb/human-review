@@ -258,6 +258,12 @@ from hrbuild.tabs.cost import (
 # before any content. Leading whitespace and comments are skipped; case does not matter.
 WHOLE_DOCUMENT = re.compile(r"\s*(?:<!--.*?-->\s*)*<(?:!doctype\b|html\b|head\b)", re.I | re.S)
 
+#: Blocks whose tab is never struck through, whatever the delta. The strike says "this
+#: branch did not touch it", which is a statement about the diff — and the Sequence tab is
+#: not about the diff: it is the overview of what the system really does when a test runs.
+#: Victor, 5 Oct 2026: "The Sequence tab should never be crossed out."
+NEVER_STRUCK = frozenset({"testpairs"})
+
 
 def rebuild_interpreter() -> str:
     """How to say "python, with Pygments" on *this* machine, in a command a reader pastes.
@@ -1160,7 +1166,9 @@ def _main(argv=None) -> int:
             ) if badge else ""
             # Struck through rather than dropped: the answer "we looked, and this branch
             # did not touch it" is worth as much to a reviewer as the answer that it did.
-            still = not changes and not tab.get("noStrike")
+            # Not on a tab that is an overview rather than a delta (`NEVER_STRUCK`).
+            still = (not changes and not tab.get("noStrike")
+                     and not any(b.get("type") in NEVER_STRUCK for b in tab.get("blocks", [])))
             if still:
                 quiet.append(tab["label"])
             # No `data-tip` on a tab header, on purpose. The strip used to carry two

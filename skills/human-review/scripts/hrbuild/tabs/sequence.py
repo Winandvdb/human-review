@@ -907,10 +907,11 @@ TRACE_SHOT_META = "assets/sequence.trace.json"
 #: The three steps from a test to the picture of it, for a reader who has never met a
 #: trace. Tiny on purpose, and free of the machinery — no script, no file, no command: the
 #: reviewer is busy, and what they lack is the two words, not the plumbing.
-# The answer, inside the summary: a <details> shows nothing outside its <summary> while
-# shut, and Victor wants the subtitle to say where the pictures come from without a click.
-TRACE_ANSWER = ('From <a href="https://opentelemetry.io/" target="_blank" rel="noopener">'
-                "OpenTelemetry</a> recordings of end-to-end tests.")
+# The fold's handle, and the whole subtitle: a <details> shows nothing outside its <summary>
+# while shut, and Victor wants it to say where the pictures come from — and how many tests
+# they cover — without a click. `{tests}` is counted at build time (`trace_how_html`).
+TRACE_ANSWER = ('These diagrams were captured from <a href="https://opentelemetry.io/" '
+                'target="_blank" rel="noopener">OpenTelemetry</a> traces of {tests}.')
 TRACE_HOW = (
     "The tests ran against the real app, with OpenTelemetry tracing switched on.",
     "Each HTTP call and database query was recorded as a <dfn>span</dfn>: who called whom, "
@@ -959,9 +960,12 @@ def _trace_shot_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
             "</a></div>")
 
 
-def trace_how_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
-    """"How were these captured?" — shut, as the subtitle under the tab's title, with its
-    one-line answer beside it so the subtitle reads without being opened.
+def trace_how_html(out_dir: Path, root: Path, shown: dict[str, str], tests: int) -> str:
+    """"These diagrams were captured from OpenTelemetry traces of N tests." — shut, as the
+    subtitle under the tab's title, and itself the fold's handle. It used to be a question
+    with this answer beside it ("How were these captured? From OpenTelemetry recordings of
+    end-to-end tests."); Victor, 5 Oct 2026, wanted one sentence, with the count in it.
+    `tests` is how many tests the tab's diagrams were drawn from.
 
     The diagrams on this tab are drawn from OpenTelemetry traces, and nothing on the page
     said so: a reader who does not know what a trace is met a column of arrows with no
@@ -970,8 +974,9 @@ def trace_how_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
     height for it; the picture of a real trace right under them, for whoever wants to see
     the thing the three lines describe."""
     steps = "".join(f"<li>{s}</li>" for s in TRACE_HOW)
-    return ('<details class="seqhow tabsub"><summary>How were these captured?'
-            f'<span class="seqhow-ans">{TRACE_ANSWER}</span></summary>'
+    said = TRACE_ANSWER.format(tests=f"{tests} test{'' if tests == 1 else 's'}")
+    return ('<details class="seqhow tabsub"><summary>'
+            f'<span class="seqhow-ans">{said}</span></summary>'
             f"<ol>{steps}</ol>" + _trace_shot_html(out_dir, root, shown) + "</details>")
 
 
@@ -1063,11 +1068,15 @@ def render_testpairs(block, dspec, manifest_rows, root: Path, out_dir: Path,
     picked = (selection or {}).get("picked") or []
     drew: set[int] = set()
     tagged = None
+    # The tests the pictures were drawn from, for the subtitle's count: one per scenario a
+    # diagram's chapters name, and one for a diagram that names none.
+    tests_shown: set[tuple] = set()
 
     for test_rel, entries in plan.items():
         quoted_by_pair = _share_excerpts(test_rel, entries, snippets, used, root)
         for puml_rel, row in entries:
             scenarios = _scenarios_drawn(puml_rel, test_rel, root)
+            tests_shown.update({(test_rel, ln) for ln, _ in scenarios} or {(puml_rel,)})
             quoted = [snippet_html(x["ref"], x.get("caption"), root)
                       for x in quoted_by_pair[puml_rel]]
             # No lead. The scenario names used to be printed here as deep links, and every
@@ -1133,7 +1142,7 @@ def render_testpairs(block, dspec, manifest_rows, root: Path, out_dir: Path,
     # and returned above. With no title it is simply the head's first line.
     if plan:
         head += trace_how_html(out_dir, root, {rel: test_rel for test_rel, entries in plan.items()
-                                               for rel, _ in entries})
+                                               for rel, _ in entries}, len(tests_shown))
     head += f'<p>{block["body"]}</p>' if block.get("body") else ""
     head += selection_note_html(selection, drew)
     # Invisible, and last: nothing to look at, only the map's way back in. `</` cannot
@@ -1141,10 +1150,11 @@ def render_testpairs(block, dspec, manifest_rows, root: Path, out_dir: Path,
     if index:
         parts.append('<script type="application/json" id="hr-genseq">'
                      + json.dumps(index).replace("</", "<\\/") + "</script>")
-    # Weight counts every exhibit; changes count only the manifest's rows. An unchanged
-    # pair is context, exactly as a `puml` block is, and must not un-strike the tab —
-    # unless the suites were not re-traced: a strike says "this branch left the sequences
-    # alone", and a run that drew nothing cannot know that.
+    # Weight counts every exhibit; changes count only the manifest's rows — an unchanged
+    # pair is context, exactly as a `puml` block is, unless the suites were not re-traced:
+    # a run that drew nothing cannot know the branch left the sequences alone. The count
+    # is a fact about the delta only: the tab holding this block is never struck through
+    # whatever it says (`NEVER_STRUCK` in build-review-html.py).
     return (band + "\n".join(([head] if head else []) + parts) + "\n",
             len(rows) + unchanged + stale + len(orphaned),
             len(rows) or int(sequence_verdict_alarm(out_dir) is not None))

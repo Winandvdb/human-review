@@ -660,7 +660,7 @@ def render(model, entries, global_changes, tags, old_label, new_label) -> str:
 
 
 def _tip_js() -> str:
-    """The review page's tooltip component, so the frame's tooltips are the page's own.
+    """The review page's tooltip component, so the diff's tooltips are the page's own.
     The standalone copy of this script has no hrbuild next to it and goes without."""
     tip = Path(__file__).resolve().parent / "hrbuild" / "assets" / "tip.js"
     return tip.read_text(encoding="utf-8").replace("</", "<\\/") if tip.is_file() else ""
@@ -674,12 +674,15 @@ TEMPLATE = r"""<!doctype html>
 <title>OpenAPI visual diff</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.29.1/swagger-ui.min.css">
 <style>
-  :root {
+  /* `:host` beside every `:root`: embedded in another page (the review's API tab), this
+     stylesheet is moved into a shadow root on a host element, where `:root` matches
+     nothing. The shadow boundary keeps these rules and the host page's apart. */
+  :root, :host {
     --dv-breaking: #d7263d;
     --dv-modified: #d98218;
     --dv-added:    #2e9e5b;
     --dv-removed:  #8a8f98;
-    /* palette shared with the Human Review report, so an embedded frame doesn't
+    /* palette shared with the Human Review report, so an embedded diff doesn't
        announce itself as a foreign document */
     --dv-bg:    #fbfbfd;
     --dv-fg:    #1c1c22;
@@ -692,10 +695,10 @@ TEMPLATE = r"""<!doctype html>
     --dv-dim:   #8a8a95;
     --dv-attr:  #5555aa;
   }
-  /* System theme by default; ?theme=dark|light pins it, which is what the
-     embedding page uses when it wants the frame to match rather than guess. */
+  /* System theme by default; ?theme=dark|light pins it (embedded: `data-theme` on the
+     host), which is what an embedding page uses when it wants us to match, not guess. */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
+    :root:not([data-theme="light"]), :host(:not([data-theme="light"])) {
       --dv-breaking: #f0757f; --dv-modified: #e0a44a; --dv-added: #6fce93;
       --dv-removed: #9aa0aa;
       --dv-bg: #15151a; --dv-fg: #e8e8ef; --dv-muted: #9a9aa8;
@@ -703,7 +706,7 @@ TEMPLATE = r"""<!doctype html>
       --dv-dim: #82828e; --dv-attr: #97a9ee;
     }
   }
-  :root[data-theme="dark"] {
+  :root[data-theme="dark"], :host([data-theme="dark"]) {
     --dv-breaking: #f0757f; --dv-modified: #e0a44a; --dv-added: #6fce93;
     --dv-removed: #9aa0aa;
     --dv-bg: #15151a; --dv-fg: #e8e8ef; --dv-muted: #9a9aa8;
@@ -712,17 +715,29 @@ TEMPLATE = r"""<!doctype html>
   }
   body { margin: 0; background: var(--dv-bg); color: var(--dv-fg);
          color-scheme: light dark; }
-  /* Framed, a wheel that reaches our last endpoint stops here rather than scrolling the
-     review around us: the frame is the one scrollbar on that tab. */
-  html { overscroll-behavior-y: contain; }
+  /* Embedded, the host starts from the same blank slate a document of our own would:
+     `all: initial` drops the font, size, line height and colour the host page would
+     otherwise pass down across the shadow boundary (inherited properties do cross it;
+     custom properties are not reset by `all`, so `--dv-sticky-top` still arrives). It
+     scrolls with the page -- no scrollport of its own -- and `isolation` keeps our
+     z-indexes (the toolbar over the roads) inside us, under the host page's own bars. */
+  :host {
+    all: initial; display: block; isolation: isolate;
+    background: var(--dv-bg); color: var(--dv-fg); color-scheme: light dark;
+  }
+  /* The roads' origin: every road is measured from this box's top-left corner, so the
+     same numbers hold standalone (the top of the body) and embedded (wherever the host
+     page put us). */
+  #dv-app { position: relative; }
 
   /* ---------- toolbar ---------- */
   .dv-bar {
-    /* Pinned at the top of whatever scrolls us: the window standalone, our own scrollport
-       framed -- the review sizes the frame to its window and lets it scroll itself. The
+    /* Pinned at the top of whatever scrolls us -- the window, standalone or embedded --
+       `--dv-sticky-top` below the top edge: an embedding page with a pinned header of its
+       own sets it to that header's height, so the bar stops under it, not behind it. The
        filters and the counts are wanted at the fortieth endpoint, not just the first.
        Slim (Victor, 5 Oct 2026): every pixel of it is taken from the diff under it. */
-    position: sticky; top: 0; z-index: 50;
+    position: sticky; top: var(--dv-sticky-top, 0px); z-index: 50;
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     padding: 5px 20px;
     background: #1b1b1f; color: #eaeaea;
@@ -971,8 +986,8 @@ TEMPLATE = r"""<!doctype html>
     opacity: .32; filter: saturate(.15);
   }
   .swagger-ui .opblock.dv-untouched:hover { opacity: .85; filter: saturate(.6); }
-  body.dv-hide-untouched .opblock.dv-untouched,
-  body.dv-hide-untouched .opblock-tag-section.dv-empty { display: none; }
+  .dv-hide-untouched .opblock.dv-untouched,
+  .dv-hide-untouched .opblock-tag-section.dv-empty { display: none; }
   .swagger-ui .opblock-tag-section.dv-quiet > h3 { opacity: .4; }
 
   /* operations read as children of their controller, not as siblings of it */
@@ -1154,9 +1169,10 @@ TEMPLATE = r"""<!doctype html>
 </style>
 </head>
 <body>
+<div id="dv-app">
 <div class="dv-bar">
   <h1>OpenAPI visual diff</h1>
-  <!-- The pair of refs used to sit here, between the title and the chips. Framed in the
+  <!-- The pair of refs used to sit here, between the title and the chips. Embedded in the
        review -- which is how this page is read -- the masthead two inches above already
        says which branch is against which base, on every tab, and saying it again here
        only cost the chips their room. Standalone it is not lost: it is the tab title. -->
@@ -1164,24 +1180,45 @@ TEMPLATE = r"""<!doctype html>
   <span class="dv-spacer"></span>
   <!-- No tooltip here on purpose: the checkbox demonstrates itself the moment it is
        ticked. The count is the verdict line's count: that line
-       says "25 changes" right above this frame, and a toggle that opened 11 endpoints
+       says "25 changes" right above this diff, and a toggle that opened 11 endpoints
        with no number on it read as a second, contradicting tally. -->
   <label class="dv-toggle"><input type="checkbox" id="dv-expand"> __EXPAND_LABEL__</label>
 </div>
 <div id="dv-global"></div>
 <div id="swagger-ui"></div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.29.1/swagger-ui-bundle.min.js"></script>
 <script>
+// One function scope for all of it: embedded, this script runs in the host page's global
+// scope, where a top-level `const root` or `function apply` would clash with the page's own.
+(() => {
+// Standalone, this page is the document. Embedded (the review's API tab), the markup and
+// the styles above were moved into a shadow root on a host element, and this script tag
+// carries `data-dv-host` naming that host. Everything below queries `root`, never
+// `document`: it finds its own nodes either way, never the host page's, and no stylesheet
+// crosses the boundary in either direction. The view the URL hash picks (`#only-touched`)
+// is the host's `data-hash` when embedded, since the page's own hash names its tab.
+const HOST = document.currentScript && document.currentScript.dataset.dvHost
+  ? document.getElementById(document.currentScript.dataset.dvHost) : null;
+const root = HOST ? HOST.shadowRoot : document;
+const APP = root.getElementById('dv-app');
+const HASH = HOST ? (HOST.dataset.hash || '') : location.hash;
+
 // The report's one tooltip component (hrbuild/assets/tip.js, driven by data-tip), inlined:
-// the host page's copy cannot reach into this frame, and a native title= is the thing the
-// house rule exists to keep out.
+// a native title= is the thing the house rule exists to keep out. It is written against
+// `document`; embedded, it is handed a stand-in that puts its stylesheet and its bubble
+// in our root and listens there -- the host page's own copy sees our elements only as the
+// host, retargeted, and a second copy listening on the page would double every page tip.
+(function (document) {
 __TIP_JS__
-</script>
-<script>
-// ?theme=dark|light pins the theme; with no parameter the system decides.
+})(HOST ? { createElement: tag => document.createElement(tag), head: root, body: root,
+            addEventListener: (...a) => root.addEventListener(...a) } : document);
+
+// ?theme=dark|light pins the theme (embedded: the host's `data-theme`, which the
+// stylesheet reads off `:host` directly); with neither the system decides.
 const THEME = new URLSearchParams(location.search).get('theme');
-if (THEME === 'dark' || THEME === 'light') {
+if (!HOST && (THEME === 'dark' || THEME === 'light')) {
   document.documentElement.setAttribute('data-theme', THEME);
 }
 
@@ -1192,7 +1229,7 @@ const ORDER = ['breaking', 'modified', 'added', 'removed', 'untouched'];
 
 // The one place the two refs are still named: the browser tab, where it costs no room
 // and answers "which of these did I leave open?".
-document.title = DATA.new + ' vs ' + DATA.old + ' \u2014 OpenAPI visual diff';
+if (!HOST) document.title = DATA.new + ' vs ' + DATA.old + ' \u2014 OpenAPI visual diff';
 
 // backticked oasdiff prose -> <code>
 function md(s) {
@@ -1202,7 +1239,7 @@ function md(s) {
 
 // ---- toolbar chips double as filters ----
 const hidden = new Set();
-const chips = document.getElementById('dv-chips');
+const chips = root.getElementById('dv-chips');
 // The chips count endpoints, one per operation; the verdict line under the tab counts
 // the individual changes inside them. Without the unit "4 breaking" up here and
 // "14 breaking" down there read as two answers to the same question.
@@ -1219,7 +1256,7 @@ ORDER.forEach(state => {
     hidden.has(state) ? hidden.delete(state) : hidden.add(state);
     el.classList.toggle('off', hidden.has(state));
     if (state === 'untouched') {
-      document.body.classList.toggle('dv-hide-untouched', hidden.has(state));
+      APP.classList.toggle('dv-hide-untouched', hidden.has(state));
     }
     apply();
   };
@@ -1228,7 +1265,7 @@ ORDER.forEach(state => {
 
 // ---- non-path changes (components, servers, security...) ----
 if (DATA.global.length) {
-  const box = document.getElementById('dv-global');
+  const box = root.getElementById('dv-global');
   box.className = 'dv-global';
   box.innerHTML = '<h2>Outside the endpoints</h2>' + DATA.global.map(c =>
     `<div class="dv-change l${c.level}"><span class="lvl">${c.level === 3 ? 'breaking' : c.level === 2 ? 'warn' : 'info'}</span><span>${md(c.text)}</span></div>`
@@ -1248,7 +1285,7 @@ function keyOf(op) {
 // constraints happen to end, and the field-change chip lands there too. Re-run with
 // decorate(), so a node opened by hand or by the walk is laid out once it renders.
 function layoutDescriptions() {
-  document.querySelectorAll(
+  root.querySelectorAll(
     '.swagger-ui .json-schema-2020-12-body > .json-schema-2020-12-keyword--description'
   ).forEach(d => {
     const art = d.parentElement.parentElement;
@@ -1273,11 +1310,10 @@ function layoutDescriptions() {
     else if (d.getAttribute('data-tip') !== text) d.setAttribute('data-tip', text);
   });
 }
-window.addEventListener('resize', layoutDescriptions);
 
 // Swagger UI re-renders on expand/collapse, so decorating is idempotent and re-run.
 function decorate() {
-  document.querySelectorAll('.swagger-ui .opblock').forEach(op => {
+  root.querySelectorAll('.swagger-ui .opblock').forEach(op => {
     const key = keyOf(op);
     const info = key && DATA.ops[key];
     if (!info) return;
@@ -1320,7 +1356,7 @@ function decorate() {
 let collapsedOnce = false;
 function autoCollapse() {
   if (collapsedOnce) return;
-  const sections = [...document.querySelectorAll('.opblock-tag-section')];
+  const sections = [...root.querySelectorAll('.opblock-tag-section')];
   if (!sections.length || !sections.some(s => s.querySelector('.opblock'))) return;
   collapsedOnce = true;
   sections.forEach(sec => {
@@ -1332,12 +1368,12 @@ function autoCollapse() {
 }
 
 function apply() {
-  document.querySelectorAll('.swagger-ui .opblock').forEach(op => {
+  root.querySelectorAll('.swagger-ui .opblock').forEach(op => {
     const s = op.dataset.dvState;
     op.style.display = s && hidden.has(s) ? 'none' : '';
   });
   // a tag section nobody touched fades as a whole; empty ones disappear
-  document.querySelectorAll('.opblock-tag-section').forEach(sec => {
+  root.querySelectorAll('.opblock-tag-section').forEach(sec => {
     const ops = [...sec.querySelectorAll('.opblock')];
     const visible = ops.filter(o => o.style.display !== 'none');
     const tag = sec.querySelector('.opblock-tag')?.dataset.tag;
@@ -1355,14 +1391,14 @@ function apply() {
 // `#only-touched` opens on the filtered view — the same state the untouched chip
 // toggles, so there is one control for it rather than two that must agree.
 function setOnlyTouched(on) {
-  document.body.classList.toggle('dv-hide-untouched', on);
+  APP.classList.toggle('dv-hide-untouched', on);
   if (on) hidden.add('untouched'); else hidden.delete('untouched');
-  document.querySelectorAll('.dv-chip').forEach(c => {
+  root.querySelectorAll('.dv-chip').forEach(c => {
     if (c.textContent.includes('untouched')) c.classList.toggle('off', on);
   });
   apply();
 }
-if (location.hash.includes('only')) setOnlyTouched(true);
+if (HASH.includes('only')) setOnlyTouched(true);
 
 // ---- walking down to the fields that changed ----
 // Swagger UI renders a collapsed subtree as an empty <div>: the children do not exist in
@@ -1554,7 +1590,7 @@ function walkVisible(op, where, steps) {
 
 function markVisible() {
   pruneRoads();
-  document.querySelectorAll('.swagger-ui .opblock.is-open').forEach(op => {
+  root.querySelectorAll('.swagger-ui .opblock.is-open').forEach(op => {
     const info = DATA.ops[keyOf(op)];
     if (!info) return;
     for (const c of info.changes) {
@@ -1771,18 +1807,21 @@ function headOf(el) {
 // Where the road turns at this node: just left of its name — a 2020-12 box starts at
 // its first letter, so its own edge would put the road through the "p" of "pets" — and
 // level with the middle of the name. The leaf's spine sits exactly there, 7px out.
-function roadPoint(el) {
+// Measured from #dv-app's corner, the box the layer is positioned in: standalone that is
+// the top of the page, embedded it is wherever the host page put us -- and the page
+// scrolling moves both rects alike, so no scroll offset enters the sum.
+function roadPoint(el, origin) {
   const box = el.getBoundingClientRect(), head = headOf(el).getBoundingClientRect();
   if (!box.height) return null;                 // filtered out, collapsed, detached
   return {
-    x: box.left + scrollX - 5.5,
-    y: head.top + scrollY + Math.min(head.height / 2, 14),
+    x: box.left - origin.left - 5.5,
+    y: head.top - origin.top + Math.min(head.height / 2, 14),
   };
 }
 
-function roadPath(road) {
+function roadPath(road, origin) {
   if (!road.leaf.isConnected || road.chain.some(el => !el.isConnected)) return null;
-  const pts = [...road.chain, road.leaf].map(roadPoint);
+  const pts = [...road.chain, road.leaf].map(el => roadPoint(el, origin));
   if (pts.some(p => !p)) return null;
   // Down the ancestor's rail to the level of the next name, then in to it.
   let d = `M${pts[0].x} ${pts[0].y}`;
@@ -1797,20 +1836,20 @@ function drawRoads() {
       roadLayer = document.createElementNS(SVG_NS, 'svg');
       roadLayer.setAttribute('class', 'dv-roads');
       roadLayer.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(roadLayer);
+      APP.appendChild(roadLayer);
     }
-    // Sized to the content with the layer itself taken out of the measurement. Sized to
-    // `scrollWidth`/`scrollHeight` as it stood, it was a ratchet: a vertical scrollbar
-    // narrowed the page by 15px under a layer still as wide as before, which drew the
-    // horizontal scrollbar under the frame, and a collapse left the page as tall as it had
-    // ever been. `clientWidth` is the width inside a scrollbar; the roads never pass it.
-    const root = document.documentElement;
+    // Sized to #dv-app with the layer itself taken out of the measurement. Sized to the
+    // document's `scrollWidth`/`scrollHeight` as it stood, it was a ratchet: a vertical
+    // scrollbar narrowed the page by 15px under a layer still as wide as before, which drew
+    // a horizontal scrollbar, and a collapse left the page as tall as it had ever been.
+    // `clientWidth` is the box's width inside any scrollbar; the roads never pass it.
     roadLayer.setAttribute('width', 0);
     roadLayer.setAttribute('height', 0);
-    roadLayer.setAttribute('width', root.clientWidth);
-    roadLayer.setAttribute('height', root.scrollHeight);
+    roadLayer.setAttribute('width', APP.clientWidth);
+    roadLayer.setAttribute('height', APP.scrollHeight);
+    const origin = APP.getBoundingClientRect();
     for (const road of ROADS) {
-      const d = roadPath(road);
+      const d = roadPath(road, origin);
       if (!road.g) {
         road.g = document.createElementNS(SVG_NS, 'g');
         road.g.setAttribute('class', 'l' + road.level);
@@ -1864,16 +1903,18 @@ function pruneRoads() {
   }
 }
 
-new ResizeObserver(drawRoads).observe(document.body);
+// Our own box, not the window: embedded, a tab switch takes us from no size to full size
+// with no window resize at all, and the descriptions laid out while hidden measured zero.
+new ResizeObserver(() => { drawRoads(); layoutDescriptions(); }).observe(APP);
 new MutationObserver(() => { if (ROADS.length) drawRoads(); })
-  .observe(document.getElementById('swagger-ui'), { childList: true, subtree: true });
+  .observe(root.getElementById('swagger-ui'), { childList: true, subtree: true });
 
 // One run at a time. A second click supersedes the first rather than racing it.
 let revealRun = 0;
 
 async function revealImpacted() {
   const run = ++revealRun;
-  const ops = [...document.querySelectorAll('.swagger-ui .opblock')].filter(op => {
+  const ops = [...root.querySelectorAll('.swagger-ui .opblock')].filter(op => {
     const s = op.dataset.dvState;
     return s && s !== 'untouched' && op.style.display !== 'none';
   });
@@ -1925,14 +1966,14 @@ function reportMissed(op, missed) {
 // unticking folds back the ones the toggle opened, and only those.
 const openedTags = new Set();
 function tagHead(tag) {
-  return document.querySelector(`.opblock-tag[data-tag="${CSS.escape(tag)}"]`);
+  return root.querySelector(`.opblock-tag[data-tag="${CSS.escape(tag)}"]`);
 }
-document.getElementById('dv-expand').onchange = async e => {
+root.getElementById('dv-expand').onchange = async e => {
   const run = ++revealRun;                       // cancel anything still walking
   const on = e.target.checked;
   clearRoads();
   if (on) {
-    document.querySelectorAll('.opblock-tag').forEach(h3 => {
+    root.querySelectorAll('.opblock-tag').forEach(h3 => {
       const tag = h3.dataset.tag;
       if (DATA.tags[tag] !== 'touched' || h3.dataset.isOpen === 'true') return;
       openedTags.add(tag);
@@ -1945,7 +1986,7 @@ document.getElementById('dv-expand').onchange = async e => {
       STEP_WAIT);
     if (run !== revealRun) return;
   }
-  document.querySelectorAll('.swagger-ui .opblock').forEach(op => {
+  root.querySelectorAll('.swagger-ui .opblock').forEach(op => {
     const s = op.dataset.dvState;
     if (!s || s === 'untouched') return;
     const open = op.classList.contains('is-open');
@@ -1959,26 +2000,36 @@ document.getElementById('dv-expand').onchange = async e => {
   openedTags.clear();
 };
 
-window.ui = SwaggerUIBundle({
-  spec: DATA.spec,   // already fully dereferenced by the generator
-  dom_id: '#swagger-ui',
-  docExpansion: 'list',
-  defaultModelsExpandDepth: -1,
-  tryItOutEnabled: false,
-  supportedSubmitMethods: [],
-  deepLinking: false,
-  onComplete: decorate,
-});
+// `domNode`, not `dom_id`: Swagger UI looks a `dom_id` up on the document, and embedded
+// our node is in a shadow root the document's lookups never enter.
+function boot() {
+  SwaggerUIBundle({
+    spec: DATA.spec,   // already fully dereferenced by the generator
+    domNode: root.getElementById('swagger-ui'),
+    docExpansion: 'list',
+    defaultModelsExpandDepth: -1,
+    tryItOutEnabled: false,
+    supportedSubmitMethods: [],
+    deepLinking: false,
+    onComplete: decorate,
+  });
+}
+// Standalone the bundle's tag above blocks, so it is already here. An embedding page may
+// load it `defer` instead -- a blocking download in the middle of its body would hold up
+// everything after us -- and then it has run by DOMContentLoaded.
+if (typeof SwaggerUIBundle === 'function') boot();
+else document.addEventListener('DOMContentLoaded', boot, { once: true });
 
+let decorateTimer = 0;
 new MutationObserver(() => {
-  clearTimeout(window.__dvT);
-  window.__dvT = setTimeout(decorate, 50);
-}).observe(document.getElementById('swagger-ui'), { childList: true, subtree: true });
+  clearTimeout(decorateTimer);
+  decorateTimer = setTimeout(decorate, 50);
+}).observe(root.getElementById('swagger-ui'), { childList: true, subtree: true });
 
-// Framed, this document scrolls itself. It used to post its height so the review could
-// grow the frame and keep the only scrollbar, and the review posted back how far to slide
-// the toolbar down; the API tab is one window tall now (Victor, 5 Oct 2026), the frame
-// fills what the verdict band leaves, and `sticky` pins the toolbar with no help.
+// Neither framed nor sized by anyone: it used to be an iframe, first grown to its content
+// by posted heights, then one window tall and scrolling itself (5 Oct 2026). Embedded in
+// a shadow root it unfolds at its full height and the window is the one scrollbar.
+})();
 </script>
 </body>
 </html>

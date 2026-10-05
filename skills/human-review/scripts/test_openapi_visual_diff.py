@@ -480,15 +480,36 @@ def test_expand_impacted_opens_a_folded_controller_and_folds_back_only_what_it_o
     assert "openedTags.clear()" in t
 
 
-def test_the_framed_diff_scrolls_itself_and_its_roads_do_not_ratchet():
-    """The API tab is one window tall and the frame its only scrollbar: no height posted to
-    the host, no stick offset taken from it. The roads layer is measured with itself taken
-    out, inside the scrollbar — sized to the old `scrollWidth`, it outgrew the page by the
-    scrollbar's 15px and drew a horizontal scrollbar under the frame."""
+def test_the_diff_scrolls_with_its_page_and_its_roads_do_not_ratchet():
+    """No height posted to a host, no stick offset taken from one: embedded or standalone,
+    the window scrolls and the toolbar pins itself by plain sticky. The roads layer is
+    measured with itself taken out, inside the scrollbar — sized to the old `scrollWidth`,
+    it outgrew the page by the scrollbar's 15px and drew a horizontal scrollbar."""
     t = ovd.TEMPLATE
-    assert "dv-height" not in t and "dv-stick" not in t
-    assert "setAttribute('width', root.clientWidth)" in t
-    assert "setAttribute('width', document.documentElement.scrollWidth)" not in t
+    assert "postMessage" not in t and "'dv-height'" not in t and "'dv-stick'" not in t
+    assert "setAttribute('width', APP.clientWidth)" in t
+    assert "scrollWidth)" not in t[t.index("function drawRoads()"):]
+    assert "position: sticky; top: var(--dv-sticky-top, 0px);" in t
+
+
+def test_the_script_runs_against_its_own_root_so_it_can_live_in_a_shadow_root():
+    """5 Oct 2026: the review embeds this page in a shadow root rather than an iframe. The
+    script finds its root off its own tag (`data-dv-host`) and never queries the document,
+    Swagger UI is handed its node rather than a selector the document would resolve, and
+    the whole script is one function scope so nothing leaks into the host page's globals."""
+    t = ovd.TEMPLATE
+    js = t[t.index("const DATA = __PAYLOAD__;"):t.index("</script>\n</body>")]
+    assert "document.currentScript.dataset.dvHost" in t
+    assert "const root = HOST ? HOST.shadowRoot : document;" in t
+    for call in ("document.querySelector", "document.getElementById", "document.body",
+                 "location.hash", "window."):
+        assert call not in js, f"{call} reaches past the root"
+    assert "domNode: root.getElementById('swagger-ui')" in t and "dom_id:" not in js
+    assert "<script>\n// One function scope for all of it" in t
+    assert t.rstrip().endswith("})();\n</script>\n</body>\n</html>")
+    # The stylesheet answers to a shadow host as well as to a document.
+    assert ":root, :host {" in t and ':host([data-theme="dark"])' in t
+    assert "body.dv-hide-untouched" not in t and ".dv-hide-untouched .opblock" in t
 
 
 def test_the_skill_copy_and_the_public_repo_copy_have_not_drifted():

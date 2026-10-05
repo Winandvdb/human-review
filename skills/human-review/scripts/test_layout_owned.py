@@ -76,8 +76,9 @@ def test_the_api_tab_is_the_verdict_over_the_visual_diff_and_nothing_else(tmp_pa
     page, err = _build(tmp_path, COPILOT)
     api = _panel(page, "api")
     assert "Backwards compatible" in api
-    assert 'class="oaviframe"' in api
-    assert 'src="assets/openapi-visual-diff.html#only-touched"' in api
+    # Embedded in a shadow root, not framed: one scrollbar, the page's (5 Oct 2026).
+    assert 'class="oavhost"' in api and 'data-hash="#only-touched"' in api
+    assert "<iframe" not in api
     assert "Coordinated contract migration" not in page
     assert "Independent contract comparison" not in page
     assert "api-note" in err and "pb33f" in err

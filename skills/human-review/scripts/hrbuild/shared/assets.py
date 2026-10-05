@@ -80,9 +80,6 @@ APP_ENV_JS = _script("app-env.js")
 TIP_JS = _script("tip.js")
 
 
-FRAME_JS = _script("frame.js")
-
-
 TRACE_JS = _script("trace.js")
 
 

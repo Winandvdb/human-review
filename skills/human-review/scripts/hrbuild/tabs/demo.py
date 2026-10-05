@@ -355,23 +355,60 @@ def video_html(s, out_dir: Path) -> str:
 
 
 def embed_html(s, out_dir: Path) -> str:
-    """Another tool's whole report, framed rather than re-drawn.
+    """Another tool's whole report, embedded in a shadow root rather than framed.
 
-    `aria-label`, not `title`: a `title` on an iframe is a native tooltip, and this page has
-    exactly one tooltip component. The label is the same string either way, and a screen
-    reader reads it from `aria-label` just as happily."""
+    It used to be an iframe, and an iframe is a second scrollbar or a second document
+    sized by messages (Victor, 5 Oct 2026: one scrollbar, the page's, and the report at
+    its full height). Read at build time and pasted, so the page still opens off disk:
+    the report's stylesheets and markup go into a `<template>`, a few lines of script move
+    them into a shadow root on the host `<div>` — the one boundary a stylesheet cannot
+    cross, either way — and the report's own scripts follow, each inline one tagged
+    `data-dv-host` so it knows which root is its own (`openapi-visual-diff.py` reads it off
+    `document.currentScript`). An external script is loaded `defer`: a blocking CDN fetch
+    in the middle of the body would hold every tab after this one, and the page's own
+    scripts with them.
+
+    `aria-label`, not `title`: a `title` is a native tooltip, and this page has exactly one
+    tooltip component."""
     e = s.get("embed")
     if not e:
         return ""
-    # `src` may carry a fragment — a framed report that reads its own hash can be opened
-    # on a particular view (`…#only-touched`). Only the path in front of it is a file.
-    path = e["src"].split("#", 1)[0]
+    # `src` may carry a fragment — a report that reads its own hash can be opened on a
+    # particular view (`…#only-touched`). Only the path in front of it is a file; the
+    # fragment rides on the host as `data-hash`, since the page's own hash names its tab.
+    path, _, frag = e["src"].partition("#")
     if not (out_dir / path).is_file():
         # The tool that writes it is an optional install. Say which one is missing rather
-        # than framing a 404.
+        # than embedding nothing.
         return (f'<p class="sub">No embedded report at <code>{html.escape(path)}</code>'
                 + (f' — { e["missing"]}' if e.get("missing") else "")
                 + ".</p>")
-    return (f'<iframe class="{html.escape(e.get("class", "oacframe"))}" '
-            f'src="{html.escape(e["src"])}" '
-            f'aria-label="{html.escape(e.get("label", ""))}"></iframe>')
+    doc = (out_dir / path).read_text(encoding="utf-8")
+    style_re = re.compile(r'<link\b[^>]*\brel=["\']?stylesheet\b[^>]*>'
+                          r'|<style\b[^>]*>.*?</style\s*>', re.S | re.I)
+    body_re = re.compile(r'<body\b[^>]*>(.*)</body\s*>', re.S | re.I)
+    script_re = re.compile(r'<script\b([^>]*)>(.*?)</script\s*>', re.S | re.I)
+    # Attaches the shadow root and moves the report's styles and markup into it, before the
+    # report's own scripts run. `__ID__` is the host's id; the template is the next sibling.
+    attach = ("<script>(function(){var h=document.getElementById('__ID__'),"
+              "t=document.getElementById('__ID__-tpl');if(!h||!t)return;"
+              "(h.shadowRoot||h.attachShadow({mode:'open'})).appendChild(t.content);"
+              "t.remove();})();</script>")
+    m = body_re.search(doc)
+    head, body = (doc[:m.start()], m.group(1)) if m else ("", doc)
+    hid = f'embed-{s.get("id") or "report"}'
+    scripts = []
+    for sm in script_re.finditer(body):
+        attrs = sm.group(1)
+        if re.search(r'\bsrc=', attrs):
+            if not re.search(r'\b(?:defer|async)\b', attrs):
+                attrs += " defer"
+            scripts.append(f"<script{attrs}></script>")
+        else:
+            scripts.append(f'<script{attrs} data-dv-host="{hid}">{sm.group(2)}</script>')
+    inner = "".join(x.group(0) for x in style_re.finditer(head)) + script_re.sub("", body)
+    return (f'<div class="{html.escape(e.get("class", "embed"))}" id="{hid}" role="region"'
+            + (f' data-hash="#{html.escape(frag)}"' if frag else "")
+            + f' aria-label="{html.escape(e.get("label", ""))}"></div>'
+            + f'<template id="{hid}-tpl">{inner}</template>'
+            + attach.replace("__ID__", hid) + "".join(scripts))

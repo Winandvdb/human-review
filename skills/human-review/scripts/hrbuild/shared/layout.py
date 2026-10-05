@@ -36,7 +36,7 @@ LAYOUT_SECTIONS: dict[str, dict] = {
     "swaggerdiff": {
         "id": "swaggerdiff", "title": "",
         "includeHtml": "assets/openapi-verdict.html",
-        "embed": {"src": "assets/openapi-visual-diff.html#only-touched", "class": "oaviframe",
+        "embed": {"src": "assets/openapi-visual-diff.html#only-touched", "class": "oavhost",
                   "label": "openapi-visual-diff — the REST contract at the base against "
                            "the working tree",
                   "missing": "run scripts/openapi-visual-diff.py (needs `brew install oasdiff`)"},

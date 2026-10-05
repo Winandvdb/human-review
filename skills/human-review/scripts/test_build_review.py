@@ -387,6 +387,29 @@ def test_an_embed_uses_aria_label_never_title(tmp_path):
     assert ' title=' not in out, "this page has exactly one tooltip component"
 
 
+def test_an_embed_is_pasted_into_a_shadow_root_not_framed(tmp_path):
+    """5 Oct 2026: one scrollbar, the page's. The report's styles and markup go into a
+    template a shadow root is filled from, its inline script is told its host, its CDN
+    script is deferred so it holds up nothing after it, and the fragment rides as data."""
+    (tmp_path / "r.html").write_text(
+        '<!doctype html><html><head><title>t</title><link rel="stylesheet" href="x.css">'
+        '<style>body{color:red}</style></head><body><div id="dv-app">hi</div>'
+        '<script src="https://cdn/x.js"></script><script>go()</script></body></html>',
+        encoding="utf-8")
+    out = build.embed_html({"id": "api1", "embed": {"src": "r.html#only-touched",
+                                                    "class": "oavhost", "label": "r"}},
+                           tmp_path)
+    assert "<iframe" not in out
+    assert '<div class="oavhost" id="embed-api1" role="region" data-hash="#only-touched"' in out
+    tpl = out[out.index('<template id="embed-api1-tpl">'):out.index("</template>")]
+    assert '<link rel="stylesheet" href="x.css">' in tpl and "body{color:red}" in tpl
+    assert '<div id="dv-app">hi</div>' in tpl and "<script" not in tpl and "<title>" not in tpl
+    assert "attachShadow({mode:'open'})" in out
+    assert '<script src="https://cdn/x.js" defer></script>' in out
+    assert '<script data-dv-host="embed-api1">go()</script>' in out
+    assert out.index("attachShadow") < out.index("go()"), "the root exists before its script"
+
+
 def test_a_missing_embed_names_the_tool_instead_of_framing_a_404(tmp_path):
     out = build.embed_html(
         {"embed": {"src": "gone.html", "label": "x", "missing": "brew install thing"}}, tmp_path)

@@ -1261,7 +1261,9 @@ Four tabs need something said about how they are written:
     the team means, and it is the one the reader is asked to act on. Walking the tab ends
     on it rather than opening on it, which is also the order it gets presented in.
   - **Head it the way the file names itself** — `Conceptual Model`, both words capital.
-    It is the name of an artefact the team maintains, not a description of one.
+    It is the name of an artefact the team maintains, not a description of one. The token
+    draws that head itself, in the same card as `DB` above it, with the file name read off
+    `conceptual-diff.json` — do not wrap it in a card of your own.
     **That head is the only one: the section's `"title"` is `""`.** A section title
     above it — *The concepts, as the team drew them* — was a second, literary name for a
     card that already names itself one line lower, and Victor asked for it gone.

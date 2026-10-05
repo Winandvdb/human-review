@@ -218,12 +218,24 @@ def drawio_widget_html(name: str, assets: Path, root: Path, rebuild: str = "") -
     # gone from `content.json` now — the edit offer and its two buttons are the one thing
     # above the picture instead, so the block reads title, then what to do about the
     # drawing, then the drawing itself.
-    return (rerun_html(verdict.get("rerun"), rebuild, name,
-                       verdict.get("drawio_url") or "",
-                       verdict.get("drawio_web_url") or "",
-                       verdict.get("redraw"), verdict.get("revert"),
-                       verdict.get("reveal"), verdict.get("tested_against") or "")
-            + dgm_views_html(panes, initial="new" if red else "diff"))
+    #
+    # Inside the card every other diagram on the tab sits in — title, file on the right —
+    # and drawn here, not in `content.json`: the layout rewrites the `conceptual` section's
+    # body to the bare token, so a card written around it by hand never reached the page,
+    # and the one diagram the reader is asked to edit was the one with no frame (Victor,
+    # 5 Oct 2026).
+    rel = verdict.get("diagram") or ""
+    title = _pretty(Path(rel).name.split(".")[0]) if rel else _pretty(name)
+    return ('<div class="diagram dgm-toggles"><div class="head">'
+            f'<b>{html.escape(title)}</b>'
+            + (_source_link(rel, root) if rel else "") + '</div>'
+            + rerun_html(verdict.get("rerun"), rebuild, name,
+                         verdict.get("drawio_url") or "",
+                         verdict.get("drawio_web_url") or "",
+                         verdict.get("redraw"), verdict.get("revert"),
+                         verdict.get("reveal"), verdict.get("tested_against") or "")
+            + dgm_views_html(panes, initial="new" if red else "diff")
+            + '</div>')
 
 
 def expand_drawio(text: str, out_dir: Path, root: Path, rebuild: str) -> str:

@@ -830,6 +830,19 @@ def test_the_to_do_row_is_repeated_under_the_undiffed_new_pane(tmp_path):
     assert "still waiting for a manual re-layout" in pane
 
 
+def test_the_widget_sits_in_the_card_every_other_diagram_does(tmp_path):
+    """The layout rewrites the section to the bare token, so the card has to come with it:
+    a frame written around it in `content.json` never reached the page."""
+    assets = _drawio_set(tmp_path / "assets", added=[("Vet-Visit", False)])
+    verdict = json.loads((assets / "conceptual-diff.json").read_text())
+    verdict["diagram"] = "docs/ConceptualModel.drawio.png"
+    (assets / "conceptual-diff.json").write_text(json.dumps(verdict))
+    out = build.drawio_widget_html("conceptual", assets, tmp_path)
+    assert out.startswith('<div class="diagram dgm-toggles"><div class="head">'
+                          '<b>Conceptual Model</b>')
+    assert out.endswith("</div>") and 'class="dgmviews"' in out
+
+
 def test_a_section_body_expands_the_token(tmp_path):
     out_dir = tmp_path / ".human-review"
     _drawio_set(out_dir / "assets")

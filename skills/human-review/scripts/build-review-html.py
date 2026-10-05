@@ -65,7 +65,7 @@ from hrbuild.shared.actions import (
 from hrbuild.shared.assets import (
     APP_ENV_JS, CAPTION_JS, CSS, CSS_FILES, DGM_VIEWS_JS, EDITOR_JS, FOCUS_JS, FOOTER_CSS, FRAME_JS,
     GENSEQ_JS, HSCROLL_JS, LATE_CSS, PAINT_HOLD_JS, PAINT_RELEASE_JS, RERUN_JS, SEQFOLD_JS, SEQHEADS_JS,
-    SEQLINK_JS, SERVER_JS, TABS_JS, TIP_JS, TRACE_JS, XREF_CSS, XREF_JS
+    SEQLINK_JS, SERVER_JS, TABS_JS, TIP_JS, TRACE_JS, XREF_CSS, XREF_JS, FOLDERS_JS
 )
 from hrbuild.shared.commands import (
     CMD_COPY, CMD_PLAY, CMD_RUN, CMD_STOP, command_html, COPY_TIP,
@@ -94,6 +94,11 @@ from hrbuild.shared.genseq import (
     MAPPING_POSITIONAL_PATH, METHOD_NAME, pair_anchor, REQUEST_METHOD, SKIP_DIRS,
     spring_handlers, test_of_genseq, TYPE_DECL, _annotation_span, _controller_routes,
     _declared_test, _details_carrier, _join_route, _mapping_path, _with_handlers
+)
+from hrbuild.shared.folders import (
+    folder_targets, link_folders, maven_modules, package_folders, puml_boxes, _artifact_id,
+    _DECL, _ENTITY, _KEYWORD, _ls_files, _module_dir, _packages, _pattern, _SOURCE_DIR,
+    _STEREO, _tree_base
 )
 from hrbuild.shared.diagrams import (
     CM_LEGEND_NEW, CM_LEGEND_TODO, DEFAULT_FOCUS, DGM_SRC_ANCHOR, dgm_views_html, DRAWIO_TOKEN,
@@ -1385,7 +1390,7 @@ def _main(argv=None) -> int:
 {DGM_VIEWS_JS}
 {XREF_JS}
 {EDITOR_JS}
-{FRAME_JS}\n{TRACE_JS}\n{SEQLINK_JS}\n{SEQFOLD_JS}\n{SEQHEADS_JS}\n{HSCROLL_JS}\n{TABS_JS}\n{PAINT_RELEASE_JS}
+{FRAME_JS}\n{TRACE_JS}\n{SEQLINK_JS}\n{FOLDERS_JS}\n{SEQFOLD_JS}\n{SEQHEADS_JS}\n{HSCROLL_JS}\n{TABS_JS}\n{PAINT_RELEASE_JS}
 {RERUN_JS}
 {TIP_JS}
 </body></html>

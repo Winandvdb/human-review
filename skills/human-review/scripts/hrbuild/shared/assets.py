@@ -89,6 +89,11 @@ TRACE_JS = _script("trace.js")
 SEQLINK_JS = _script("seqlink.js")
 
 
+# The Structure tab's package and module boxes: a click reveals the folder in VS Code
+# where the server can, and follows the box's github.com link where it cannot.
+FOLDERS_JS = _script("folders.js")
+
+
 SEQFOLD_JS = _script("seqfold.js")
 
 

@@ -164,3 +164,9 @@
             border-bottom:1px solid var(--line); box-shadow:0 6px 12px -8px rgba(0,0,0,.45); }
 #seqheads[hidden] { display:none; }
 #seqheads svg { position:absolute; top:0; display:block; }
+/* A package's or a Maven module's box that opens its folder (folders.js): the box answers
+   the hover, and the outline follows the keyboard. `!important` against the stroke
+   PlantUML writes into each rect's own style attribute. */
+.diagram [data-folder][role=button] { cursor:pointer; }
+.diagram [data-folder]:is([role=button], :has(> a)):hover rect { stroke:var(--link) !important; stroke-width:1.5 !important; }
+.diagram [data-folder]:focus-visible { outline:2px solid var(--link); outline-offset:2px; }

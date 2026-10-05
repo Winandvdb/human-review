@@ -173,7 +173,7 @@ CSS_ORDER = ["CSS", "FOOTER_CSS", "extra_css", "LATE_CSS", "XREF_CSS"]
 #: `<head>`, and the release has to be the last thing after the strip has done its work.
 JS_ORDER = [
     "SERVER_JS", "CAPTION_JS", "APP_ENV_JS", "GENSEQ_JS", "FOCUS_JS", "DGM_VIEWS_JS",
-    "XREF_JS", "EDITOR_JS", "TRACE_JS", "SEQLINK_JS", "SEQFOLD_JS",
+    "XREF_JS", "EDITOR_JS", "TRACE_JS", "SEQLINK_JS", "FOLDERS_JS", "SEQFOLD_JS",
     "SEQHEADS_JS", "HSCROLL_JS", "TABS_JS", "PAINT_RELEASE_JS", "RERUN_JS", "TIP_JS",
 ]
 

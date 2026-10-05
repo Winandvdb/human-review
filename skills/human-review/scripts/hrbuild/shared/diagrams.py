@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from .commands import rerun_html
+from .folders import link_folders
 from .genseq import genseq_details_at_base, genseq_details_at_render, test_of_genseq
 from .svg import inline_svg
 from .util import _pretty
@@ -605,6 +606,10 @@ def render_diagrams(spec, root: Path, out_dir: Path, rows=None, bare: str = "") 
             body, toggles = _diagram_views(r, manifest.parent, svg_rel, root)
         else:
             body, toggles = _why_not_drawn(r, manifest.parent), False
+        # A package's or a Maven module's box opens its folder — every view of it, the
+        # delta and the whole picture alike. A sequence's boxes are participants, not code.
+        if r.get("kind") != "sequence":
+            body = link_folders(body, r["source"], root)
         test_src = (f' data-test-src="vscode://file/{(root / bare).resolve()}:1:1"'
                     if bare and (root / bare).is_file() else "")
         parts.append(
@@ -659,7 +664,8 @@ def render_puml(block, root: Path, out_dir: Path) -> str:
         + _source_link(block["src"], root) + '</div>'
         + (f'<p>{block["note"]}</p>' if block.get("note") else "")
         + _provenance(block["src"], root)
-        + f'<div class="svgbox">{inline_svg(cache, root)}</div></div>'
+        + f'<div class="svgbox">{link_folders(inline_svg(cache, root), block["src"], root)}'
+        '</div></div>'
     )
 
 

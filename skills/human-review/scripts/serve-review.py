@@ -56,7 +56,7 @@ Usage:
   serve-review.py .human-review --no-watch           # no live reload
 """
 import argparse, collections, functools, hashlib, http.server, json, os, re, secrets, shlex, shutil, socket, socketserver, subprocess, sys, threading, time, urllib.error, urllib.parse, urllib.request
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 MARKER = "/__human_review__"
 OPEN = "/__open__"
@@ -82,6 +82,10 @@ EDITOR_OPEN = "/__editor_open__"
 # Pressing the page's own path in the footer: show that file selected in Finder. The page
 # names which of the files this server serves it is, and nothing outside that directory.
 REVEAL = "/__reveal__"
+# A package's or a Maven module's box on the Structure tab: show that folder selected in
+# the Explorer of the VS Code window that has the checkout, and raise it. The page names
+# the folder relative to the checkout; anything not a folder inside ROOT is refused.
+REVEAL_FOLDER = "/__reveal_folder__"
 # The red ■ beside `Served`: shut this server down now instead of waiting out
 # `--idle-minutes`. The page that pressed it stays on screen, and falls back to static.
 STOP = "/__stop__"
@@ -623,6 +627,53 @@ def open_editor(root: Path) -> dict:
                 return {"how": "focused", "window": name}
     _launch(root)
     return {"how": "opened", "window": None}
+
+
+def checkout_folder(root, rel):
+    """`(as spelt, resolved)` for the folder `rel` names inside the checkout `root`, or
+    None. Relative, no `..` and no backslash before anything touches the disk; then
+    resolved, so a symlink out of the checkout is refused too, and it has to be a folder."""
+    if root is None or not isinstance(rel, str) or not rel.strip() or "\x00" in rel \
+            or "\\" in rel:
+        return None
+    pure = PurePosixPath(rel)
+    if pure.is_absolute() or ".." in pure.parts or rel.startswith("~"):
+        return None
+    base = Path(root).resolve()
+    spelt = Path(root) / pure
+    try:
+        target = spelt.resolve()
+    except OSError:
+        return None
+    if not (target == base or target.is_relative_to(base)) or not target.is_dir():
+        return None
+    return spelt, target
+
+
+def reveal_folder(spelt: Path, target: Path) -> dict | None:
+    """Show `target` selected in the Explorer of the window that owns it, and raise that
+    window. Both spellings, because the bridge takes the uri only inside one of *its*
+    folders, and a window opened through a symlink holds the other one.
+
+    `revealed`, or `focused` when the window's bridge is too old to take a uri (it still
+    comes forward); None when no window has the checkout."""
+    for candidate in dict.fromkeys((spelt, target)):
+        for entry, info in owning_windows(candidate):
+            name = info.get("folder") or candidate.name
+            query = urllib.parse.urlencode({"id": "revealInExplorer", "uri": candidate.as_uri()})
+            try:
+                req = urllib.request.Request(
+                    f"http://127.0.0.1:{entry['port']}/command?{query}", method="POST",
+                    data=b"", headers={"x-relay-token": entry["token"]})
+                ok = json.loads(urllib.request.urlopen(req, timeout=5).read() or b"{}").get("ok")
+            except Exception:
+                ok = False
+            if ok:
+                focus_window(entry)
+                return {"how": "revealed", "window": name}
+            if focus_window(entry):
+                return {"how": "focused", "window": name}
+    return None
 
 
 def reveal_in_finder(path: Path) -> None:
@@ -1470,7 +1521,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         Handler.last_seen = time.time()
         route = self.path.split("?")[0]
-        if route not in (RUN, RERUN, RERUN_AI, EDITOR_OPEN, REVEAL, STOP):
+        if route not in (RUN, RERUN, RERUN_AI, EDITOR_OPEN, REVEAL, REVEAL_FOLDER, STOP):
             self.reply_text("no", 404)
             return
         problem = refuse_reason(self.headers)
@@ -1525,6 +1576,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return
             reveal_in_finder(target)
             self.reply_json({"revealed": str(target)})
+            return
+        if route == REVEAL_FOLDER:
+            try:
+                rel = (json.loads(raw) or {}).get("path")
+            except Exception:
+                rel = None
+            found = checkout_folder(ROOT, rel)
+            if found is None:
+                self.reply_text("that is not a folder in this checkout", 404)
+                return
+            done = reveal_folder(*found)
+            if done is None:
+                self.reply_text(f"No VS Code window has {ROOT} open: press the VSC badge "
+                                "to open one, then click the box again", 409)
+                return
+            self.reply_json({"revealed": str(found[1]), **done})
             return
         if route in (RERUN, RERUN_AI):
             # No id and no parameters: there is exactly one thing each of these asks for,
@@ -1628,6 +1695,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                              # is said: a server started before /__reveal__ existed would
                              # answer the press with a bare 404.
                              "reveal": True,
+                             # And a Structure box into its folder in VS Code: absent from
+                             # an older server, so its boxes keep their github.com links.
+                             "revealFolder": ROOT is not None,
                              # The baseline the page was served against. Empty when
                              # nothing is watching, which is how the page knows not to
                              # poll — a build that stopped watching takes the reload

@@ -68,7 +68,12 @@ def test_each_data_card_gets_its_own_button_inside_its_border_with_its_own_promp
     assert len(cards) == 3
     for card in cards:
         assert card.count("Prompt to get this") == 1
-        assert card.rstrip().endswith("</button></div></div>"), "the button closes the card"
+        assert card.rstrip().endswith("</button></div></div>") or card.rstrip().endswith(
+            "</button></div></div></div>"), "the button closes the card"
+    # A card that ends on a caption line gives that line the pill, not a row under it.
+    assert '<div class="adoptfoot"><p class="sub dgm-unseen">Also changed</p>' \
+           '<div class="adoptline adopt-title">' in cards[1]
+    assert "adoptfoot" not in cards[0] + cards[2]
     first = [p.split(" into this repository")[0] for p in _prompts(out)]
     assert first == [
         "Get the domain-model class diagram generated from your domain classes by Java "

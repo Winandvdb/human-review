@@ -27,6 +27,15 @@ button.adopt:focus-visible { outline:2px solid var(--adopt); outline-offset:1px;
 .dsa-run:has(~ .adopt-end) > .dsa:not(:has(~ .dsa)) { margin-bottom:1rem; }
 /* Inside a card: the card's own bottom padding is most of the room the row needs. */
 .diagram:has(> .adopt-in) { padding-bottom:.6rem; }
+/* A card that ends on a caption line (its legend, the C2 note) gives that line the pill
+   at its right end, as a title row does: one line, not the caption and a row under it.
+   The caption's own margins move onto the wrapper; it keeps its left inset. */
+.diagram:has(> .adoptfoot) { padding-bottom:.6rem; }
+.adoptfoot { display:flex; align-items:center; flex-wrap:wrap; column-gap:1rem;
+             row-gap:.2rem; margin-top:.45rem; }
+.adoptfoot > :first-child { flex:1 1 20rem; min-width:0; margin:0; }
+.adoptfoot > .cmlegend { margin-left:.6rem; }
+.adoptfoot > .adoptline { margin:0 0 0 auto; flex:none; }
 /* The Demo's transcript column stretches to the player's height, so the pill sits in the
    free space under the cues, level with the voice switch under the film. */
 .adoptcol { display:flex; flex-direction:column; align-self:stretch; min-width:0; }

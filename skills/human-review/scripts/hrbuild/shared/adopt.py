@@ -171,6 +171,23 @@ def _close(doc: str, start: int) -> tuple[int, int] | None:
     return None
 
 
+#: The one-line captions a diagram card can end on: its legend, or a producer's note.
+_CAPTION = re.compile(r'<p class="(?:cmlegend|sub dgm-(?:stale|unseen))\b[^"]*"')
+
+
+def _last_caption(doc: str, start: int, end: int) -> int | None:
+    """Where the caption that closes the card [start, end) opens, if it ends on one:
+    the pill then sits at the right end of that line (Victor, 6 Oct 2026) instead of on
+    a row of its own under it."""
+    last = None
+    for m in _CAPTION.finditer(doc, start, end):
+        last = m
+    if not last:
+        return None
+    span = _close(doc, last.start())
+    return last.start() if span and not doc[span[1]:end].strip() else None
+
+
 def adopt_prompt(piece: str, title: str = "") -> str | None:
     """The prompt a button copies, or None for a piece with nothing to get."""
     if piece not in PIECES:
@@ -235,7 +252,13 @@ def place_prompts(tid: str, body: str) -> str:
                 title = html.unescape(re.sub(r"<[^>]+>", "", b.group(1))).strip() if b else ""
                 name = next((k for k, rx in DIAGRAM_KINDS if rx.search(text)), "diagram")
             if how == "in":
-                edits.append((span[0], span[0], adopt_html(name, title, "in")))
+                cap = _last_caption(body, hit.start(), span[0])
+                if cap:             # the card ends on a caption line: the pill shares it
+                    edits.append((cap, cap, '<div class="adoptfoot">'))
+                    edits.append((span[0], span[0],
+                                  adopt_html(name, title, "title") + "</div>"))
+                else:
+                    edits.append((span[0], span[0], adopt_html(name, title, "in")))
             elif how == "title":
                 edits.append((hit.start(), hit.start(), '<div class="adopthead">'))
                 edits.append((span[1], span[1], adopt_html(name, title, "title") + "</div>"))

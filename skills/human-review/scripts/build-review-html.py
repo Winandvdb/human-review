@@ -129,8 +129,8 @@ from hrbuild.shared.masthead import (
     _picked_outside
 )
 from hrbuild.shared.adopt import (
-    DIAGRAM_CARD, DIAGRAM_KINDS, PETCLINIC, PIECES, PLACES, ROBOT, _TAG, _close, adopt_html,
-    adopt_prompt, place_prompts
+    DIAGRAM_CARD, DIAGRAM_KINDS, PETCLINIC, PIECES, PLACES, ROBOT, _CAPTION, _TAG, _close,
+    _last_caption, adopt_html, adopt_prompt, place_prompts
 )
 from hrbuild.shared.footer import (
     DEMO_DOCKER_URL, DEMO_PAGES_URL, DEMO_ZIP_URL, FOOTER_BOILERPLATE, HOME_URL, INVITATION,

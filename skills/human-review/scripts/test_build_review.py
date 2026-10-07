@@ -164,7 +164,7 @@ def test_the_row_reads_the_state_first_then_the_verbs_that_act_on_it(tmp_path):
     order = ["appenv-title", "appenv-state", "appenv-url", "appenv-start",
              "appenv-stop", "appenv-reset"]
     assert [out.index(c) for c in order] == sorted(out.index(c) for c in order)
-    assert ">Deployed app<" in out
+    assert ">Running app<" in out
     rule = build.CSS[build.CSS.index(".appenv .appenv-at"):]
     assert "margin-left:auto" not in rule[:rule.index("}")], "not off in the corner"
 
@@ -1389,9 +1389,9 @@ def test_the_show_all_button_says_what_it_does_next(tmp_path):
     carried the state while the button sat among the tabs, and at the foot of the page
     there is nothing beside it to read a highlight against."""
     page, _ = _build(tmp_path, BARE)
-    assert 'data-label-off="Single page"' in page
-    assert 'data-label-on="back to one tab at a time"' in page
-    assert ">Single page</button>" in page, "the unpressed label is also the markup"
+    assert 'data-label-off="⇄ Single page"' in page
+    assert 'data-label-on="⇄ back to one tab at a time"' in page
+    assert ">⇄ Single page</button>" in page, "the unpressed label is also the markup"
     assert "(single)" not in page
 
 

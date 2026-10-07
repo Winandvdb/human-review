@@ -1311,9 +1311,9 @@ def _main(argv=None) -> int:
         # tab above it does not get.
         allbtn_html = (
             ' <button type="button" class="allbtn" aria-pressed="false" '
-            'data-label-off="Single page" data-label-on="back to one tab at a time" '
+            'data-label-off="⇄ Single page" data-label-on="⇄ back to one tab at a time" '
             'data-tip="All tabs on one page (for \u2318F)">'
-            "Single page</button>"
+            "⇄ Single page</button>"
         )
         # Where this page sits on disk, on its own centred line under that sentence. The URL
         # bar says 127.0.0.1:7655 when it is served, which names a port and not a checkout —

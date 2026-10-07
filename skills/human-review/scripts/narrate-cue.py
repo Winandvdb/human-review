@@ -115,6 +115,35 @@ def fish_key() -> str:
   return key
 
 
+def record_spend(text: str, voice: str) -> None:
+  """Append one paid-for synthesis (a cache miss that called the API) to the film's ledger.
+
+  Fish bills on the UTF-8 bytes of the input text, so the ledger keeps bytes and the model,
+  not a price: the cost tab prices them (hrbuild/tabs/cost.py), and a price change never
+  makes the ledger wrong. `HR_NARRATION_LEDGER` is the file, set by record-feature-video.sh;
+  without it (a bare run) nothing is recorded. Never raises: a ledger is not worth a film."""
+  path = os.environ.get("HR_NARRATION_LEDGER", "")
+  if not path:
+    return
+  try:
+    import fcntl
+    import time
+    ledger = Path(path)
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    with open(str(ledger) + ".lock", "w") as lock:
+      fcntl.flock(lock, fcntl.LOCK_EX)
+      try:
+        rows = json.loads(ledger.read_text(encoding="utf-8"))
+        rows = rows if isinstance(rows, list) else []
+      except (OSError, ValueError):
+        rows = []
+      rows.append({"model": FISH_MODEL, "bytes": len(text.encode("utf-8")), "voice": voice,
+          "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")})
+      ledger.write_text(json.dumps(rows, indent=1), encoding="utf-8")
+  except Exception:                                         # noqa: BLE001
+    pass
+
+
 def voiced_span(wav_path: Path) -> tuple[float, float, float]:
   """(start, end, duration) of the part of a 16-bit .wav that is not silence."""
   with wave.open(str(wav_path)) as w:
@@ -159,6 +188,7 @@ def fish(text: str, out: Path, key: str, speed: float, voice: str = FISH_VOICE) 
       audio = res.read()
     cached.parent.mkdir(parents=True, exist_ok=True)
     cached.write_bytes(audio)
+    record_spend(text, voice)
   shutil.copyfile(cached, out)
   start, end, dur = voiced_span(out)
   return {"duration": round(dur, 3), "voice": f"fish:{voice}",

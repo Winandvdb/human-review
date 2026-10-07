@@ -159,6 +159,9 @@ FISH_VOICES='[
   {"key": "discovery", "label": "Discovery", "tip": "David Attenborough",
    "id": "5860c08729ef4623a05addbf5fa543ec"}]'
 export HR_FISH_VOICES="${NARRATION_FISH_VOICES:-$FISH_VOICES}"
+# Every paid Fish synthesis (a cache miss) is appended here by narrate-cue.py; the cost tab's
+# "Voices" row reads it.
+export HR_NARRATION_LEDGER="${OUT%.webm}.narration-cost.json"
 rm -rf "$VOICEDIR/fish"
 mkdir -p "$(dirname "$OUT")" "$VOICEDIR/fish"
 # .cloned.* is what a recorder with a single cloned voice left behind.

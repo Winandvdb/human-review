@@ -287,6 +287,7 @@ from hrbuild.tabs.cost import (
     _cost_tab_rows, _cost_tokens, _when, components_html, cost_pill_label, cost_pill_title,
     _legacy_ledger_html, _HARNESS, _aic, _component_money, _minutes, _entry_line,
     guide_breakdown_html, _extension_line, _instants, _stamp_s, _span, _cost_cell,
+    voice_money, voices_cost, voices_row_html, FISH_PRICE_PER_M_BYTES, FISH_DEFAULT_MODEL,
     BUSY_TIP, _duration, _time_cell, COST_TITLE, _WHAT_SHORT, _cost_ledger_body, _entry_row,
     _split
 )
@@ -1270,7 +1271,7 @@ def _main(argv=None) -> int:
         # page's whole discipline is that a number nobody can keep up to date is a number
         # that will be wrong; and its position is a fact about the page rather than about
         # any one review — the bill goes at the end, where a bill goes.
-        cost_tab_body = cost_ledger_html(led, emitted)
+        cost_tab_body = cost_ledger_html(led, emitted, voices_cost(out_dir))
         if cost_tab_body:
             # No decimals. `$744.18` on a tab pill invites reading the cents of a
             # list-price estimate whose error bars are the width of a whole session; `$744`

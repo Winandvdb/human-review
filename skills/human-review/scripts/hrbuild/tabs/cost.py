@@ -475,7 +475,7 @@ def phase_rows_html(phases: dict | None) -> str:
     return "".join(out)
 
 
-def cost_ledger_html(led: dict | None, tabs: list[dict]) -> str:
+def cost_ledger_html(led: dict | None, tabs: list[dict], voices: dict | None = None) -> str:
     """What this change set cost, from the first line written to this page being built.
 
     This was a chip in the scope bar with a breakdown hanging off it, and the chip
@@ -503,7 +503,7 @@ def cost_ledger_html(led: dict | None, tabs: list[dict]) -> str:
     # Every tab opens on its title (Victor, 7 Oct 2026: this one had none), and the
     # "Prompt to get this page" pill goes at its right end, as on the other tabs
     # (`adopt.PLACES`), out of the table's header where it crowded the time column.
-    body = _cost_ledger_body(led, tabs)
+    body = _cost_ledger_body(led, tabs, voices)
     return COST_TITLE + body if body else ""
 
 
@@ -511,8 +511,8 @@ def cost_ledger_html(led: dict | None, tabs: list[dict]) -> str:
 COST_TITLE = '<h2 class="tabtitle">Token costs</h2>'
 
 
-def _cost_ledger_body(led: dict, tabs: list[dict]) -> str:
-    four = components_html(led.get("components"))
+def _cost_ledger_body(led: dict, tabs: list[dict], voices: dict | None = None) -> str:
+    four = components_html(led.get("components"), voices=voices)
     if four:
         # The four components lead, and the fold under them breaks down ONE of their rows
         # — "this guide" — tab by tab, adding up to it. It used to be the whole
@@ -525,7 +525,7 @@ def _cost_ledger_body(led: dict, tabs: list[dict]) -> str:
         # Opened from the "This guide" row's own name (Victor, 4 Oct 2026), not from a
         # fold under the table.
         rest = guide_breakdown_html(led, tabs)
-        return components_html(led.get("components"), fold=rest) if rest else four
+        return components_html(led.get("components"), fold=rest, voices=voices) if rest else four
     return _legacy_ledger_html(led, tabs)
 
 
@@ -959,7 +959,94 @@ def _extension_line(r: dict, rate: float) -> str:
             f"{_cost_money(then_c)} / {_cost_tokens(was.get('tokens') or 0)}")
 
 
-def components_html(comp: dict | None, fold: str = "") -> str:
+#: Fish Audio API price, USD per million UTF-8 bytes of input text (docs.fish.audio, "API
+#: Pricing", checked 8 Oct 2026). The `-free` model is free; the others bill the same.
+FISH_PRICE_PER_M_BYTES = {"s2.1-pro-free": 0.0, "s2.1-pro": 15.0, "s2-pro": 15.0, "s1": 15.0}
+FISH_DEFAULT_MODEL = "s2.1-pro-free"
+
+
+def voice_money(c: float) -> str:
+    """The voices' price. Victor wants it shown even when tiny: anything under a cent
+    (a free model's exact zero included) reads `< $0.01`."""
+    return "< $0.01" if c < 0.01 else f"${c:,.2f}"
+
+
+def voices_cost(out_dir: Path | None) -> dict | None:
+    """What the narration voices cost this report, or None when it has no cloned voice.
+
+    Measured: `assets/*.narration-cost.json`, which `narrate-cue.py` appends to for each
+    synthesis that called the API (a cache hit makes no call and costs nothing). A film
+    recorded before the ledger existed has none, and is *estimated*: the UTF-8 bytes of its
+    cue texts (`*.cues.json`) once per cloned voice (`*.voices.json`), at the model the
+    recorder would use today."""
+    if not out_dir:
+        return None
+    assets = out_dir / "assets"
+    usd, nbytes, models, voices, estimated = 0.0, 0, set(), set(), False
+    for voices_file in sorted(assets.glob("*.voices.json")):
+        try:
+            data = json.loads(voices_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        film = voices_file.name[:-len(".voices.json")]
+        keys = {str(v.get("key")) for v in data if isinstance(v, dict) and v.get("key")}
+        if not keys:
+            continue
+        voices |= keys
+        ledger = assets / f"{film}.narration-cost.json"
+        if ledger.is_file():
+            try:
+                rows = json.loads(ledger.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                rows = []
+            for r in rows if isinstance(rows, list) else []:
+                if not isinstance(r, dict):
+                    continue
+                model, b = str(r.get("model") or FISH_DEFAULT_MODEL), int(r.get("bytes") or 0)
+                nbytes += b
+                models.add(model)
+                usd += b * FISH_PRICE_PER_M_BYTES.get(model, 15.0) / 1e6
+            continue
+        try:
+            cues = json.loads((assets / f"{film}.cues.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        model = os.environ.get("NARRATION_FISH_MODEL", FISH_DEFAULT_MODEL)
+        b = sum(len(str(c.get("text") or "").encode("utf-8")) for c in cues
+                if isinstance(c, dict)) * len(keys)
+        nbytes += b
+        models.add(model)
+        usd += b * FISH_PRICE_PER_M_BYTES.get(model, 15.0) / 1e6
+        estimated = True
+    if not voices:
+        return None
+    return {"usd": usd, "bytes": nbytes, "models": sorted(models), "voices": len(voices),
+            "estimated": estimated}
+
+
+def voices_row_html(v: dict | None) -> str:
+    """The "Voices" row: price in COST, model under it, time blank, muted like a session
+    line. Tooltip: bytes, and that the figure is an estimate when no ledger recorded it."""
+    if not v:
+        return ""
+    tips = []
+    if v["usd"] <= 0:
+        tips.append("free model " + ", ".join(v["models"] or [FISH_DEFAULT_MODEL]))
+    tips.append(f"{v['bytes']:,} UTF-8 bytes of narration")
+    if v["estimated"]:
+        tips.append("estimated: the film predates the narration ledger, so this is its cue "
+                    "texts once per cloned voice at the current model's price")
+    n = v["voices"]
+    model = " / ".join(v["models"]) or FISH_DEFAULT_MODEL
+    return ('<tr class="costquiet" data-component="voices"><td>Voices'
+            f'<span class="costsub">Fish Audio, {n} voice{"s" if n != 1 else ""}</span></td>'
+            '<td></td>'
+            f'<td><span class="costmoney" data-tip="{html.escape("; ".join(tips), quote=True)}">'
+            f'{html.escape(voice_money(v["usd"]))}</span><span class="costsub">{html.escape(model)}</span>'
+            '</td></tr>')
+
+
+def components_html(comp: dict | None, fold: str = "", voices: dict | None = None) -> str:
     """The four rows the cost tab leads with, or "" when nothing at all was measured.
 
     `fold` is the "This guide" row's tab-by-tab breakdown, opened from that row's name.
@@ -1038,8 +1125,9 @@ def components_html(comp: dict | None, fold: str = "") -> str:
             out.append("".join(_entry_row(e) for e in entries))
         if folds:
             out.append(f'<tr class="costfold" hidden><td colspan="3">{fold}</td></tr>')
+    out.append(voices_row_html(voices))
     usd, aic = comp.get("usd") or 0.0, comp.get("aic") or 0.0
-    total = usd + aic * rate
+    total = usd + aic * rate + ((voices or {}).get("usd") or 0.0)
     # Under the total, only what the column cannot say by itself: two kinds of price.
     sub = ""
     if aic:

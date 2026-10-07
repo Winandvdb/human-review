@@ -501,30 +501,43 @@ def test_the_panel_counts_what_the_differ_found_and_nothing_else():
     result = _result(oac.COMPATIBLE, additive=[_op("GET", "/api/owners", 3),
                                                _op("GET", "/api/pets", 22)])
     assert oac.change_count(result) == 25
-    assert "25 changes, none breaking" in _panel_text(oac.panel(result, {"breaking": [],
-                                                                        "subjects": 2}))
-    # One more compatible change and the sentence moves with it. No fixture pins "25".
+    # The band counts endpoints (7 Oct 2026), not the 25 changes inside them.
+    assert "2 endpoints changed" in _panel_text(oac.panel(result, {"breaking": [],
+                                                                  "subjects": 2}))
+    # One more endpoint and the sentence moves with it. No fixture pins "2".
     result["additive"].append(_op("GET", "/api/vets", 1))
-    assert "26 changes, none breaking" in _panel_text(oac.panel(result, {"breaking": [],
-                                                                         "subjects": 3}))
-    # A single change is not "1 changes".
+    assert "3 endpoints changed" in _panel_text(oac.panel(result, {"breaking": [],
+                                                                  "subjects": 3}))
+    # More changes on an endpoint already counted do not move it.
+    result["additive"].append(_op("GET", "/api/vets", 4))
+    assert "3 endpoints changed" in _panel_text(oac.panel(result, {"breaking": [],
+                                                                  "subjects": 3}))
+    # A single endpoint is not "1 endpoints".
     one = _result(oac.COMPATIBLE, additive=[_op("GET", "/api/vets", 1)])
-    assert "1 change, none breaking" in _panel_text(oac.panel(one, {"breaking": [],
-                                                                    "subjects": 1}))
+    assert "1 endpoint changed" in _panel_text(oac.panel(one, {"breaking": [],
+                                                              "subjects": 1}))
 
 
-def test_the_breaking_panel_names_both_counts():
+def test_the_breaking_panel_counts_the_endpoints_broken_and_nothing_else():
+    """7 Oct 2026: "9 changes, 1 breaking across 1 endpoint · checked by oasdiff,
+    double-checked by openapi-diff.py" wrapped onto two lines. The band says how many
+    endpoints break; the changes inside them are what the tab below lists."""
     result = _result(oac.INCOMPATIBLE,
                      breaks=[_op("DELETE", "/api/visits/{id}", 2)],
                      additive=[_op("GET", "/api/owners", 3)])
     text = _panel_text(oac.panel(result, {"breaking": ["a", "b"], "subjects": 2}))
     # verdict · counts · who checked it — the same shape as the green line.
-    assert text.startswith("Breaking changes · 5 changes, 2 breaking across 1 endpoint · checked by"), text
-    assert "oasdiff" in text and "openapi-diff.py" in text
+    assert text.startswith("Breaking changes · 1 endpoint broken · checked by"), text
+    assert text.endswith("checked by oasdiff and openapi-diff.py"), text
+    assert "double-checked" not in text and "change," not in text, text
 
     single = _result(oac.INCOMPATIBLE, breaks=[_op("DELETE", "/api/visits/{id}", 1)])
     assert _panel_text(oac.panel(single, {"breaking": ["a"], "subjects": 1})).startswith(
-        "Breaking change · 1 change, 1 breaking across 1 endpoint ·")
+        "Breaking change · 1 endpoint broken ·")
+    two = _result(oac.INCOMPATIBLE, breaks=[_op("DELETE", "/api/visits/{id}", 1),
+                                            _op("GET", "/api/owners", 1)])
+    assert "· 2 endpoints broken ·" in _panel_text(oac.panel(two, {"breaking": ["a", "b"],
+                                                                   "subjects": 2}))
 
 
 def _entry(level, rule, op="GET", path="/api/owners"):
@@ -544,7 +557,7 @@ def test_one_break_among_additions_counts_as_one_break():
     assert oac.change_count(result) == 6
     text = _panel_text(oac.panel(result, {"breaking": ["GET /api/owners — replaced"],
                                           "subjects": 2}))
-    assert text.startswith("Breaking change · 6 changes, 1 breaking across 1 endpoint ·"), text
+    assert text.startswith("Breaking change · 1 endpoint broken ·"), text
     # The INFO entries are not dropped: the operation's compatible movement lists them.
     fragment = oac.render(result, None, "provenance", "")
     assert re.search(r'What breaks <span class="oac-count">1<', fragment), fragment
@@ -555,16 +568,16 @@ def test_one_break_among_additions_counts_as_one_break():
     assert oac.breaking_count(warn) == 1 and oac.change_count(warn) == 2
 
 
-def test_a_different_count_under_the_same_verdict_is_said_on_the_band():
-    """Both differs say breaking, but count it differently: the band names both numbers
-    rather than letting the second report contradict it silently."""
+def test_a_different_count_under_the_same_verdict_cannot_contradict_the_band():
+    """Both differs say breaking, but count it differently. The band used to name both
+    numbers so the second report would not contradict it silently; since it counts
+    endpoints, not breaking changes, there is no count of theirs for it to contradict."""
     result = _result(oac.INCOMPATIBLE, breaks=[_op("GET", "/api/owners", 1)],
                      additive=[_op("GET", "/api/owners", 5)])
     text = _panel_text(oac.panel(result, {"breaking": ["a", "b", "c"], "subjects": 2}))
     assert _panel_class(oac.panel(result, {"breaking": ["a"], "subjects": 2})) == "red"
-    assert "which counts 3 breaking where oasdiff counts 1" in text, text
-    same = _panel_text(oac.panel(result, {"breaking": ["a"], "subjects": 2}))
-    assert "counts" not in same, same
+    assert text.startswith("Breaking change · 1 endpoint broken · checked by"), text
+    assert "counts" not in text and "breaking" not in text.lower().split("·", 1)[1], text
 
 
 def test_the_band_wraps_as_a_sentence_and_never_opens_a_line_on_the_dot():
@@ -600,11 +613,11 @@ def test_a_replaced_schema_is_one_breaking_change_not_three():
 
 def test_nothing_moved_says_so_and_gets_out_of_the_way():
     same = oac.panel(_result(oac.NO_CHANGES, identical=True), {"breaking": [], "subjects": 0})
-    assert _panel_text(same).startswith("No API changes · 0 changes · checked by")
+    assert _panel_text(same).startswith("No API changes · 0 endpoints changed · checked by")
     # A reworded description moves the spec without moving the contract; the panel must
     # not flatly claim the two files are the same, the way the seal below does not.
     moved = oac.panel(_result(oac.NO_CHANGES, identical=False), {"breaking": [], "subjects": 0})
-    assert "0 changes a caller can see" in _panel_text(moved)
+    assert "0 endpoints changed for a caller" in _panel_text(moved)
 
 
 def test_a_disagreement_never_claims_both_tools_checked_it():
@@ -615,8 +628,8 @@ def test_a_disagreement_never_claims_both_tools_checked_it():
     text = _panel_text(over_strict)
     assert _panel_class(over_strict) == "red", "a contested verdict rendered as safe"
     assert "checked by" not in text, text
-    assert text == ("Verdict disputed · 3 changes, 1 breaking by openapi-diff.py, "
-                    "none by oasdiff · the two differs disagree — one of them is wrong "
+    assert text == ("Verdict disputed · 1 endpoint changed, breaking by openapi-diff.py, "
+                    "not by oasdiff · the two differs disagree — one of them is wrong "
                     "about somebody's client"), text
 
     missed = oac.panel(_result(oac.INCOMPATIBLE, breaks=[_op("DELETE", "/api/x", 2)]),
@@ -624,7 +637,7 @@ def test_a_disagreement_never_claims_both_tools_checked_it():
     missed_text = _panel_text(missed)
     assert _panel_class(missed) == "red"
     assert "checked by" not in missed_text
-    assert "2 breaking by oasdiff, none by openapi-diff.py" in missed_text
+    assert "1 endpoint broken by oasdiff, none by openapi-diff.py" in missed_text
 
 
 def test_the_panel_credits_only_the_differ_that_actually_ran():
@@ -641,8 +654,8 @@ def test_the_panel_credits_only_the_differ_that_actually_ran():
     assert "OpenAPITools/openapi-diff" in text
     assert "oasdiff" in text and "lower bound" in text, (
         "a count from a list that cannot follow a $ref must not look whole")
-    # An operation nobody itemised is still one change, not zero.
-    assert "1 change," in text
+    # An operation nobody itemised is still one endpoint changed, not zero.
+    assert "1 endpoint changed" in text
 
     # Nobody to cross-check against is its own admission, not silence.
     alone = _panel_text(oac.panel(_result(oac.COMPATIBLE,
@@ -663,7 +676,9 @@ def test_the_panel_count_matches_what_oasdiff_reported():
                               str(base), str(head), "-f", "json"],
                              capture_output=True, text=True)
         entries = json.loads(raw.stdout.strip() or "[]")
-    assert f"{len(entries)} changes, none breaking" in _panel_text(rendered.stdout)
+    ops = {(e["operation"], e["path"]) for e in entries if e.get("operation")}
+    n = len(ops)
+    assert f"{n} endpoint{'' if n == 1 else 's'} changed" in _panel_text(rendered.stdout)
 
 
 def test_no_number_in_the_panel_is_typed_into_the_content_file():
@@ -671,9 +686,9 @@ def test_no_number_in_the_panel_is_typed_into_the_content_file():
     Nothing in the generator may contain a literal count."""
     source = COMPAT.read_text(encoding="utf-8")
     body = source[source.index("def panel("):source.index("# ── the tool's markdown")]
-    # "0 changes" is allowed: it is the no-change state's own honest constant, and it is
+    # "0 endpoints" is allowed: it is the no-change state's own honest constant, and it is
     # guarded by `state == NO_CHANGES`, not by somebody remembering to retype it.
-    assert not re.search(r"[1-9]\d* change", body), "a count is hardcoded in the panel"
+    assert not re.search(r"[1-9]\d* (change|endpoint)", body), "a count is hardcoded in the panel"
 
 
 
@@ -736,7 +751,7 @@ def test_a_swapped_media_type_is_one_change_on_the_band_as_in_the_visual_diff():
     assert oac.change_count(result) == 3, result
     assert oac.breaking_count(result) == 2
     text = _panel_text(oac.panel(result, None))
-    assert text.startswith("Breaking changes · 3 changes, 2 breaking across 1 endpoint"), text
+    assert text.startswith("Breaking changes · 1 endpoint broken"), text
     # The folded line says what happened, in one sentence, at the higher severity.
     reasons = " ".join(t for b in result["breaks"] for _, t in b["reasons"])
     assert "changed from <code>*/*</code> to <code>application/problem+json</code>" in reasons
@@ -748,20 +763,22 @@ def test_a_swapped_media_type_is_one_change_on_the_band_as_in_the_visual_diff():
     assert ovd.change_total(entries, global_changes) == oac.change_count(result)
 
 
-def test_the_folded_count_owns_up_to_oasdiff_s_own_on_hover_and_only_there():
-    """Run 11: the band said "7 changes", `oasdiff changelog` says "8 changes" — a judge
-    re-ran the tool and caught the band in an unexplained disagreement. The count stays the
-    rows' count; the difference is said on hover, never as more prose on the band."""
+def test_the_band_counts_no_changes_so_neither_oasdiff_nor_the_toggle_can_disagree():
+    """Runs 6 and 11: the band's change count disagreed first with the visual diff's toggle
+    ("8 changes" over "expand 7 impacted"), then with `oasdiff changelog` itself (7 vs 8),
+    and needed a hover to own up to the fold. Since 7 Oct 2026 the band counts endpoints,
+    which the fold never changes: the swap is on one endpoint however it is counted."""
     band = oac.panel(oac.read_changelog(_swap_entries()), None)
-    assert re.search(r'<span data-tip="4 in oasdiff; a swapped media type is one row here">'
-                     r'3 changes</span>', band), band
-    assert _panel_text(band).startswith("Breaking changes · 3 changes, 2 breaking"), "no new words"
-    # Nothing folded, nothing to own up to.
+    assert "data-tip" not in band, band
+    text = _panel_text(band)
+    assert text.startswith("Breaking changes · 1 endpoint broken ·"), text
+    assert not re.search(r"\d+ changes?\b", text), text
     plain = [e for e in _swap_entries() if e["id"] != "response-media-type-added"]
-    assert "data-tip" not in oac.panel(oac.read_changelog(plain), None)
+    assert _panel_text(oac.panel(oac.read_changelog(plain), None)).startswith(
+        "Breaking changes · 1 endpoint broken ·")
 
 
-def test_the_band_and_the_toggle_print_the_same_number_end_to_end():
+def test_the_band_counts_the_endpoints_oasdiff_broke_end_to_end():
     if not HAVE_OASDIFF:
         print(f"skip {SKIP_REASON}")
         return
@@ -771,16 +788,14 @@ def test_the_band_and_the_toggle_print_the_same_number_end_to_end():
         head.write_text(SWAP_AFTER, encoding="utf-8")
         band = compat(str(base), str(head), "--panel", "--no-cross-check")
         assert band.returncode == 0, band.stderr
-        out = Path(tmp) / "vd.html"
-        vd = subprocess.run([sys.executable, str(HERE / "openapi-visual-diff.py"),
-                             str(base), str(head), "-o", str(out)],
-                            capture_output=True, text=True)
-        assert vd.returncode == 0, vd.stderr
-        toggle = re.search(r"expand (\d+) impacted", out.read_text(encoding="utf-8"))
-    n = re.search(r"· (\d+) changes?,", _panel_text(band.stdout))
-    assert toggle and n, (band.stdout, toggle)
-    # The swap folded, the added /api/vets counted once: both sides say the same.
-    assert n.group(1) == toggle.group(1), (n.group(1), toggle.group(1))
+        raw = subprocess.run([os.environ.get("OASDIFF_BIN", "oasdiff"), "changelog",
+                              str(base), str(head), "-f", "json"],
+                             capture_output=True, text=True)
+        entries = json.loads(raw.stdout.strip() or "[]")
+    broken = {(e["operation"], e["path"]) for e in entries
+              if e.get("operation") and int(e.get("level") or 1) >= 2}
+    n = re.search(r"· (\d+) endpoints? broken ·", _panel_text(band.stdout))
+    assert n and int(n.group(1)) == len(broken), (band.stdout, broken)
 
 
 def test_the_report_calls_the_review_base_the_review_base():

@@ -681,6 +681,19 @@ def breaking_count(result: dict) -> int:
     return sum(len(b.get("reasons") or []) or 1 for b in result.get("breaks") or [])
 
 
+def endpoint_count(result: dict) -> int:
+    """The endpoints the engine saw move, each once. An operation with a break and a few
+    compatible additions sits on both a `breaks` and an `additive` row; it is still one
+    endpoint. Changes that belong to no operation (`info.version`) move none."""
+    return len({(i.get("method"), i.get("path"))
+                for group in ("breaks", "additive", "deprecated")
+                for i in result.get(group) or []})
+
+
+def endpoints(n: int) -> str:
+    return f"{n} endpoint{'' if n == 1 else 's'}"
+
+
 def engine_link(result: dict) -> str:
     """Whichever differ actually produced this result — never both, they are alternatives."""
     if result.get("source") == "oasdiff":
@@ -715,7 +728,7 @@ def who(label: str) -> str:
 
 def panel(result: dict, ours: dict | None,
           assets: Path | None = None, prefix: str = "assets/") -> str:
-    """The verdict, the counts, and who checked it — in that order, on one line."""
+    """The verdict, how many endpoints it touches, and who checked it — on one line."""
     state = result["state"]
     # Built once, with its report already attached, because the name is used in three
     # different sentences below — credited, disputed, or standing alone — and a reader
@@ -724,73 +737,52 @@ def panel(result: dict, ours: dict | None,
     # between them and left the second "(report ↗)" alone on a line of its own.
     engine = who(engine_link(result) + report_link("engine", assets, prefix))
     ours_label = who(OURS_LABEL + report_link("ours", assets, prefix))
-    total = change_count(result)
     n_break = breaking_count(result)
-    s = "" if total == 1 else "s"
+    # The band counts *endpoints*, not changes: "N changes, M breaking across K endpoints"
+    # made the reader do arithmetic the diff right below already does, row by row, and
+    # pushed the band onto a second line. What a reader needs from the band is how many
+    # endpoints a caller has to worry about; which changes, and how many, is what the
+    # tab is for (Victor, 7 Oct 2026). Same reason the two differs are joined by "and":
+    # "double-checked by" was the long way of saying it.
+    n_broken = len(result.get("breaks") or [])
+    n_changed = endpoint_count(result)
 
     they_break = state == INCOMPATIBLE
     we_break = bool(ours and ours["breaking"])
     disputed = ours is not None and we_break != they_break
 
-    # "and" put the two on one footing; they are not on one. oasdiff produced every
-    # number on this line, and our sibling only re-read the same specs to see whether it
-    # would say something different. "double-checked by" is that arrangement said out
-    # loud — the verdict is the tool's, the second opinion is the script's, named by its
-    # file name and no possessive (Victor, 5 Oct 2026).
-    checked = (f"checked by {engine}, double-checked by {ours_label}"
+    checked = (f"checked by {engine} and {ours_label}"
                if ours is not None else
                f"checked by {engine} alone — the cross-check did not run")
-    # Same verdict, different count: said, not smoothed over. The two differs cut a change
-    # differently (oasdiff one entry per rule, ours one per spec node), and a reader who
-    # opens the second report and finds "3 breaking" under a band that said 1 deserves to
-    # have been told first.
-    ours_n = len(ours["breaking"]) if ours is not None else 0
-    if ours is not None and we_break and they_break and ours_n != n_break:
-        # The engine by name, not by a second copy of its link.
-        name = "oasdiff" if result.get("source") == "oasdiff" else "openapi-diff"
-        checked += (f", which counts {ours_n} breaking where {name} counts {n_break} — "
-                    "same verdict, cut differently")
 
     if disputed:
         cls, verdict = "red", "Verdict disputed"
-        flagged, quiet = ((len(ours["breaking"]), ours_label), engine) if we_break \
-            else ((n_break, engine), ours_label)
-        counts = (f"{total} change{s}, {flagged[0]} breaking by {flagged[1]}, "
-                  f"none by {quiet}")
+        # openapi-diff.py reports schema nodes, not endpoints, so only the engine's side
+        # can be counted in the band's currency; ours is named, not numbered.
+        counts = (f"{endpoints(n_broken)} broken by {engine}, none by {ours_label}"
+                  if they_break else
+                  f"{endpoints(n_changed)} changed, breaking by {ours_label}, "
+                  f"not by {engine}")
         # The counts clause just named both tools; repeating them here only buys a
         # second copy of the same link.
         checked = "the two differs disagree — one of them is wrong about somebody's client"
     elif state == INCOMPATIBLE:
         cls = "red"
         verdict = f"Breaking change{'' if n_break == 1 else 's'}"
-        # The chips above the spec count *endpoints* ("4 breaking"); this line counts
-        # individual changes ("14 breaking"). Side by side the two numbers read as a
-        # contradiction, so this one says which endpoints its changes fall in.
-        n_ops = len(result.get("breaks") or [])
-        counts = (f"{total} change{s}, {n_break} breaking across "
-                  f"{n_ops} endpoint{'' if n_ops == 1 else 's'}")
+        counts = f"{endpoints(n_broken)} broken"
     elif state == COMPATIBLE:
         cls, verdict = "green", "Backwards compatible"
-        counts = f"{total} change{s}, none breaking"
+        counts = f"{endpoints(n_changed)} changed"
     else:
         cls, verdict = "none", "No API changes"
         # "No changes" is a claim about callers, not about bytes: the spec may well have
-        # moved. Saying "0 changes" flat over a reworded description is the same
-        # overstatement the seal below refuses to make.
-        counts = ("0 changes" if result.get("identical", True)
-                  else "0 changes a caller can see")
+        # moved. Saying it flat over a reworded description is the same overstatement the
+        # seal below refuses to make.
+        counts = ("0 endpoints changed" if result.get("identical", True)
+                  else "0 endpoints changed for a caller")
 
     if not result.get("complete", True) and state != NO_CHANGES:
         counts += " — a lower bound, <code>oasdiff</code> is not installed"
-    # Eval run 11: the band counted one fewer than `oasdiff changelog` itself prints — the
-    # fold above turns a swapped media type's removal + addition into one row. The count
-    # stays the rows' count; the hover owns up to the difference, in no more words than that
-    # (the page's own tooltip, `data-tip`; a native title is banned by test_tooltips.py).
-    folded = result.get("folded") or 0
-    if folded and total:
-        tip = f"{total + folded} in oasdiff; a swapped media type is one row here"
-        counts = counts.replace(f"{total} change{s}",
-                                f'<span data-tip="{tip}">{total} change{s}</span>', 1)
 
     # The space between the spans is not cosmetic: a reader copying the line out would
     # get "Backwards compatible· …" with the dot glued on. It is a no-break space, and so is

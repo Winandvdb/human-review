@@ -989,9 +989,11 @@ def _api_signal(out_dir: Path) -> dict | None:
         return None
     text = _plain_text(re.sub(r"<style>.*?</style>", "", band, flags=re.S))
     text = re.sub(r"\s+", " ", re.sub(r"\(report\s*\u2197\)", "", text)).strip()
-    m = re.search(r"(\d+)\s+breaking", text)
+    # The band counts endpoints, not changes, since 7 Oct 2026 ("1 endpoint broken"), and
+    # so does this line: the two side by side must not print two different numbers.
+    m = re.search(r"(\d+)\s+endpoints?\s+broken", text)
     n = int(m.group(1)) if m else 0
-    short = (f"{n} breaking API change{'' if n == 1 else 's'}" if n
+    short = (f"{n} API endpoint{'' if n == 1 else 's'} broken" if n
              else "The API contract breaks")
     # No hover: the API tab is the detail, and its verdict line restated here named the
     # two differs — tooling, not a fact about the change.

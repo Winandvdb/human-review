@@ -1584,7 +1584,6 @@ details.dsa-screen > summary .dsa-sumtail { font-weight: 400; }
 .dsa-howbox p { margin: .2rem 0; }
 .dsa-howbox ul { margin: .1rem 0 .5rem 1.1rem; padding: 0; }
 .dsa-howbox li { margin: .1rem 0; }
-.dsa-howbox ul:last-child { margin-bottom: 0; }
 .dsa-gap, .dsa-comp, .dsa-fixed, .dsa-pre { cursor: help; }
 .dsa-unlisted { color: var(--dsa-bad); border: 1px solid var(--dsa-bad); border-radius: 6px;
   padding: .45rem .7rem; margin: .4rem 0 .8rem; font-size: .9rem; }

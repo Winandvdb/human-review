@@ -1410,3 +1410,4 @@ def test_the_count_opens_a_box_that_names_each_side_once():
     assert "<p><b>How the screens were compared</b></p><ul>" in box
     assert '.dsa-count[aria-expanded="true"] { text-decoration-style: solid; }' in ds.CSS
     assert "padding: .6rem .9rem; margin: .4rem 0 .9rem;" in ds.CSS
+    assert ".dsa-howbox ul:last-child" not in ds.CSS, "the last list keeps its .5rem, as tuned"

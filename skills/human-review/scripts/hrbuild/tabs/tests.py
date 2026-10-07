@@ -1001,9 +1001,13 @@ def coverage_side(side: str, frag: str, spec: dict, out_dir: Path, root: Path,
             return side
         note = COV_NOT_MEASURED_SCRIPTED if generated else COV_NOT_MEASURED
         return side[:span[1]] + f'<p class="cov-none">{note}</p>' + side[span[1]:]
-    head = (f'<div class="rm-tkhead"><span class="rm-av cov-av" aria-hidden="true">{COV_SHIELD}</span>'
-            f'<span class="rm-who" data-tip="{html.escape(covcard_tip(doc), quote=True)}">'
-            f'{covcard_who(spec, out_dir)}</span></div>')
+    # The shield and the title are one thing to hover (Victor, 7 Oct 2026): the tooltip sat
+    # on the title alone, and the shield beside it - the more tooltip-looking of the two -
+    # answered nothing.
+    head = (f'<div class="rm-tkhead"><span class="cov-head" '
+            f'data-tip="{html.escape(covcard_tip(doc), quote=True)}">'
+            f'<span class="rm-av cov-av" aria-hidden="true">{COV_SHIELD}</span>'
+            f'<span class="rm-who">{covcard_who(spec, out_dir)}</span></span></div>')
     side = re.sub(r'<div class="rm-tkhead">.*?</div>', lambda _: head, side, count=1, flags=re.S)
     # Last in the column, under the card: the suites missing from it are a footnote to it.
     after = coverage_after(doc)
@@ -1294,10 +1298,16 @@ REQMAP_CSS = """
    third scrollbar, moving the two pinned ones under the masthead. The body is a grid of
    the title row and a 1fr row the panes stretch into; `--strip-h` is the masthead's own
    measured height (tabs.js), and the panel starts right under it. `100vh` is said first
-   for a browser without `dvh`. */
+   for a browser without `dvh`.
+   And the footer is in the window too (Victor, 7 Oct 2026): left under the fold it was
+   81px of page scroll - a third scrollbar again, for two lines nobody came to the tab
+   for. `--rm-tail-h` is everything the page lays out under the matrix (the footer, its
+   margin, `.wrap`'s bottom padding), measured by REQMAP_FIT_JS, so the matrix plus the
+   tail is exactly the window at any height. */
 @media (min-width:901px){
-  .reqmap .rm-body{height:calc(100vh - var(--strip-h, 7rem));
-    height:calc(100dvh - var(--strip-h, 7rem));grid-template-rows:auto minmax(0,1fr)}
+  .reqmap .rm-body{height:calc(100vh - var(--strip-h, 7rem) - var(--rm-tail-h, 0px));
+    height:calc(100dvh - var(--strip-h, 7rem) - var(--rm-tail-h, 0px));
+    grid-template-rows:auto minmax(0,1fr)}
   .reqmap .rm-text,.reqmap .rm-side,.reqmap .rm-side:has(.rm-t[data-open=yes]){
     position:static;align-self:stretch;min-height:0;display:flex;flex-direction:column;
     overflow:hidden}
@@ -1435,6 +1445,37 @@ REQMAP_LEDGER_JS = """
   if (led && head) head.appendChild(led);
 });</script>"""
 
+#: What the page lays out under the matrix, published as `--rm-tail-h` for REQMAP_CSS to
+#: take off the window's height — the same bargain as tabs.js's `--strip-h` above it: the
+#: script measures, the sheet does the arithmetic. Measured, not a constant, because the
+#: footer is not one: it wraps to more lines on a narrow window and its rows depend on how
+#: the page is served. The tail is the body's bottom minus the matrix's, which does not
+#: depend on the matrix's own height, so setting it cannot feed back into the next
+#: measurement. Skipped while the panel is hidden (every box is 0 there) and in show-all
+#: (the other panels are under it, and the page scrolls anyway); a ResizeObserver on the
+#: matrix fires again the moment the tab is shown, and on the body for the footer.
+REQMAP_FIT_JS = """
+<script>(function () {
+  var body = document.querySelector('.reqmap .rm-body');
+  if (!body) return;
+  var root = document.documentElement;
+  function fit() {
+    if (!body.getClientRects().length || document.body.classList.contains('showall')) return;
+    var tail = document.body.getBoundingClientRect().bottom - body.getBoundingClientRect().bottom;
+    // Rounded up: a fraction of a pixel left over is a page scrollbar.
+    var v = Math.max(0, Math.ceil(tail)) + 'px';
+    if (root.style.getPropertyValue('--rm-tail-h') !== v) root.style.setProperty('--rm-tail-h', v);
+  }
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(fit);
+    ro.observe(body);
+    ro.observe(document.body);
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('load', fit);
+  document.addEventListener('DOMContentLoaded', fit);
+})();</script>"""
+
 REQMAP_TIP_JS = """
 <script>(function () {
   function measure(ev) {
@@ -1523,7 +1564,7 @@ def reqmap_layout(frag: str, spec: dict, out_dir: Path, root: Path | None = None
         out = coverage_tests(out, doc, _load_test_changes(spec, out_dir),
                              root if root is not None else out_dir.resolve().parent)
     out = relabel_cats(out)
-    return out + REQMAP_CSS + REQMAP_TIP_JS + REQMAP_SEMCOV_JS + REQMAP_CATS_JS + REQMAP_LEDGER_JS
+    return out + REQMAP_CSS + REQMAP_FIT_JS + REQMAP_TIP_JS + REQMAP_SEMCOV_JS + REQMAP_CATS_JS + REQMAP_LEDGER_JS
 
 
 # --- the third run mode: run the tests, then re-derive ---------------------------------

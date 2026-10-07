@@ -441,6 +441,55 @@ def test_the_legend_holds_every_state_inside_its_column(width, scheme, tmp_path)
     assert {p[0] for p in got["pills"]} >= {"unconfirmed", "narrowed"}
 
 
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_the_tab_is_exactly_one_window_tall_footer_included(scheme, tmp_path):
+    """Victor, 7 Oct 2026, at 1152x625: the matrix filled the window under the masthead and
+    the footer hung 81px below it, so the page grew a scrollbar of its own next to the two
+    panes'. The matrix now gives up what the page lays out under it (`--rm-tail-h`,
+    REQMAP_FIT_JS): no page scroll at any height, after a resize, with the footer on
+    screen."""
+    sync = pytest.importorskip("playwright.sync_api")
+    from hrbuild.shared import assets
+    out = T.reqmap_layout(_all_states_fragment(), SPEC, tmp_path)
+    page_file = tmp_path / "page.html"
+    page_file.write_text(
+        '<!doctype html><html style="--strip-h:87.5px"><head><meta charset="utf-8">'
+        f'<style>{assets.CSS}</style></head><body><div class="wrap">'
+        '<div class="masthead" style="height:87.5px"></div>'
+        f'<section class="panel">{out}</section>'
+        '<footer><p class="footrow">Built by somebody.</p><p class="diskline">/a/path</p></footer>'
+        '</div></body></html>', encoding="utf-8")
+    measure = """() => ({sh: document.documentElement.scrollHeight, ih: innerHeight,
+      foot: document.querySelector('footer').getBoundingClientRect().bottom})"""
+    with sync.sync_playwright() as p:
+        try:
+            browser = p.chromium.launch()
+        except Exception as e:  # no browser downloaded for this interpreter
+            pytest.skip(f"chromium unavailable: {e}")
+        try:
+            page = browser.new_page(viewport={"width": 1152, "height": 625},
+                                    color_scheme=scheme)
+            page.goto(page_file.as_uri())
+            page.wait_for_timeout(100)
+            got = [page.evaluate(measure)]
+            for h in (900, 480, 625):
+                page.set_viewport_size({"width": 1152, "height": h})
+                page.wait_for_timeout(100)
+                got.append(page.evaluate(measure))
+        finally:
+            browser.close()
+    for g in got:
+        assert g["sh"] <= g["ih"], f"the page scrolls: {g}"
+        assert g["foot"] <= g["ih"], f"the footer is under the fold: {g}"
+
+
+def test_the_fit_script_rides_with_the_matrix_and_the_sheet_reads_it(tmp_path):
+    out = _laid_out(tmp_path)
+    assert "setProperty('--rm-tail-h', v)" in out
+    assert "calc(100dvh - var(--strip-h, 7rem) - var(--rm-tail-h, 0px))" in T.REQMAP_CSS
+    assert out.index("--rm-tail-h', v)") > out.index('class="rm-body"')
+
+
 def test_a_models_ui_label_is_renamed_e2e_at_build_time():
     """The end-to-end level is `E2E` everywhere; a fragment a model drew says `UI` and is
     relabelled by the builder, never regenerated."""

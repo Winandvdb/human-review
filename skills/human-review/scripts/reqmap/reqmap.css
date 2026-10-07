@@ -232,13 +232,11 @@
   white-space:nowrap}
 /* `.srcref` carries an 8px bottom margin for prose; in a centred row it pushed the file name 4px
    above everything else. The 1px dotted underline is balanced by 1px on top. */
+/* Only the extension is shown - `.feature`, `.spec.ts`, `.java` (reqmap.js `ext`) - in the
+   srcref's own link blue: the kind of test is what the row needs from its file, and the
+   repo path is on the hover. It was the whole name with the extension in amber, which
+   spent a third of the row on a file name nobody was reading. */
 .reqmap .rm-tw{flex:0 0 auto;font-size:10.5px;margin-bottom:0;padding-top:1px}
-/* The part of the file name that says what kind of test this is - `.feature`, `.spec.ts`,
-   `.component.spec.ts`, `.java` - in amber, the page's own "look here" colour, so the
-   kind is read off the row without decoding the whole name. Everything before the first
-   dot of the extension run is the test's name and stays the link colour. */
-.reqmap .rm-tw .rm-tk{color:var(--drift);font-weight:600}
-@media (prefers-color-scheme:dark){.reqmap .rm-tw .rm-tk{color:var(--drift)}}
 /* What the branch did to this test, on the test itself. It is the fact the deleted
    evidence cards carried in prose ("the new one", "the pre-existing flow, extended") -
    worth one word on the row. An untouched test used to get silence, on the theory that

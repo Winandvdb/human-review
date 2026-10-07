@@ -11,13 +11,14 @@
   function esc(s){return String(s).replace(/[&<>]/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
   function where(id){return id.split('/').pop();}
-  // `add-visit.component.spec.ts:52` -> the name, then the run of extensions that names
-  // the kind of test (`.component.spec.ts`), then the `:line`. The run starts at the first
-  // dot after the name: a dotted name (`visits.page.spec.ts`) would colour from `.page`
-  // on, which is still where the eye should land.
-  function kind(face){
-    var m=/^([^.]+)((?:\.[^.:]+)+)(:\d+)?$/.exec(face);
-    return m?m[1]+'<span class="rm-tk">'+m[2]+'</span>'+(m[3]||''):face;
+  // `add-visit.component.spec.ts` -> `.spec.ts`, `OwnerListTest.java` -> `.java`: the kind
+  // of test is all the row says about its file (Victor, 7 Oct 2026 - "only if it's a
+  // feature or a spec.ts or a Java"). The last extension, plus the `.spec`/`.test`
+  // before it where there is one; a role like `.component` or `.page` is dropped. The
+  // whole repo path rides on the hover.
+  function ext(file){
+    var m=/((?:\.(?:spec|test|e2e-spec|e2e|cy|it))?\.[A-Za-z0-9]+)$/i.exec(file);
+    return m?m[1]:file;
   }
 
   // Test names arrive as identifiers - `getById_exposesTheAttendingVet` - because that is
@@ -267,11 +268,13 @@
          // file left in this checkout, and a dead vscode:// URL is the one thing this page
          // never emits, so it keeps the location and loses the link.
          var href=t.href||(t.parts&&t.parts[0]&&t.parts[0].href),
-             face=kind(esc((t.where||where(id)).replace(/:\d+(?:[-\u2013]\d+)?$/,'')));
+             face=esc(ext((t.where||where(id)).replace(/:\d+(?:[-\u2013]\d+)?$/,''))),
+             // The id is the repo path and line (`@base` marks a deleted test's key).
+             path=esc(id.replace(/@base$/,'')).replace(/"/g,'&quot;')+' \u2014 ';
          // semcov: a deleted test's href is its blob at the base commit, and says so.
-         return href?'<a class="rm-tw srcref" href="'+href+'" data-tip="'+esc(t.hrefTip||'Open in VS Code')+'" target="_blank" rel="noopener">'
+         return href?'<a class="rm-tw srcref" href="'+href+'" data-tip="'+path+esc(t.hrefTip||'Open in VS Code')+'" target="_blank" rel="noopener">'
                      +face+'</a>'
-                   :'<span class="rm-tw srcref tgone" data-tip="'
+                   :'<span class="rm-tw srcref tgone" data-tip="'+path
                      +esc(t.goneTip||'the file is gone').replace(/"/g,'&quot;')+'">'
                      +face+'</span>';})()
       // The stamp closes the row, on the right of the file it is about - the same order

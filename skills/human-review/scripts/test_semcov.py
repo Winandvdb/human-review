@@ -878,6 +878,27 @@ def test_the_matrix_script_still_parses():
     assert got.returncode == 0, got.stderr
 
 
+@pytest.mark.skipif(not shutil.which("node"), reason="node is not installed")
+def test_a_rows_file_is_named_by_its_kind_alone():
+    """Victor, 7 Oct 2026: "only if it's a feature or a spec.ts or a Java" — the row keeps
+    the extension, the repo path moves to the hover."""
+    import subprocess
+    js = (S.ASSETS / "reqmap.js").read_text(encoding="utf-8")
+    fn = js[js.index("  function ext(file){"):]
+    fn = fn[:fn.index("\n  }\n") + 4]
+    probe = fn + "\nconsole.log(JSON.stringify(%s.map(ext)));" % json.dumps(
+        ["owner-search.feature", "owner-list.component.spec.ts", "OwnerListTest.java",
+         "visits.page.spec.ts", "api.test.ts", "app.e2e-spec.ts", "conftest.py"])
+    got = subprocess.run(["node", "-e", probe], capture_output=True, text=True)
+    assert got.returncode == 0, got.stderr
+    assert json.loads(got.stdout) == [".feature", ".spec.ts", ".java", ".spec.ts", ".test.ts",
+                                      ".e2e-spec.ts", ".py"]
+    assert "face=esc(ext(" in js and "kind(" not in js
+    assert "data-tip=\"'+path+esc(t.hrefTip||'Open in VS Code')" in js
+    css = (S.ASSETS / "reqmap.css").read_text(encoding="utf-8")
+    assert ".rm-tk{" not in css, "no amber half: the extension is the whole link, in link blue"
+
+
 def test_a_narrowed_sentence_names_and_links_the_decision_it_rests_on(tmp_path):
     """Run 6: "The grid should be sortable by any column" popped only "narrowed by a
     recorded decision". The decision is the proposal's line 86, and the hover and the box

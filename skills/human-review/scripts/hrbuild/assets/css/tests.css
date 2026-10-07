@@ -91,6 +91,9 @@ ul.req-tests li { list-style:none; }
    its own frame and rows, with a ruler for an avatar, and the suites it is short of are
    noted under it. */
 .reqmap .cov-av { display:flex; align-items:center; justify-content:center; cursor:help; }
+/* The shield and the card's title, one hover target with one tooltip; the gap is the
+   strip's own, so the pair sits where the two siblings did. */
+.reqmap .cov-head { display:inline-flex; align-items:center; gap:8px; cursor:help; }
 .reqmap .cov-av svg { width:20px; height:20px; fill:var(--rm-run); }
 .cov-after { margin:.5rem 2px 0; font-size:.85rem; }
 .cov-none { margin:6px 12px; font-size:.82rem; color:var(--drift); }

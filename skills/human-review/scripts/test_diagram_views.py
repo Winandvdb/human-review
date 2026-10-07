@@ -1001,6 +1001,10 @@ def test_both_editors_are_offered_and_named(tmp_path):
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
     assert '<span class="cmd-word">Edit on desktop</span><span class="cmd-ico">\u2197</span></a>' in out
     assert '<span class="cmd-word">Edit on web</span><span class="cmd-ico">\u2197</span></a>' in out
+    # Each says on hover where it opens (hand-added on the PR #51 page, 7 Oct 2026, and
+    # lost by the from-scratch rebuild until the builder wrote it).
+    assert 'data-tip="Open in the draw.io desktop app"' in out
+    assert 'data-tip="Open in draw.io on the web"' in out
     # Links, not commands: the run script must neither disable nor pair them.
     for a in re.findall(r'<a class="dgm-edit".*?</a>', out):
         assert "cmd-copy" not in a and "cmd-run" not in a

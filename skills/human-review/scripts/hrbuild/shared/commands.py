@@ -396,15 +396,17 @@ def drawio_open_html(app_url: str, web_url: str = "") -> str:
     `.rerun` while a command is going and pairs them by `.cmd`, and a link that only opens
     an editor is neither a copy nor a run.
     """
-    def btn(href: str, word: str, extra: str = "") -> str:
-        return (f'<a class="dgm-edit" href="{html.escape(href, quote=True)}"{extra}>'
+    def btn(href: str, word: str, tip: str, extra: str = "") -> str:
+        return (f'<a class="dgm-edit" href="{html.escape(href, quote=True)}" '
+                f'data-tip="{html.escape(tip, quote=True)}"{extra}>'
                 f'<span class="cmd-lead">\u270f\ufe0f</span><span class="cmd-word">{word}</span><span class="cmd-ico">\u2197</span></a>')
 
     out = []
     if app_url:
-        out.append(btn(app_url, "Edit on desktop"))
+        out.append(btn(app_url, "Edit on desktop", "Open in the draw.io desktop app"))
     if web_url:
-        out.append(btn(web_url, "Edit on web", ' target="_blank" rel="noopener"'))
+        out.append(btn(web_url, "Edit on web", "Open in draw.io on the web",
+                       ' target="_blank" rel="noopener"'))
     return "".join(out)
 
 

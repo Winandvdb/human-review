@@ -528,7 +528,7 @@ def test_the_breaking_panel_counts_the_endpoints_broken_and_nothing_else():
     text = _panel_text(oac.panel(result, {"breaking": ["a", "b"], "subjects": 2}))
     # verdict · counts · who checked it — the same shape as the green line.
     assert text.startswith("Breaking changes · 1 endpoint broken · checked by"), text
-    assert text.endswith("checked by oasdiff and openapi-diff.py"), text
+    assert text.endswith("checked by oasdiff and our openapi-diff.py"), text
     assert "double-checked" not in text and "change," not in text, text
 
     single = _result(oac.INCOMPATIBLE, breaks=[_op("DELETE", "/api/visits/{id}", 1)])
@@ -621,14 +621,14 @@ def test_nothing_moved_says_so_and_gets_out_of_the_way():
 
 
 def test_a_disagreement_never_claims_both_tools_checked_it():
-    """"checked by oasdiff and openapi-diff.py" is a claim that the two agreed. When they
+    """"checked by oasdiff and our openapi-diff.py" is a claim that the two agreed. When they
     do not, the panel has to say the opposite — and it must not read as safe."""
     over_strict = oac.panel(_result(oac.COMPATIBLE, additive=[_op("GET", "/api/owners", 3)]),
                             {"breaking": ["VisitDto.vetId — type changed"], "subjects": 4})
     text = _panel_text(over_strict)
     assert _panel_class(over_strict) == "red", "a contested verdict rendered as safe"
     assert "checked by" not in text, text
-    assert text == ("Verdict disputed · 1 endpoint changed, breaking by openapi-diff.py, "
+    assert text == ("Verdict disputed · 1 endpoint changed, breaking by our openapi-diff.py, "
                     "not by oasdiff · the two differs disagree — one of them is wrong "
                     "about somebody's client"), text
 
@@ -637,7 +637,7 @@ def test_a_disagreement_never_claims_both_tools_checked_it():
     missed_text = _panel_text(missed)
     assert _panel_class(missed) == "red"
     assert "checked by" not in missed_text
-    assert "1 endpoint broken by oasdiff, none by openapi-diff.py" in missed_text
+    assert "1 endpoint broken by oasdiff, none by our openapi-diff.py" in missed_text
 
 
 def test_the_panel_credits_only_the_differ_that_actually_ran():

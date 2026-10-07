@@ -736,7 +736,10 @@ def panel(result: dict, ours: dict | None,
     # Each name and its "(report ↗)" are one unbreakable unit: at 1440px the band wrapped
     # between them and left the second "(report ↗)" alone on a line of its own.
     engine = who(engine_link(result) + report_link("engine", assets, prefix))
-    ours_label = who(OURS_LABEL + report_link("ours", assets, prefix))
+    # "our": the second differ is this skill's own script, not a second tool off the
+    # shelf, and the band says so wherever it names it (Victor, 7 Oct 2026). The word
+    # sits outside the unbreakable unit; only the name and its report link must not part.
+    ours_label = "our " + who(OURS_LABEL + report_link("ours", assets, prefix))
     n_break = breaking_count(result)
     # The band counts *endpoints*, not changes: "N changes, M breaking across K endpoints"
     # made the reader do arithmetic the diff right below already does, row by row, and

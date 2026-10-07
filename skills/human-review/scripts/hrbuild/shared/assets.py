@@ -41,7 +41,8 @@ def _script(name: str) -> str:
 # named here, and ``test_build_split_identity.py`` fails the build if one is not.
 CSS_FILES = (
     "core", "masthead", "chips", "commands", "demo", "review", "cost", "tests",
-    "snippets", "sequence", "logging", "diagrams", "genseq", "city", "adopt", "frame",
+    "snippets", "sequence", "logging", "diagrams", "genseq", "city", "adopt", "fixtures",
+    "frame",
 )
 CSS = "".join(_text(f"css/{name}.css") for name in CSS_FILES)
 
@@ -81,6 +82,11 @@ TIP_JS = _script("tip.js")
 
 
 TRACE_JS = _script("trace.js")
+
+
+# The DB fixtures' coloured dots, on the Demo tab's buttons and the Tests tab's E2E rows,
+# read off the `hr-fixtures` registry `shared/fixtures.py` writes.
+FIXTURES_JS = _script("fixtures.js")
 
 
 SEQLINK_JS = _script("seqlink.js")

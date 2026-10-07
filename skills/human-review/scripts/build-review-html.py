@@ -65,7 +65,36 @@ from hrbuild.shared.actions import (
 from hrbuild.shared.assets import (
     APP_ENV_JS, CAPTION_JS, CSS, CSS_FILES, DGM_VIEWS_JS, EDITOR_JS, FOCUS_JS, FOOTER_CSS,
     GENSEQ_JS, HSCROLL_JS, LATE_CSS, PAINT_HOLD_JS, PAINT_RELEASE_JS, RERUN_JS, SEQFOLD_JS, SEQHEADS_JS,
-    SEQLINK_JS, SERVER_JS, TABS_JS, TIP_JS, TRACE_JS, XREF_CSS, XREF_JS, FOLDERS_JS
+    SEQLINK_JS, SERVER_JS, TABS_JS, TIP_JS, TRACE_JS, XREF_CSS, XREF_JS, FOLDERS_JS,
+    FIXTURES_JS
+)
+from hrbuild.shared.fixtures import (
+    FIXTURE_COLORS_FILE,
+    FIXTURE_PALETTE,
+    FIXTURE_SEED,
+    _FX_BLOCK,
+    _FX_COLOUR,
+    _FX_KW,
+    _FX_NAME,
+    _FX_SEEDWORD,
+    _FX_SPEC,
+    _FX_STEPDEF,
+    _FX_TEST,
+    _fx_block_end,
+    _fx_explicit,
+    _fx_expr_to_regex,
+    _fx_feature_tests,
+    _fx_local_imports,
+    _fx_ls,
+    _fx_spec_tests,
+    _fx_step_defs,
+    _fx_strip_comments,
+    _fx_verdict,
+    fixture_colors,
+    fixture_dirs,
+    fixture_registry,
+    fixtures_by_test,
+    render_fixture_registry
 )
 from hrbuild.shared.commands import (
     CMD_COPY, CMD_PLAY, CMD_RUN, CMD_STOP, command_html, COPY_TIP,
@@ -1402,6 +1431,11 @@ def _main(argv=None) -> int:
             base_st = {**base_st, "outside": [{**c, "spec": specs.get(c["sha"])}
                                               for c in base_st["outside"]]}
 
+    # The DB fixtures' colours and which one each E2E test starts from, read off the
+    # project (`shared/fixtures.py`); nothing at all when it has no fixtures and no test
+    # leans on the seed, and then neither tab draws a dot.
+    fixtures_html = render_fixture_registry(root)
+    fixtures_html = fixtures_html + "\n" + FIXTURES_JS if fixtures_html else ""
     doc = f"""<!doctype html>
 <html lang="en"{commit_stamp(root)}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1429,6 +1463,7 @@ def _main(argv=None) -> int:
 {TRACE_JS}\n{SEQLINK_JS}\n{FOLDERS_JS}\n{SEQFOLD_JS}\n{SEQHEADS_JS}\n{HSCROLL_JS}\n{TABS_JS}\n{PAINT_RELEASE_JS}
 {RERUN_JS}
 {TIP_JS}
+{fixtures_html}
 </body></html>
 """
     doc = code_xref.cross_link(doc)

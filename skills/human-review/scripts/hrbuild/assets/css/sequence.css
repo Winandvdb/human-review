@@ -56,8 +56,12 @@ details.testpair > summary { cursor:pointer; list-style:none; display:flex; gap:
   align-items:baseline; color:var(--fg); font-size:.95rem; font-weight:600;
   padding:.25rem 0; }
 details.testpair > summary::-webkit-details-marker { display:none; }
-details.testpair > summary::before { content:"▾"; font-size:.75rem; }
-details.testpair:not([open]) > summary::before { content:"▸"; }
+/* The fold's caret, drawn as every other tab draws its own (`.cx-caret`, `.disclose`): the
+   full-size ▶/▼ at 13px in a 1.1rem box, link-blue, centred on the row. The small ▸/▾ at
+   .75rem read as a speck next to a 0.95rem title. FE0E keeps the glyph text, not emoji. */
+details.testpair > summary::before { content:"\25BC\FE0E"; font-size:13px; line-height:1;
+  flex:0 0 1.1rem; width:1.1rem; text-align:center; align-self:center; color:var(--link); }
+details.testpair:not([open]) > summary::before { content:"\25B6\FE0E"; }
 details.testpair > summary:hover { color:var(--link); }
 /* What kind of test drew the sequence, in the chip the Tests tab wears for the same three
    words and in the same three colours — `.evi.e2e` / `.api` / `.unit` a few hundred lines

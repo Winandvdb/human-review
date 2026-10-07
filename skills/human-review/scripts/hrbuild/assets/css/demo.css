@@ -38,11 +38,16 @@
 /* The containers a Start is bringing up (APP_ENV_JS `appenvPods`): one chip per service,
    its light a dot in front of the name — grey while created or still waiting on its
    healthcheck, green once running, red once it exited non-zero or went unhealthy. Images
-   being built before any container exists are chips too, outlined. Wraps under the row's
-   verbs rather than pushing them off screen. */
-.appenv .appenv-pods { display:inline-flex; flex-wrap:wrap; gap:.25rem .3rem;
-    align-items:center; }
+   being built before any container exists are chips too, outlined. Their own line under
+   the row, never inline in it: inline, six chips pushed the voice switch onto a second
+   line of its own while the app started (7 Oct 2026). `order` and a full basis put them
+   last in the wrapping row whatever the DOM order; `[hidden]` has to be restated because
+   `display` set here would beat the UA sheet and leave an empty line behind. */
+.appenv .appenv-pods { display:flex; flex-wrap:wrap; gap:.25rem .3rem; align-items:center;
+    order:99; flex-basis:100%; }
 .appenv .appenv-pods[hidden] { display:none; }
+/* Breathing room between the tab strip and the band, which otherwise sits right under it. */
+.appenv { margin-top:.7rem; }
 .appenv .appenv-pod { --pod:#9a9aa8; display:inline-flex; align-items:center; gap:.3em;
     padding:.05rem .45rem; border:1px solid var(--line); border-radius:999px;
     background:var(--bg); font:11.5px/1.5 ui-monospace,Menlo,monospace; cursor:help;

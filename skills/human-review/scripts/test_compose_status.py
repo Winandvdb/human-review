@@ -282,8 +282,13 @@ window.HR = {onready: fn => setTimeout(fn, 0), can: () => true,
     window.FINISH = resolve;
   }),
   tail: snap => (snap && snap.output || '').trim()};
+window.ACTIVE = window.ACTIVE || null; window.RAN = [];
+const _run = window.HR.run;
+window.HR.run = (id, params, progress) => (window.RAN.push(id), _run(id, params, progress));
 window.fetch = url => url.startsWith('/__compose__')
   ? (window.POLLS++, Promise.resolve({ok: true, json: () => Promise.resolve(window.COMPOSE)}))
+  : url.startsWith('/__run_status__')
+  ? Promise.resolve({ok: true, json: () => Promise.resolve({active: window.ACTIVE})})
   : Promise.reject(new Error('down'));
 </script>"""
 
@@ -309,8 +314,15 @@ def page():
         browser.close()
 
 
+def _load(page, html):
+    """A fresh window per case: `set_content` keeps the old one, and with it the timers and
+    pending runs of the case before, which then press buttons in this one."""
+    page.goto("about:blank")
+    page.set_content(html)
+
+
 def _start(page):
-    page.set_content("<!doctype html><meta charset=utf-8><style>" + build.CSS + "</style>"
+    _load(page, "<!doctype html><meta charset=utf-8><style>" + build.CSS + "</style>"
                      + STUB + build.runtime_html(RUNTIME) + build.APP_ENV_JS)
     page.wait_for_timeout(50)
     page.evaluate("document.querySelector('.appenv-start .cmd-run').click()")
@@ -360,3 +372,31 @@ def test_a_failed_start_keeps_the_red_chip_with_the_reason_on_hover(page):
     seen = page.evaluate(READ)
     assert seen["chips"][0] == ["bad", "down", "bad: FATAL - no DATABASE_URL set"]
     assert seen["count"] == "1/2 up"
+
+
+def test_a_page_reloaded_mid_start_picks_the_run_up_by_itself(page):
+    """7 Oct 2026, on stage: a live patch rewrote the report a few seconds into a Start, the
+    tab reloaded itself, and the reloaded row said "Offline" with no chips while the stack
+    came up behind it — the address only appeared after a manual refresh. A served page
+    that finds a `demo-env` run in flight follows it (the server joins the press to it)."""
+    _load(page, "<!doctype html><meta charset=utf-8><style>" + build.CSS + "</style>"
+                     + "<script>window.ACTIVE = {action: 'demo-env', state: 'running', run: 'r1'};"
+                     + "</script>" + STUB + build.runtime_html(RUNTIME) + build.APP_ENV_JS)
+    page.wait_for_function("window.RAN.includes('demo-env')", timeout=3000)
+    seen = _compose(page, {"state": "running", "up": 1, "total": 2, "images": [],
+                           "containers": [{"service": "db", "light": "up", "status": "Up"},
+                                          {"service": "web", "light": "starting",
+                                           "status": "Created"}]})
+    assert seen["count"] == "1/2 up"
+    assert page.evaluate("document.querySelector('.appenv-state').textContent") == "Starting\u2026"
+    page.evaluate("window.FINISH({state: 'done', result: {base: 'http://localhost:5'}})")
+    page.wait_for_timeout(100)
+    assert page.evaluate(READ) is None
+
+
+def test_with_no_start_in_flight_the_page_does_not_press_it(page):
+    _load(page, "<!doctype html><meta charset=utf-8><style>" + build.CSS + "</style>"
+                     + "<script>window.ACTIVE = {action: 'cue-drive', state: 'running'};</script>"
+                     + STUB + build.runtime_html(RUNTIME) + build.APP_ENV_JS)
+    page.wait_for_timeout(300)
+    assert "demo-env" not in page.evaluate("window.RAN")

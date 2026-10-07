@@ -451,7 +451,7 @@
     });
   }
 
-  onrun(acts.start, function () {
+  function startApp() {
     drive('demo-env', 'Starting', function (done) {
       if (done.state === 'done' && adopt(done.result && done.result.base)) return;
       // It ran and printed no URL we recognised, or it failed. Either way the reader is
@@ -460,7 +460,28 @@
       probe(done.state === 'done' ? null
             : failure('start failed', done, 'the command exited ' + done.exit));
     });
-  });
+  }
+  onrun(acts.start, startApp);
+
+  // A Start already in flight when this page loads: pick it up instead of saying Offline.
+  //
+  // The page reloads itself whenever anything rewrites the report beside it, and on the
+  // demo day (7 Oct 2026) something did, a few seconds into a Start. The reloaded tab had
+  // forgotten the run — "Offline", no chips — while the stack came up behind it, and only
+  // a manual refresh, after the fact, found the address. So a served page asks first
+  // whether a `demo-env` run is going, and if one is it presses Start itself: the server
+  // hands a second press the run already in flight rather than a second build, so this is
+  // the very same follow — chips, then the address — the original press would have had.
+  function resume() {
+    return fetch('/__run_status__', {cache: 'no-store'}).then(function (r) {
+      return r.ok ? r.json() : null;
+    }).then(function (j) {
+      var a = j && j.active;
+      if (!a || a.action !== 'demo-env' || a.state !== 'running' || busy) return false;
+      startApp();
+      return true;
+    }).catch(function () { return false; });
+  }
 
   // Stop forgets the address as well as freeing the port. Remembering it would leave
   // every link in the transcript pointing confidently at nothing, and the next Start will
@@ -515,8 +536,8 @@
       bar.classList.add('appenv-served');
       // Re-ask rather than re-deriving from whatever the pill happens to say: the first
       // probe may still be in flight, and `served` has just changed the answer for two
-      // of the three verbs.
-      probe();
+      // of the three verbs. Unless a Start is already running, which owns the row.
+      resume().then(function (resumed) { if (!resumed) probe(); });
     }
     // The `probe` above is also what asks the host where the app is, when the remembered
     // address does not answer — see `look`. It waits for this point because `served` is

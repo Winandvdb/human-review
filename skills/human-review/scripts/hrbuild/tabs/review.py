@@ -1796,8 +1796,8 @@ def _confidence_chip(f) -> str:
     # The lede already says "3 under 70% sure"; the chips now speak the same unit.
     shown = f"{round(c * 100)}% confident"
     cls = "f-confidence sev-med" if c < 0.5 else "f-confidence"
-    return (f'<span class="{cls}" title="{html.escape(CONFIDENCE_TIP, quote=True)}">'
-            f'{shown}</span>')
+    # No tooltip (Victor, 7 Oct 2026): the number says it; the old range hint only added noise.
+    return f'<span class="{cls}">{shown}</span>'
 
 
 #: The word on every assumption card — fixed, never the item's own `source`. The report

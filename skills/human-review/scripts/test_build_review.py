@@ -2976,7 +2976,7 @@ def test_an_assumptions_confidence_reads_verbatim_with_its_tooltip(tmp_path):
     # The tooltip is `CONFIDENCE_TIP`, fixed — not a sentence composed around this item's
     # own number — and the face is a percentage, not a rate, said as what it measures:
     # `85% confident`, so the number beside `assumption` cannot be read as a score.
-    assert ('<span class="f-confidence" data-tip="Confidence ∈ [10% .. 90%]">'
+    assert ('<span class="f-confidence">'
             '85% confident</span>') in item
     assert "sev-med" not in item, "0.85 is not a low confidence"
 

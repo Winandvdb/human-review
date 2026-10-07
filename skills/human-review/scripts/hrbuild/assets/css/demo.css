@@ -73,7 +73,7 @@
    line of its own while the app started (7 Oct 2026). `order` and a full basis put them
    last in the wrapping row whatever the DOM order; `[hidden]` has to be restated because
    `display` set here would beat the UA sheet and leave an empty line behind. */
-.appenv .appenv-pods { display:flex; flex-wrap:wrap; gap:.25rem .3rem; align-items:center;
+.appenv .appenv-pods { display:flex; flex-wrap:wrap; gap:.35rem; align-items:center;
     order:99; flex-basis:100%; }
 .appenv .appenv-pods[hidden] { display:none; }
 /* Breathing room between the tab strip and the band, which otherwise sits right under it. */

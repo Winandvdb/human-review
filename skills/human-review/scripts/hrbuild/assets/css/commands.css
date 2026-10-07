@@ -357,6 +357,12 @@ span.tabre > button.chip-rerun span.rr-mark { font-size:9px; line-height:1; colo
             display:inline-flex; align-items:center; padding-top:0; padding-bottom:0; line-height:1;
             font-size:.8rem; height:var(--tr-h); min-height:0; box-sizing:border-box; }
 .titlerow .titleside button.chip-rerun { --rr-size:var(--tr-h); padding:0; width:var(--tr-h); height:var(--tr-h); }
+/* The sides too, at this specificity: the row-level `.7rem` above (same 0,2,0 as
+   masthead.css's own `.titlerow .titlescore`, and later in the page) won over both, and
+   the from-scratch rebuild drew VSC / Static / Serve and the score 2-3px wider a side than
+   the masthead Victor tuned live on 7 Oct (patches 1350, 1422, masthead-r4). */
+.titlerow .titleside .chip { padding-left:.55rem; padding-right:.55rem; }
+.titlerow .titleside .titlescore { padding-left:.55rem; padding-right:.5rem; }
 .titlerow .chip-vsc[hidden], .titlerow .chip-mode[hidden], .titlerow .chip-serve[hidden], .titlerow .chip-rerun[hidden] { display:none; }
 /* Stop: the ⏹️ after the word `Served`, inside its pill. A bare glyph with no ring of its
    own — the pill's border is the only border — at about the text's cap height, and its own

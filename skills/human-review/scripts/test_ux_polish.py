@@ -121,3 +121,28 @@ def test_17c_voices_are_emoji_faces_each_with_a_spoken_name():
         '<span class="vs-emoji">\U0001F30D</span>', "Discovery")
     assert demo.voice_face("", "standard")[1] == "Standard voice"
     assert "font-size:1.3em" in _rule(_read(CSS / "demo.css"), ".voice-switch .vs-emoji")
+
+
+def test_title_row_badges_keep_the_side_padding_tuned_live():
+    """7 Oct 2026 rebuild check: commands.css's row-level `padding:.15rem .7rem` (0,2,0,
+    later in the page) beat masthead.css's `.titlerow .titlescore` and the 18px rule only
+    zeroed top/bottom, so VSC / Static / Serve and the score came out 2-3px wider a side."""
+    css = _read(HERE / "hrbuild" / "assets" / "css" / "commands.css")
+    assert "padding-left:.55rem; padding-right:.55rem" in _rule(css, ".titlerow .titleside .chip")
+    assert "padding-left:.55rem; padding-right:.5rem" in _rule(css, ".titlerow .titleside .titlescore")
+
+
+def test_the_behind_main_mark_is_as_bold_as_the_ahead_one():
+    """`5↓main` and `7↑test-pr` sit in one chip: the same weight, with patch 1334's room."""
+    css = _read(HERE / "hrbuild" / "assets" / "css" / "masthead.css")
+    rule = _rule(css, ".chip.refchip .drift")
+    assert "font-weight:700" in rule and "margin:0 .1rem 0 .3rem" in rule
+
+
+def test_demo_transcript_pill_and_container_chips_keep_their_live_spacing():
+    """Patches 1505 and 1517 (7 Oct 2026): a .4rem gap between the transcript card and its
+    pill, and .35rem between the Start-in-Docker container chips."""
+    adopt = _read(HERE / "hrbuild" / "assets" / "css" / "adopt.css")
+    assert "margin-top:.4rem" in _rule(adopt, "#behaviour .vidwrap .adoptcol > .adoptline")
+    demo = _read(HERE / "hrbuild" / "assets" / "css" / "demo.css")
+    assert "gap:.35rem" in _rule(demo, ".appenv .appenv-pods")

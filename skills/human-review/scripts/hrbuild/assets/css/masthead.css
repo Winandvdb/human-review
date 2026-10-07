@@ -77,8 +77,8 @@
    have it read as the thirteenth thing /code-review raised. It is a filled disc rather
    than a bare glyph so it survives being skimmed past at the end of a row of chips, and
    the chip it sits on keeps its border so the ref itself stays the thing being read. */
-.chip.refchip .drift { font-style:normal; cursor:help; font-weight:600; color:var(--drift);
-            white-space:nowrap; }
+.chip.refchip .drift { font-style:normal; cursor:help; font-weight:700; color:var(--drift);
+            white-space:nowrap; margin:0 .1rem 0 .3rem; }
 .chip.refchip .drift-ahead { font-weight:700; margin-right:.1rem; }
 .chip.refchip a.refl { text-decoration:none; }
 .chip.refchip a.refl:hover b { text-decoration:underline; }

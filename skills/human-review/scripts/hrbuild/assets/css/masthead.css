@@ -93,7 +93,8 @@ h1 .nopr { font-size:.55em; font-weight:600; vertical-align:middle; color:var(--
 /* Even padding round the figure: an empty verdict label still cost its gap and margin
    (~7px) after `/10`, and the row's .7rem on top of that left the right edge far airier
    than the left. Row-level rule is `.titlerow .titlescore`, hence the doubled selector. */
-.titlerow .titlescore { padding:.05rem .5rem .05rem .55rem; }
+.titlerow .titlescore { padding:0 .5rem 0 .55rem; align-items:center; gap:.15rem; }
+.titlescore b, .titlescore small { line-height:1; }
 .titlescore i:empty { display:none; }
 .titlescore b { font-size:1em; line-height:inherit; letter-spacing:0; }
 .titlescore small { font-size:1em; opacity:.6; }

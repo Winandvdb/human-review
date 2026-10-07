@@ -68,7 +68,7 @@ button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
 .tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun_ai__"]:not([hidden])) { --tabre-w2:calc(var(--tabre-rr) + .2rem); }
 .tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun_tests__"]:not([hidden])) { --tabre-w3:calc(var(--tabre-rr) + .2rem); }
 .tabstrip .tab[aria-selected="true"]:has(+ .tabre > .tabrerun:not([hidden])) {
-            padding-right:calc(var(--tabre-w) + .55rem); }
+            padding-right:calc(var(--tabre-w) + .175rem); }
 .tabstrip .tab[aria-selected="true"] + .tabre:has(> .tabrerun:not([hidden])) {
             margin-left:calc(-1 * var(--tabre-w) - .7rem); margin-right:0;
             position:relative; z-index:1; }
@@ -320,13 +320,16 @@ button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
 /* The three presses are round (`rerun_face`): the row's padding, set for the word badges
    beside them, would stretch them back into pills. */
 .titlerow .chip-rerun { padding:0; width:var(--rr-size); border:0; background:none; }
-/* The title row's badges as tall as the text beside them (~21px, was 28): one pinned
-   height shared by every badge so VSC, Served/Static, the rings and the grade pill cannot
-   drift apart, whatever their borders or faces add, all centred on the title. */
-.titlerow .titleside { --tr-h:21px; --rr-size:21px; gap:.35rem; display:inline-flex; align-items:center; }
+/* The title row's badges as tall as the title's letters (cap-top to baseline, 18px beside
+   a 1.5rem h1) and starting at the same height the letters do: one pinned height shared by
+   every badge so VSC, Served/Static, the rings and the grade pill cannot drift apart,
+   whatever their borders or faces add, centred on the title's ink (1.2px nudge: the line
+   box is centred, the letters sit a little below it). */
+.titlerow .titleside { --tr-h:18px; --rr-size:18px; gap:.35rem; display:inline-flex; align-items:center;
+            margin-top:1.2px; }
 .titlerow .titleside .chip, .titlerow .titleside .titlescore {
-            display:inline-flex; align-items:center; padding:.05rem .55rem; line-height:1.25;
-            font-size:.8rem; height:var(--tr-h,21px); box-sizing:border-box; }
+            display:inline-flex; align-items:center; padding-top:0; padding-bottom:0; line-height:1;
+            font-size:.8rem; height:var(--tr-h); min-height:0; box-sizing:border-box; }
 .titlerow .titleside button.chip-rerun { --rr-size:var(--tr-h); padding:0; width:var(--tr-h); height:var(--tr-h); }
 .titlerow .chip-vsc[hidden], .titlerow .chip-mode[hidden], .titlerow .chip-serve[hidden], .titlerow .chip-rerun[hidden] { display:none; }
 /* Stop: the ⏹️ after the word `Served`, inside its pill. A bare glyph with no ring of its

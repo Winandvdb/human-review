@@ -33,17 +33,34 @@ repository method scores 0; reflection is invisible; and a nesting level opened 
 brace-less `if` is not tracked. Both sides of the delta are measured by this same file, so
 what the bars say the branch added stays honest even where the absolute number is low.
 
+**Two engines.** Everything above describes the *regex* engine, which needs nothing but
+Python. When a JDK is on the PATH the numbers come instead from `complexity/
+ComplexityEngine.java` — JavaParser + its symbol solver over the same sources: a real
+syntax tree (nesting is exact, brace-less `if`s included), and calls bound by type, so
+overloads, chained calls, method references of all four kinds, static imports, nested
+classes and interface dispatch are followed instead of guessed. A call into project code
+that even the solver cannot place is not dropped in silence: it is listed per entry point
+(`unresolved`) and the tab says "N calls not followed". The engine's two jars and its one
+class are cached outside the reviewed repository (see `engine_classpath`). Its design and
+the adversarial eval it had to pass are in `reference/complexity-engine-eval.md`.
+
 Usage:
     endpoint-complexity.py --out after.json                      # the working tree
     endpoint-complexity.py --base origin/main --out before.json  # the merge-base
+    endpoint-complexity.py --engine regex --out after.json       # force the regex engine
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
+import urllib.request
 from pathlib import Path
 
 # Only main sources. Test sources are entry points into nothing the outside world can call,
@@ -133,13 +150,17 @@ def sources(rev: str | None) -> dict[str, str]:
     free of a worktree and of whatever the build leaves behind in the tree."""
     if rev is None:
         root = Path(run("git", "rev-parse", "--show-toplevel"))
+        # What git would commit — tracked plus untracked-but-not-ignored — never a gitignored
+        # `target/generated-sources`: the merge-base side is read out of git and cannot see
+        # those, so measuring them here would draw every generated handler as "new".
+        listed = run("git", "-C", str(root), "ls-files", "-co", "--exclude-standard").splitlines()
         return {
-            str(rel): p.read_text(encoding="utf-8", errors="replace")
-            for p in sorted(root.glob("**/src/main/java/**/*.java"))
-            for rel in [p.relative_to(root)]
+            rel: (root / rel).read_text(encoding="utf-8", errors="replace")
+            for rel in sorted(set(listed))
+            if SRC.search(rel) and (root / rel).is_file()
             # `.human-review/.diffbase` holds the *base* copy of files this run is diffing;
             # measuring those too would file every handler twice, once per snapshot.
-            if not any(part.startswith(".") for part in rel.parts)
+            and not any(part.startswith(".") for part in Path(rel).parts)
         }
     paths = [p for p in run("git", "ls-tree", "-r", "--name-only", rev).splitlines() if SRC.search(p)]
     if not paths:
@@ -530,24 +551,168 @@ def extract(files: dict[str, str]) -> list[dict]:
     return out
 
 
+# ── the JavaParser engine ──────────────────────────────────────────────────────────────
+
+HERE = Path(__file__).resolve().parent
+ENGINE_SRC = HERE / "complexity" / "ComplexityEngine.java"
+ENGINE_CACHE = (Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+                / "human-review" / "complexity-engine")
+M2 = Path(os.environ.get("M2_REPO", Path.home() / ".m2" / "repository"))
+MAVEN = "https://repo1.maven.org/maven2"
+# Pinned: coordinates and the sha256 of each jar as published on Maven Central (checked
+# against Central's own .sha1 when these were pinned, 7 Oct 2026). A jar whose bytes do not
+# match is never put on a classpath — downloaded or found in ~/.m2 alike.
+JARS = [
+    ("com.github.javaparser", "javaparser-core", "3.28.2",
+     "b5499a3b1c40b16c0671fabe478c9aafeab38160c6fde74a6c13f42d86716ecd"),
+    ("com.github.javaparser", "javaparser-symbol-solver-core", "3.28.2",
+     "4cb097c0834427939c01f4169dd0bab20068673913341c5b6db27be1a7445098"),
+    ("org.javassist", "javassist", "3.31.0-GA",
+     "44b6b900ca352f4a0048e9428efab16582a014e10f8f65b4e58f5136c704624e"),
+    ("com.google.guava", "guava", "33.6.0-jre",
+     "dc573e1fca4fd5454f4a5fd3d7da2df03002876a4175bafc14a95980dd7713b3"),
+    ("com.google.guava", "failureaccess", "1.0.3",
+     "cbfc3906b19b8f55dd7cfd6dfe0aa4532e834250d7f080bd8d211a3e246b59cb"),
+]
+# Which engine runs when none is asked for: "auto" is JavaParser when a JDK is on the PATH,
+# the regex engine otherwise. HR_COMPLEXITY_ENGINE overrides it for a whole run.
+DEFAULT_ENGINE = "auto"
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _jar(group: str, artifact: str, version: str, sha: str) -> Path:
+    """One pinned jar: the cache, else the local Maven repository, else Maven Central."""
+    name = f"{artifact}-{version}.jar"
+    cached = ENGINE_CACHE / "lib" / name
+    if cached.is_file() and _sha256(cached) == sha:
+        return cached
+    local = M2 / group.replace(".", "/") / artifact / version / name
+    if local.is_file() and _sha256(local) == sha:
+        return local
+    url = f"{MAVEN}/{group.replace('.', '/')}/{artifact}/{version}/{name}"
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    part = cached.with_suffix(".part")
+    print(f"[complexity] fetching {name}", file=sys.stderr)
+    with urllib.request.urlopen(url, timeout=60) as r, open(part, "wb") as f:
+        shutil.copyfileobj(r, f)
+    got = _sha256(part)
+    if got != sha:
+        part.unlink(missing_ok=True)
+        raise RuntimeError(f"{name}: sha256 {got} is not the pinned {sha}")
+    part.replace(cached)
+    return cached
+
+
+def have_jdk() -> bool:
+    return bool(shutil.which("java") and shutil.which("javac"))
+
+
+def engine_classpath() -> str:
+    """The engine's classpath: the pinned jars, and its one class compiled into the user cache.
+
+    Built, never committed — the same bargain as the test-coverage tools: a jar in the
+    repository is a binary nobody can review, and the class compiles in two seconds. The
+    build is keyed by the source's hash, so an edit to the engine rebuilds it and nothing
+    else ever does."""
+    jars = [_jar(*j) for j in JARS]
+    h = hashlib.sha256(ENGINE_SRC.read_bytes())
+    for *_, sha in JARS:
+        h.update(sha.encode())
+    out = ENGINE_CACHE / h.hexdigest()[:16]
+    if not (out / "hr" / "complexity" / "ComplexityEngine.class").is_file():
+        ENGINE_CACHE.mkdir(parents=True, exist_ok=True)
+        tmp = Path(tempfile.mkdtemp(dir=ENGINE_CACHE, prefix=".build-"))
+        r = subprocess.run(["javac", "--release", "17", "-nowarn", "-encoding", "UTF-8",
+                            "-d", str(tmp), "-cp", os.pathsep.join(map(str, jars)), str(ENGINE_SRC)],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            shutil.rmtree(tmp, ignore_errors=True)
+            raise RuntimeError("javac failed:\n" + r.stderr[-2000:])
+        shutil.rmtree(out, ignore_errors=True)
+        tmp.replace(out)
+        print(f"[complexity] built the JavaParser engine into {out}", file=sys.stderr)
+    return os.pathsep.join(map(str, [out, *jars]))
+
+
+def extract_javaparser(files: dict[str, str]) -> list[dict] | None:
+    """The same entries `extract` returns, read by the JavaParser engine — or None when it
+    cannot run (no JDK, no network for a first fetch, a source it cannot parse), which the
+    caller turns into the regex engine and a line on stderr saying so.
+
+    The sources are written into a scratch tree first, at their repo-relative paths: the
+    merge-base side has no checkout to point the engine at, and doing the same for the
+    working tree keeps one code path — and keeps `.human-review/.diffbase` out of it the way
+    `sources` already does."""
+    if not have_jdk():
+        print("[complexity] no JDK on the PATH — using the regex engine", file=sys.stderr)
+        return None
+    try:
+        cp = engine_classpath()
+    except Exception as e:  # noqa: BLE001 — any failure to get the engine means: fall back
+        print(f"[complexity] JavaParser engine unavailable ({e}) — using the regex engine",
+              file=sys.stderr)
+        return None
+    with tempfile.TemporaryDirectory(prefix="hr-complexity-") as d:
+        root = Path(d) / "src"
+        for rel, text in files.items():
+            p = root / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding="utf-8")
+        out = Path(d) / "out.json"
+        root.mkdir(exist_ok=True)
+        try:
+            r = subprocess.run(["java", "-Xss8m", "-cp", cp, "hr.complexity.ComplexityEngine",
+                                "--root", str(root), "--out", str(out)],
+                               capture_output=True, text=True, timeout=900)
+        except subprocess.TimeoutExpired:
+            print("[complexity] JavaParser engine timed out after 900 s — using the regex engine",
+                  file=sys.stderr)
+            return None
+        sys.stderr.write(r.stderr[-4000:])
+        if r.returncode != 0 or not out.is_file():
+            print(f"[complexity] JavaParser engine failed (exit {r.returncode}) — "
+                  "using the regex engine", file=sys.stderr)
+            return None
+        return json.loads(out.read_text(encoding="utf-8"))
+
+
+def measure(files: dict[str, str], engine: str = "auto") -> list[dict]:
+    """Entries from the engine asked for, each stamped with the engine that produced it."""
+    entries = extract_javaparser(files) if engine in ("auto", "javaparser") else None
+    if entries is None:
+        if engine == "javaparser" and os.environ.get("HR_COMPLEXITY_STRICT"):
+            raise SystemExit("[complexity] the JavaParser engine was required and did not run")
+        entries = extract(files)
+        for e in entries:
+            e["engine"] = "regex"
+    return entries
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base", help="measure the merge-base with this ref, not the working tree")
     ap.add_argument("--rev", help="measure this exact revision instead of the working tree")
     ap.add_argument("--out", help="where to write the JSON (default: stdout)")
+    ap.add_argument("--engine", choices=("auto", "javaparser", "regex"),
+                    default=os.environ.get("HR_COMPLEXITY_ENGINE", DEFAULT_ENGINE),
+                    help="auto: JavaParser when a JDK is on the PATH, else regex (default: %(default)s)")
     args = ap.parse_args(argv)
 
     # The merge-base, never the tip of the base branch: commits that landed on main after
     # this branch started are not this branch's doing, and charging them to it is how a
     # "+4" appears next to an entry point nobody here touched.
     rev = args.rev or (run("git", "merge-base", args.base, "HEAD") if args.base else None)
-    entries = extract(sources(rev))
+    entries = measure(sources(rev), args.engine)
     body = json.dumps(entries, indent=1)
     if args.out:
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         Path(args.out).write_text(body + "\n", encoding="utf-8")
-        print(f"[complexity] {len(entries)} entry points -> {args.out}", file=sys.stderr)
+        engine = entries[0]["engine"] if entries else args.engine
+        print(f"[complexity] {len(entries)} entry points ({engine}) -> {args.out}", file=sys.stderr)
     else:
         print(body)
     return 0

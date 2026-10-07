@@ -56,13 +56,25 @@ def repo_root() -> Path:
 
 @lru_cache(maxsize=None)
 def _source_of(fqcn: str):
-    """`victor.training.petclinic.mcp.PetClinicMcp` -> the .java file that declares it."""
-    rel = Path(*fqcn.split(".")).with_suffix(".java")
-    for src in sorted(repo_root().glob("*/src/main/java")):
-        candidate = src / rel
-        if candidate.is_file():
-            return candidate
+    """`victor.training.petclinic.mcp.PetClinicMcp` -> the .java file that declares it.
+
+    A nested class (`pkg.Outer.Inner`, as the JavaParser engine names it) lives in its
+    outer class's file, so a name that is no file is retried one segment shorter."""
+    parts = fqcn.split(".")
+    while parts:
+        rel = Path(*parts).with_suffix(".java")
+        for src in sorted(repo_root().glob("*/src/main/java")):
+            candidate = src / rel
+            if candidate.is_file():
+                return candidate
+        parts = parts[:-1]
     return None
+
+
+# Where each flow method is declared, when the snapshot says so (the JavaParser engine
+# writes `file` and `line` on every flow item): exact for overloads and nested classes,
+# where a search of the file by name would land on the first method of that name.
+DECL_AT: dict[str, tuple[str, int]] = {}
 
 
 @lru_cache(maxsize=None)
@@ -76,7 +88,13 @@ def entry_source(flow_method: str):
     """
     if "#" not in flow_method:
         return None
+    if flow_method in DECL_AT:
+        rel, line = DECL_AT[flow_method]
+        path = repo_root() / rel
+        if path.is_file():
+            return path, line
     fqcn, method = flow_method.split("#", 1)
+    method = method.split("(", 1)[0].split("#", 1)[0]  # `render(int)` -> `render`
     path = _source_of(fqcn)
     if path is None:
         return None
@@ -91,10 +109,49 @@ def entry_source(flow_method: str):
 
 
 def load(path: Path):
-    return {
-        (e.get("kind", DEFAULT_KIND), e["httpMethod"], e["path"]): e
-        for e in json.loads(path.read_text(encoding="utf-8"))
-    }
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    for e in entries:
+        for f in e.get("flow") or []:
+            if f.get("file") and f.get("line"):
+                # Later snapshots win: `main` loads the merge-base first and the branch
+                # second, and a link must open the line where the method is *now*.
+                DECL_AT[f["method"]] = (f["file"], f["line"])
+    return {(e.get("kind", DEFAULT_KIND), e["httpMethod"], e["path"]): e for e in entries}
+
+
+def load_pair(before: Path, after: Path):
+    """Both snapshots, keyed so that two entry points sharing a name stay two rows.
+
+    Rows are keyed by kind, verb and path, and two `@KafkaListener(topics = "orders")` share
+    all three: keyed that way one of them silently vanished from the tab. A name that is
+    ambiguous in *either* snapshot is told apart by its handler in *both* — deciding per
+    snapshot turned the untouched listener into "gone" plus "new" the day a second one
+    appeared on its topic."""
+    lists = [json.loads(p.read_text(encoding="utf-8")) for p in (before, after)]
+    for entries in lists:
+        for e in entries:
+            for f in e.get("flow") or []:
+                if f.get("file") and f.get("line"):
+                    DECL_AT[f["method"]] = (f["file"], f["line"])
+    base = lambda e: (e.get("kind", DEFAULT_KIND), e["httpMethod"], e["path"])  # noqa: E731
+    ambiguous = {k for entries in lists for k, n in Counter(map(base, entries)).items() if n > 1}
+    out = []
+    for entries in lists:
+        keyed = {}
+        for e in entries:
+            k = base(e)
+            if k in ambiguous:
+                e = {**e, "path": f'{e["path"]} · {(e.get("handler") or "").split("(")[0]}'}
+                k = base(e)
+            keyed[k] = e
+        out.append(keyed)
+    return out[0], out[1]
+
+
+def engine_of(path: Path) -> str:
+    """Which extractor wrote a snapshot: `javaparser` or `regex` (older snapshots: regex)."""
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    return (entries[0].get("engine") if entries else None) or "regex"
 
 
 def compare(before, after):
@@ -123,6 +180,7 @@ def compare(before, after):
                 "methods": cur.get("methods"),
                 "why": [] if gone else breakdown(cur, old),
                 "graph": [] if gone else graph_nodes(cur, old),
+                "unresolved": [] if gone else (cur.get("unresolved") or []),
             }
         )
     rows.sort(key=lambda r: (-max(r["now"], r["was"] or 0), r["path"]))
@@ -328,7 +386,7 @@ def _node(n, group=None) -> str:
             f' aria-expanded="false"{_tip(tip)}>'
             f'<span class="cg-c">{html.escape(cls)}{go}</span>'
             f'<span class="cg-cog">{cog}</span>'
-            f'<span class="cg-m">{tog}{html.escape(name)}()</span>'
+            f'<span class="cg-m">{tog}{html.escape(name if "(" in name else name + "()")}</span>'
             f'{delta}{lines}</div>')
 
 
@@ -395,7 +453,31 @@ def _path_cell(r) -> str:
               f'{_tip("Open " + (handler or r["path"]) + " in VS Code")}'
               f' aria-label="Open in VS Code">↗</a>')
     tip = r["path"] + (f"\n{handler}" if handler else "")
-    return f'<span class="cx-cell"{_tip(tip)}>{label}{go}</span>'
+    return f'<span class="cx-cell"{_tip(tip)}>{label}{go}{_not_followed(r)}</span>'
+
+
+def _not_followed(r) -> str:
+    """"N not followed", when the engine met calls into this project it could not place.
+
+    Those calls are not in the number, and a number that silently leaves things out is the
+    one thing this tab must not be. So the row says how many, and the hover names each one
+    — the call, where it is, and why it could not be bound — so the reader can judge
+    whether what was skipped matters. Only the JavaParser engine reports them; the regex
+    engine drops what it cannot place without knowing it did."""
+    lost = r.get("unresolved") or []
+    if not lost:
+        return ""
+    lines = [NOT_FOLLOWED_TIP.format(n=len(lost))]
+    for u in lost[:12]:
+        lines.append(f'{Path(u.get("file", "")).name}:{u.get("line", "?")}  {u.get("call", "")}'
+                     f'  ({u.get("reason", "")})')
+    if len(lost) > 12:
+        lines.append(f"… and {len(lost) - 12} more")
+    return (f'<span class="cx-nf"{_tip(chr(10).join(lines))}>{len(lost)} not followed</span>')
+
+
+NOT_FOLLOWED_TIP = ("{n} call(s) into this project that could not be bound to a method — "
+                    "not followed, so not in this number:")
 
 
 # The bar is three facts drawn as two rectangles, and none of them is labelled: how big the
@@ -519,7 +601,23 @@ def base_branch() -> str:
     return "the base branch"
 
 
-def render(rows, base="main") -> str:
+LEDE_REGEX = ("from regular expressions over the Java sources (no parser, no syntax tree).")
+LEDE_JAVAPARSER = ("with <a href=\"https://javaparser.org\" target=\"_blank\" rel=\"noopener\">"
+                   "JavaParser</a> and its symbol solver: a syntax tree of the Java sources, "
+                   "every call bound by type.")
+
+
+def _lede_engine(engines) -> str:
+    before, after = engines
+    if before == after:
+        return LEDE_JAVAPARSER if after == "javaparser" else LEDE_REGEX
+    name = {"javaparser": "JavaParser", "regex": "regular expressions"}
+    return (f"— the merge-base by {name.get(before, before)}, this branch by "
+            f"{name.get(after, after)}: the two sides were measured by different engines, "
+            "so read the deltas with care.")
+
+
+def render(rows, base="main", engines=("regex", "regex")) -> str:
     # A base handed in as a commit (eval run 10: the review's audited base) is named by
     # its short sha in every hover, never by forty hex digits.
     if re.fullmatch(r"[0-9a-f]{40}", base or ""):
@@ -543,9 +641,9 @@ def render(rows, base="main") -> str:
         # extractor is this skill's own script, regular expressions over the sources with
         # comments and literals blanked and nesting counted by braces — so the line says
         # that, rather than the syntax tree the old wording implied.
+        # Since 7 Oct 2026 there are two extractors, and the line names the one that ran.
         f'<p class="tabsub cx-lede">Computed by <a href="{EXTRACTOR_URL}" target="_blank" '
-        'rel="noopener">endpoint-complexity.py</a> from regular expressions over the Java '
-        "sources (no parser, no syntax tree).</p>",
+        f'rel="noopener">endpoint-complexity.py</a> {_lede_engine(engines)}</p>',
     ]
     known = {kind for kind, _ in KIND_TITLES}
     groups = KIND_TITLES + [
@@ -714,6 +812,11 @@ details.cx-row.cx-same:hover { opacity:.9; }
 .cx-cell { display:flex; align-items:center; gap:3px; min-width:0; overflow:hidden; }
 .cx-cell .cx-path { flex:0 1 auto; min-width:0; }
 .cx-cell a.cg-go { flex:none; }
+/* Calls the engine could not bind: not in the number, so the row says so, in amber — a
+    caveat about the measurement, not about the code. */
+.cx-nf { flex:none; margin-left:4px; padding:1px 5px; border-radius:8px; white-space:nowrap;
+         font:600 10px/1.3 system-ui,sans-serif; color:#8a5300; background:#fff3dc;
+         border:1px solid #e9c784; cursor:help; }
 /* `display:block` is what makes the ellipsis appear. `text-overflow` only applies to a
     block container, and <code> is inline — so the rule was there, doing nothing, while the
     link's own `overflow:hidden` chopped the path mid-token. `POST /api/owners/{ownerId}
@@ -907,6 +1010,7 @@ a.cx-why-new .cx-why-inc { color:var(--cx-added); }
      red invented here. */
   .cx-get{color:#8fd39c}.cx-post{color:#8ab4f8}.cx-put{color:#e0a33c}.cx-delete{color:#f08a8a}
   .cx-patch{color:#c9a0ff}.cx-mcp{color:#b39dff}.cx-job{color:#e0a33c}
+  .cx-nf { background:#3a2d12; color:#f0c069; border-color:#6b5423; }
   .cx-kafka,.cx-rabbit,.cx-jms{color:#4dd0e1}
 }
 """
@@ -931,8 +1035,9 @@ def main(argv=None) -> int:
     if not args.before or not args.after:
         ap.error("the following arguments are required: before, after")
 
-    rows = compare(load(Path(args.before)), load(Path(args.after)))
-    body = json.dumps(rows, indent=1) if args.json else render(rows, args.base or base_branch())
+    rows = compare(*load_pair(Path(args.before), Path(args.after)))
+    engines = (engine_of(Path(args.before)), engine_of(Path(args.after)))
+    body = json.dumps(rows, indent=1) if args.json else render(rows, args.base or base_branch(), engines)
     if args.out:
         Path(args.out).write_text(body, encoding="utf-8")
         print(f"[complexity-delta] wrote {args.out}", file=sys.stderr)

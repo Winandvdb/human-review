@@ -490,6 +490,15 @@ def test_the_fit_script_rides_with_the_matrix_and_the_sheet_reads_it(tmp_path):
     assert out.index("--rm-tail-h', v)") > out.index('class="rm-body"')
 
 
+def test_the_row_pills_are_one_width_and_the_filters_have_room():
+    """Victor, 7 Oct 2026: E2E was wider than API/UNIT and broke the titles' column; the
+    filter badges over the card were tight around their checkbox and word."""
+    css = (HERE / "reqmap" / "reqmap.css").read_text(encoding="utf-8")
+    assert ".reqmap .rm-thead .rm-cat{display:inline-flex;justify-content:center;min-width:4.5em}" in css
+    assert "input{margin:0 -20px 0 8px;" in T.REQMAP_CSS
+    assert ".rm-catf > .rm-cat{padding-left:27px;padding-right:13px}" in T.REQMAP_CSS
+
+
 def test_a_models_ui_label_is_renamed_e2e_at_build_time():
     """The end-to-end level is `E2E` everywhere; a fragment a model drew says `UI` and is
     relabelled by the builder, never regenerated."""

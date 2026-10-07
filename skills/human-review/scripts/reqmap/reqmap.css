@@ -175,6 +175,10 @@
 /* The badge is a column, not a word in the sentence: same width for UI and API, or every
    test title starts at a different x and the list stops scanning as a list. */
 .reqmap .rm-list .rm-cat{min-width:34px;text-align:center}
+/* On the rows, one width for all three (Victor, 7 Oct 2026): 34px held UI and API but not
+   the heavier three-letter E2E, which pushed its title right and broke the column. 4.5em
+   is 45px at the pill's 10px, room for the widest with the text centred in it. */
+.reqmap .rm-thead .rm-cat{display:inline-flex;justify-content:center;min-width:4.5em}
 /* The same badge, inside the tooltip. The bubble is appended to <body>, outside .reqmap,
    so none of the rules above reach it and none of its variables resolve there - these are
    the dark palette's literal values, which is right in both themes because the bubble is

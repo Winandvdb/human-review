@@ -1280,9 +1280,11 @@ REQMAP_CSS = """
 .reqmap .rm-cats{grid-column:2;grid-row:1;align-self:center;min-height:0;margin:.2rem 2px .15rem}
 .reqmap .rm-cats .rm-catf{display:inline-flex;align-items:center;gap:0;cursor:pointer;
   user-select:none}
-.reqmap .rm-cats .rm-catf input{margin:0 -18px 0 6px;width:12px;height:12px;cursor:pointer;
+.reqmap .rm-cats .rm-catf input{margin:0 -20px 0 8px;width:12px;height:12px;cursor:pointer;
   position:relative;z-index:1}
-.reqmap .rm-cats .rm-catf > .rm-cat{padding-left:23px}
+/* A little air on both sides of the filter badge (Victor, 7 Oct 2026): the box 8px in,
+   the word 7px after it, 13px after the word. */
+.reqmap .rm-cats .rm-catf > .rm-cat{padding-left:27px;padding-right:13px}
 .reqmap .rm-cats .rm-catf+.rm-catf{margin-left:9px}
 .reqmap .rm-cats .rm-catf:has(input:not(:checked)){opacity:.5}
 .reqmap .rm-t[data-catoff=yes]{display:none}

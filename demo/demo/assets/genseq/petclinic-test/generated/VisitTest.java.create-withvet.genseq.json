@@ -53,7 +53,7 @@
         }
       ]
     },
-    "1my0bvt": {
+    "1i1x5c4": {
       "title": "insert for victor.training.petclinic.domain.Visit",
       "steps": [
         {
@@ -61,7 +61,7 @@
           "text": "INSERT INTO visits (visit_date, description, pet_id, visit_time, vet_id)\nVALUES (?, ?, ?, ?, ?)",
           "alternate": {
             "label": "",
-            "text": "INSERT INTO visits (visit_date, description, pet_id, visit_time, vet_id)\nVALUES ('2026-10-05', 'rabies shot', 34, ?, ?)"
+            "text": "INSERT INTO visits (visit_date, description, pet_id, visit_time, vet_id)\nVALUES ('2026-10-06', 'rabies shot', 34, ?, ?)"
           }
         }
       ]
@@ -79,7 +79,7 @@
         }
       ]
     },
-    "1h0kwq0": {
+    "0wjt4y3": {
       "title": "insert for victor.training.petclinic.domain.Visit",
       "steps": [
         {
@@ -87,7 +87,7 @@
           "text": "INSERT INTO visits (visit_date, description, pet_id, visit_time, vet_id)\nVALUES (?, ?, ?, ?, ?)",
           "alternate": {
             "label": "",
-            "text": "INSERT INTO visits (visit_date, description, pet_id, visit_time, vet_id)\nVALUES ('2026-10-05', 'annual checkup', 34, 8, ?)"
+            "text": "INSERT INTO visits (visit_date, description, pet_id, visit_time, vet_id)\nVALUES ('2026-10-06', 'annual checkup', 34, 8, ?)"
           }
         }
       ]

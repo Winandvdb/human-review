@@ -1,5 +1,5 @@
   * reviewpoints -> review
-    $ /Users/victorrentea/workspace/human-review/skills/human-review/scripts/review-points.py --root . --out .human-review/review-points.json
+    $ /Users/victorrentea/.claude/plugins/cache/human-review/human-review/defa489800ed/skills/human-review/scripts/review-points.py --root . --out .human-review/review-points.json
 review-points.md: 19 item(s) in 4 fixed, 9 ignored, 6 assumptions
   Fixed        (Fixed)
       · Vet tests read the session cache, not the database   [5 ref, 5 snippet, medium, from tests reviewer]
@@ -24,7 +24,7 @@ review-points.md: 19 item(s) in 4 fixed, 9 ignored, 6 assumptions
       · Seed gives a vet to some demo visits only   [1 ref, 1 snippet, confidence 0.65]
       · MCP create_visit takes no vet; list_visits shows it   [1 ref, 1 snippet, confidence 0.7]
   fixed in     HEAD
-  base: 33977c2c2f7b0ac4ab3b8c621a22341074b5a128 · implementation: 1bcf74d4f14a165cabaaa7e9cd1cc5faaa3311b1 · reviewers: 4 read-only Sonnet subagents (correctness, security, ticket-fit, tests briefs) · session: 82329d0a-55d2-448f-aff5-0363cf80b32f
+  base: 2f17c04983ba84ecf38cf0b1515de0bf3af88b7a · implementation: 1bcf74d4f14a165cabaaa7e9cd1cc5faaa3311b1 · reviewers: 4 read-only Sonnet subagents (correctness, security, ticket-fit, tests briefs) · session: 82329d0a-55d2-448f-aff5-0363cf80b32f
   wrote  .human-review/review-points.json
-    $ git merge-base 33977c2c2f7b0ac4ab3b8c621a22341074b5a128 HEAD
-    $ /Users/victorrentea/workspace/human-review/skills/human-review/scripts/review-commits.py --base 33977c2c2f7b0ac4ab3b8c621a22341074b5a128 --json
+    $ git merge-base 2f17c04983ba84ecf38cf0b1515de0bf3af88b7a HEAD
+    $ /Users/victorrentea/.claude/plugins/cache/human-review/human-review/defa489800ed/skills/human-review/scripts/review-commits.py --base 2f17c04983ba84ecf38cf0b1515de0bf3af88b7a --json

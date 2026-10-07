@@ -4,9 +4,9 @@
       {
         "file": "petclinic-backend/src/main/java/victor/training/petclinic/notification/NotificationServiceClient.java",
         "abs_file": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet/petclinic-backend/src/main/java/victor/training/petclinic/notification/NotificationServiceClient.java",
-        "line": 37,
+        "line": 39,
         "column": 13,
-        "end_line": 37,
+        "end_line": 39,
         "level": "WARN",
         "receiver": "log",
         "flavour": "SLF4J",
@@ -20,17 +20,17 @@
         ],
         "raw_line": "            log.warn(\"Owner not notified of the visit booked for {}: {}\", petName, e.getMessage());",
         "text": "log.warn(\"Owner not notified of the visit booked for {}: {}\", petName, e.getMessage())",
-        "method_start": 28,
-        "method_end": 39,
+        "method_start": 30,
+        "method_end": 41,
         "origins": [
           {
-            "line": 29,
+            "line": 31,
             "name": "petName",
             "kind": "param",
             "text": ""
           },
           {
-            "line": 36,
+            "line": 38,
             "name": "e",
             "kind": "param",
             "text": ""
@@ -348,7 +348,7 @@
           "flavour": "SLF4J",
           "evidence": "declared `Logger log`",
           "confidence": "declared",
-          "line": 17
+          "line": 19
         }
       ],
       "petclinic-backend/src/main/java/victor/training/petclinic/rest/OwnerRestController.java": [
@@ -672,13 +672,13 @@
       ],
       "petclinic-backend/src/main/java/victor/training/petclinic/notification/NotificationServiceClient.java": [
         {
-          "line": 17,
+          "line": 19,
           "name": "log",
           "type": "Logger",
           "text": "private static final Logger log = LoggerFactory.getLogger(NotificationServiceClient.class);"
         },
         {
-          "line": 19,
+          "line": 21,
           "name": "restClient",
           "type": "RestClient",
           "text": "private final RestClient restClient;"
@@ -1510,25 +1510,31 @@
       ],
       "petclinic-backend/src/test/java/victor/training/petclinic/guardrail/DeploymentDiagramTest.java": [
         {
-          "line": 57,
+          "line": 58,
           "name": "DIAGRAM",
           "type": "Path",
           "text": "private static final Path DIAGRAM = Paths.get(\"docs/Deployment.drawio.png\");"
         },
         {
-          "line": 58,
+          "line": 59,
           "name": "TRACE_DIAGRAMS",
           "type": "Path",
           "text": "private static final Path TRACE_DIAGRAMS = Paths.get(\"../petclinic-test/generated\");"
         },
         {
-          "line": 70,
+          "line": 71,
           "name": "DEPLOYED_SUITE",
           "type": "Pattern",
           "text": "private static final Pattern DEPLOYED_SUITE = Pattern.compile(\"\\\\.(?:spec\\\\.ts|feature)\\\\..*\\\\.genseq\\\\.puml$\");"
         },
         {
-          "line": 172,
+          "line": 74,
+          "name": "LIBRARIES",
+          "type": "Set<String>",
+          "text": "private static final Set<String> LIBRARIES = Set.of(\"Commons\");"
+        },
+        {
+          "line": 176,
           "name": "CALL",
           "type": "Pattern",
           "text": "private static final Pattern CALL = Pattern.compile(\n            \"^\\\\s*(?:\\\"([^\\\"]+)\\\"|(\\\\w+))\\\\s+->\\\\s+(?:\\\"([^\\\"]+)\\\"|(\\\\w+))\\\\s*:\", Pattern.MULTILINE);"

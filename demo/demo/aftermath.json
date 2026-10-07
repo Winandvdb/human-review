@@ -1,7 +1,7 @@
 {
  "review": "be762955d5f477feeca0f7db55e32fa1c2fb8db5",
  "review_short": "be762955",
- "head": "5f84b2cdf4dbcbebf70b7a398bba00e9aa04e236",
+ "head": "c31ba5ec7721e7417cd0c0c4b46dcd848078ec56",
  "takeover": null,
  "generated_globs": [
   "**/generated/**",
@@ -188,22 +188,197 @@
    "measured": true,
    "taken_over": false,
    "takeover": false
+  },
+  {
+   "sha": "1d6719fb81cd34b95b47a8fb55eca14f3edb474f",
+   "short": "1d6719fb",
+   "when": "2026-10-06T11:00:16+02:00",
+   "subject": "Merge remote-tracking branch 'origin/main' into test-pr",
+   "files": [
+    {
+     "path": "AGENTS.md",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "human-review.json",
+     "added": 3,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "notification-service/src/main/java/victor/training/notification/NotificationController.java",
+     "added": 3,
+     "deleted": 1,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-backend/src/main/java/victor/training/petclinic/notification/NotificationServiceClient.java",
+     "added": 10,
+     "deleted": 2,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-backend/src/main/resources/db/seed/R__seed.sql",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-backend/src/test/java/victor/training/petclinic/guardrail/DeploymentDiagramTest.java",
+     "added": 7,
+     "deleted": 2,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-commons/pom.xml",
+     "added": 77,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-commons/src/main/java/victor/training/commons/HomeCountry.java",
+     "added": 6,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-commons/src/main/java/victor/training/commons/ModuleBoundaryTracing.java",
+     "added": 91,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-commons/src/main/java/victor/training/commons/PhoneNumbers.java",
+     "added": 26,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-commons/src/test/java/victor/training/commons/PhoneNumbersTest.java",
+     "added": 28,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-commons/src/test/java/victor/training/outside/ModuleBoundaryTracingTest.java",
+     "added": 81,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-test/generated/AddVisitApiTest.java.adds-a-visit-to-an-existing-pet.genseq.json",
+     "added": 59,
+     "deleted": 76,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-test/generated/AddVisitApiTest.java.adds-a-visit-to-an-existing-pet.genseq.puml",
+     "added": 29,
+     "deleted": 25,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-test/generated/add-visit.spec.ts.add-a-visit-to-an-existing-pet-from-the-owner-detail-page.genseq.json",
+     "added": 12,
+     "deleted": 12,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-test/generated/add-visit.spec.ts.add-a-visit-to-an-existing-pet-from-the-owner-detail-page.genseq.puml",
+     "added": 18,
+     "deleted": 11,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-test/src/genseq/code-location.spec.ts",
+     "added": 12,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-test/src/genseq/code-location.ts",
+     "added": 14,
+     "deleted": 6,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-test/src/genseq/trace-to-puml.spec.ts",
+     "added": 23,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-test/src/genseq/trace-to-puml.ts",
+     "added": 23,
+     "deleted": 1,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 524,
+   "deleted": 138,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "c31ba5ec7721e7417cd0c0c4b46dcd848078ec56",
+   "short": "c31ba5ec",
+   "when": "2026-10-06T11:20:23+02:00",
+   "subject": "review-points: base moves to 2f17c049 after merging main",
+   "files": [
+    {
+     "path": "review-points.md",
+     "added": 2,
+     "deleted": 2,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 2,
+   "deleted": 2,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
   }
  ],
  "totals": {
-  "commits": 7,
-  "files": 9,
-  "added": 75,
-  "deleted": 30,
+  "commits": 9,
+  "files": 29,
+  "added": 599,
+  "deleted": 168,
   "code": {
-   "files": 7,
-   "added": 73,
-   "deleted": 28
+   "files": 23,
+   "added": 479,
+   "deleted": 42
   },
   "generated": {
-   "files": 2,
-   "added": 2,
-   "deleted": 2
+   "files": 6,
+   "added": 120,
+   "deleted": 126
   }
  },
  "clean": false

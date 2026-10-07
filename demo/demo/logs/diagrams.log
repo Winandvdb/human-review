@@ -1,9 +1,10 @@
   * diagrams -> data,packages
-    $ /Users/victorrentea/workspace/human-review/skills/human-review/scripts/puml-diff.sh 72d7a4afd69f33c04d267ada4ff022d817452633 .human-review/assets/diagrams
+    $ /Users/victorrentea/.claude/plugins/cache/human-review/human-review/defa489800ed/skills/human-review/scripts/puml-diff.sh 2f17c04983ba84ecf38cf0b1515de0bf3af88b7a .human-review/assets/diagrams
 [puml-diff] petclinic-backend/docs/generated/DB.puml (structural, modified) -> .human-review/assets/diagrams/petclinic-backend_docs_generated_DB.diff.puml
 [puml-diff] petclinic-backend/docs/generated/DomainModel.puml (structural, modified) -> .human-review/assets/diagrams/petclinic-backend_docs_generated_DomainModel.diff.puml
 [puml-diff] 2 diagram(s) -> .human-review/assets/diagrams (see MANIFEST.tsv)
-    $ /Users/victorrentea/workspace/human-review/skills/human-review/scripts/drawio-diff.py --base 72d7a4afd69f33c04d267ada4ff022d817452633 --diagram petclinic-backend/docs/ConceptualModel.drawio.png --concepts petclinic-backend/docs/generated/DomainModel.puml --out-dir .human-review/assets --name conceptual --redraw 'python3 petclinic-backend/docs/scripts/conceptual-model-patch.py' --tested-against 'Java Domain Model'
-.human-review/assets/conceptual-{original,new,diff}.svg  (added 0 boxes, 1 line · removed 0 boxes, 0 lines · 0 changed · 0 moved, rendered by drawio)
-  + edge Vet-Visit — green (new)
+    $ /Users/victorrentea/.claude/plugins/cache/human-review/human-review/defa489800ed/skills/human-review/scripts/drawio-diff.py --base 2f17c04983ba84ecf38cf0b1515de0bf3af88b7a --diagram petclinic-backend/docs/ConceptualModel.drawio.png --concepts petclinic-backend/docs/generated/DomainModel.puml --out-dir .human-review/assets --name conceptual --redraw 'python3 petclinic-backend/docs/scripts/conceptual-model-patch.py' --tested-against 'Java Domain Model'
+.human-review/assets/conceptual-{original,new,diff}.svg  (added 0 boxes, 1 line, 1 note · removed 0 boxes, 0 lines · 0 changed · 0 moved, rendered by drawio)
+  + edge Vet-Visit — red (automation's to-do)
+  + annotation Please re-lay out the red elements and set their colour back to default, then delete this label. — red (automation's to-do)
   8 concept(s) linked to their class

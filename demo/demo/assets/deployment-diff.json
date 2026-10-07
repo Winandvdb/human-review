@@ -19,8 +19,14 @@
       "Pet Owner \u2192 Frontend",
       "Veterinarian \u2192 Frontend"
     ],
-    "undrawn": [],
-    "unmapped": [],
+    "undrawn": [
+      "Backend \u2192 \u00abmodule\u00bb\\nCommons",
+      "NotificationService \u2192 \u00abmodule\u00bb\\nCommons",
+      "\u00abmodule\u00bb\\nCommons \u2192 Backend"
+    ],
+    "unmapped": [
+      "\u00abmodule\u00bb\\nCommons"
+    ],
     "source": ".human-review/assets/c2/C2-Containers.json"
   },
   "linked_concepts": [],
@@ -37,7 +43,7 @@
   "tested_against": "traced sequence diagrams",
   "rerun": {
     "cwd": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet",
-    "command": "/Users/victorrentea/workspace/human-review/skills/human-review/scripts/drawio-diff.py --base 33977c2c2f7b0ac4ab3b8c621a22341074b5a128 --diagram petclinic-backend/docs/Deployment.drawio.png --out-dir .human-review/assets --name deployment --traces .human-review/assets/c2/C2-Containers.json --tested-against 'traced sequence diagrams'"
+    "command": "/Users/victorrentea/.claude/plugins/cache/human-review/human-review/defa489800ed/skills/human-review/scripts/drawio-diff.py --base 2f17c04983ba84ecf38cf0b1515de0bf3af88b7a --diagram petclinic-backend/docs/Deployment.drawio.png --out-dir .human-review/assets --name deployment --traces .human-review/assets/c2/C2-Containers.json --tested-against 'traced sequence diagrams'"
   },
   "revert": {
     "cwd": "/Users/victorrentea/workspace/petclinic-pr-visit-has-vet",

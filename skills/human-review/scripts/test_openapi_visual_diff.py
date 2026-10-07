@@ -487,6 +487,17 @@ def test_a_node_that_will_not_open_gets_its_tree_redrawn_once():
     assert "!redrawn && run === revealRun && await redrawSchema(host)" in t
 
 
+def test_a_quiet_controller_and_a_status_caret_look_as_they_did_live():
+    """What Victor saw and approved on 7 Oct: a collapsed controller is a grey name with a
+    grey rim and no band; the response-status caret is the text's colour."""
+    t = ovd.TEMPLATE
+    quiet = t.split(".opblock-tag-section.dv-quiet > h3.opblock-tag {", 1)[1].split("}", 1)[0]
+    assert "background: transparent !important;" in quiet
+    assert "border-left-color: currentColor !important;" in quiet
+    caret = t.split("td.response-col_status::before {", 1)[1].split("}", 1)[0]
+    assert "color: inherit;" in caret
+
+
 def test_a_breaking_badge_keeps_its_change_count():
     """Run 6: the breaking endpoint's badge said only BREAKING, where a modified one says
     "3 CHANGES" — the count was gone exactly where it matters most."""

@@ -199,3 +199,13 @@
 @media (prefers-reduced-motion: reduce) {
   .diagram .svgbox svg g.dgm-m-glow > :is(rect, path, polygon):first-of-type { animation-duration:1600ms; }
 }
+/* The same morph on a hand-drawn card's Diff / New / Old swap. A draw.io box's shape sits
+   a few groups down, under its link, so focus.js tags it; and the drawing's own stroke is
+   the colour to come back to, so the glow has no closing keyframe of its own. */
+.diagram .svgbox svg .dgm-m-glow .dgm-m-shape { animation:dgm-m-glow-own 1300ms ease-out 1; }
+/* A box arriving from outside the new drawing's frame must not be cut off on the way in. */
+.diagram .svgbox.dgm-morphing > svg:not(.dgm-m-ghost) { overflow:visible; }
+@keyframes dgm-m-glow-own { 0%, 40% { stroke:#f5b324; stroke-width:4px; } }
+@media (prefers-reduced-motion: reduce) {
+  .diagram .svgbox svg .dgm-m-glow .dgm-m-shape { animation-duration:1600ms; }
+}

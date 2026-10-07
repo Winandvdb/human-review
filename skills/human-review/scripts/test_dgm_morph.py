@@ -142,3 +142,148 @@ def test_reduced_motion_keeps_the_anchor_and_the_glow_but_does_not_slide(tmp_pat
 def test_the_chooser_pins_so_the_anchoring_scroll_never_takes_it_away():
     css = assets.CSS
     assert ".diagram .focus { position:sticky; top:var(--strip-h" in css
+
+
+# --- The same morph on a hand-drawn (draw.io) card's Diff / New / Old swap. -------------
+#
+# draw.io marks its cells, not its boxes: `<g data-cell-id>` holds a vertex, an edge (the
+# line takes the pointer by its stroke), an edge's label (nested in the edge), or a layer
+# that only holds other cells. The morph keys vertices by cell id, and falls back to the
+# label for a box a redraw gave a new id — here "Bee" is `b2` in the new drawing and `b1`
+# in the old one, and must still slide rather than vanish and reappear.
+
+def _vertex(cid, x, y, text):
+    return (f'<g data-cell-id="{cid}"><a href="#"><g><rect x="{x}" y="{y}" width="120" height="40" '
+            f'fill="#dae8fc" stroke="#6c8ebf" stroke-width="2" pointer-events="all"/></g>'
+            f'<g><g><foreignObject pointer-events="none" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" '
+            f'style="display:flex;width:1px;height:1px;padding-top:{y + 20}px;margin-left:{x + 1}px;">'
+            f'<div style="box-sizing:border-box;font-size:0;"><div style="font-size:12px;">{text}</div></div>'
+            f'</div></foreignObject></g></g></a></g>')
+
+
+def _edge(cid, d):
+    return (f'<g data-cell-id="{cid}"><g><path d="{d}" fill="none" stroke="#000" stroke-width="2" '
+            f'pointer-events="stroke"/></g><g data-cell-id="{cid}-t"><g><g><foreignObject pointer-events="none" '
+            f'width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml">1</div></foreignObject></g></g></g></g>')
+
+
+def _drawio(*cells):
+    return ('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="520px" height="300px" viewBox="0 0 520 300">'
+            f'<defs/><g><g data-cell-id="0"><g data-cell-id="1">{"".join(cells)}</g></g></g></svg>')
+
+
+DRAWIO_NEW = _drawio(_vertex("a", 20, 20, "Alpha"), _vertex("b2", 360, 220, "Bee"),
+                     _vertex("c", 200, 120, "Cee"), _edge("e-a-b", "M 80 60 L 420 220"))
+DRAWIO_OLD = _drawio(_vertex("a", 360, 20, "Alpha"), _vertex("b1", 20, 220, "Bee"),
+                     _vertex("d", 200, 120, "Dee"))
+
+DRAWIO_PAGE = f"""<!doctype html><html><head><meta charset="utf-8"><style>{assets.CSS}</style></head>
+<body><div class="wrap"><div class="diagram dgm-toggles"><div class="head"><b>Conceptual Model</b></div>
+<div class="dgmviews" data-state="new"><div class="dgmbar">
+<button type="button" class="dgm-diff" data-go="diff" aria-pressed="false">Diff</button>
+<button type="button" class="dgm-newold" data-go="newold" aria-pressed="true"><u data-view="new" class="on">New</u>/<u data-view="old">Old</u></button></div>
+<div class="dgmpane" data-view="diff" hidden><div class="svgbox">{DRAWIO_NEW}</div></div>
+<div class="dgmpane" data-view="new"><div class="svgbox">{DRAWIO_NEW}</div></div>
+<div class="dgmpane" data-view="old" hidden><div class="svgbox">{DRAWIO_OLD}</div></div>
+</div></div><div style="height:1500px"></div></div>
+{assets.DGM_VIEWS_JS}{assets.FOCUS_JS}</body></html>"""
+
+CELLS = """() => { const svg = document.querySelector('.dgmpane:not([hidden]) svg'), s = svg.getBoundingClientRect();
+  return [...svg.querySelectorAll('g[data-cell-id]')].map(g => { const r = g.getBoundingClientRect();
+    return [g.dataset.cellId, Math.round(r.left - s.left), Math.round(r.top - s.top), Math.round(r.width)]; }); }"""
+DRAWIO_LEFTOVERS = ("() => document.querySelectorAll('[style*=\"transform\"], .dgm-m-new, .dgm-m-fade, "
+                    ".dgm-m-glow, .dgm-m-shape, .dgm-m-ghost, .dgm-morphing').length")
+
+
+def _open_drawio(p, tmp_path, plain=False, **ctx):
+    page_file = tmp_path / "drawio.html"
+    page_file.write_text(DRAWIO_PAGE, encoding="utf-8")
+    try:
+        browser = p.chromium.launch()
+    except Exception as e:  # no browser downloaded for this interpreter
+        pytest.skip(f"chromium unavailable: {e}")
+    context = browser.new_context(viewport={"width": 1152, "height": 625}, **ctx)
+    if plain:  # the morph's guard: with it already set, the swap is the bare flip
+        context.add_init_script("window.__dgmMorph = true;")
+    page = context.new_page()
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.goto(page_file.as_uri())
+    return browser, page, errors
+
+
+def test_a_drawio_swap_slides_shared_boxes_matches_a_renamed_one_by_label_and_settles_clean(tmp_path):
+    sync = pytest.importorskip("playwright.sync_api")
+    with sync.sync_playwright() as p:
+        browser, page, errors = _open_drawio(p, tmp_path)
+        try:
+            page.click('.dgmbar button[data-go="newold"]')        # New -> Old
+            page.wait_for_timeout(40)
+            mid = page.evaluate("""() => ({
+              state: document.querySelector('.dgmviews').dataset.state,
+              moving: [...document.querySelectorAll('.dgmpane:not([hidden]) g[data-cell-id]')]
+                        .filter(g => !g.classList.contains('dgm-m-new') && getComputedStyle(g).transform !== 'none')
+                        .map(g => g.dataset.cellId).sort(),
+              arriving: [...document.querySelectorAll('.dgm-m-new')].map(g => g.dataset.cellId),
+              shape: document.querySelectorAll('.dgm-m-glow .dgm-m-shape').length,
+              ghost: [...document.querySelectorAll('.dgm-m-ghost g[data-cell-id]')]
+                       .filter(g => g.style.visibility === 'visible').map(g => g.dataset.cellId) })""")
+            page.wait_for_timeout(1900)
+            morphed, left = page.evaluate(CELLS), page.evaluate(DRAWIO_LEFTOVERS)
+            page.click('.dgmbar button[data-go="newold"]')        # Old -> New: the edge waits
+            page.wait_for_timeout(40)
+            back = page.evaluate("""() => ({
+              arriving: [...document.querySelectorAll('.dgm-m-new')].map(g => g.dataset.cellId),
+              fading: [...document.querySelectorAll('.dgm-m-fade')].map(g => g.dataset.cellId),
+              ghost: [...document.querySelectorAll('.dgm-m-ghost g[data-cell-id]')]
+                       .filter(g => g.style.visibility === 'visible').map(g => g.dataset.cellId) })""")
+            page.wait_for_timeout(1900)
+            left_back = page.evaluate(DRAWIO_LEFTOVERS)
+        finally:
+            browser.close()
+    assert not errors
+    assert mid["state"] == "old"
+    assert mid["moving"] == ["a", "b1"], "Alpha by id, Bee by its label"
+    assert mid["arriving"] == ["d"] and mid["shape"] == 1 and mid["ghost"] == ["c"]
+    assert back["arriving"] == ["c"] and back["fading"] == ["e-a-b"] and back["ghost"] == ["d"]
+    assert left == 0 and left_back == 0
+    with sync.sync_playwright() as p:
+        browser, page, _ = _open_drawio(p, tmp_path, plain=True)
+        try:
+            page.click('.dgmbar button[data-go="newold"]')
+            plain = page.evaluate(CELLS)
+        finally:
+            browser.close()
+    assert morphed == plain
+
+
+def test_a_drawio_swap_with_nothing_moved_leaves_the_picture_alone(tmp_path):
+    """Diff -> New of one drawing: same boxes, same lines. Nothing slides and no line
+    blinks — a fade on every edge would read as a change that is not there."""
+    sync = pytest.importorskip("playwright.sync_api")
+    with sync.sync_playwright() as p:
+        browser, page, errors = _open_drawio(p, tmp_path)
+        try:
+            page.click('.dgmbar button[data-go="diff"]')
+            page.wait_for_timeout(40)
+            touched = page.evaluate(DRAWIO_LEFTOVERS)
+        finally:
+            browser.close()
+    assert not errors and touched == 0
+
+
+def test_reduced_motion_on_a_drawio_swap_glows_but_does_not_slide(tmp_path):
+    sync = pytest.importorskip("playwright.sync_api")
+    with sync.sync_playwright() as p:
+        browser, page, errors = _open_drawio(p, tmp_path, reduced_motion="reduce")
+        try:
+            page.click('.dgmbar button[data-go="newold"]')
+            page.wait_for_timeout(30)
+            moving = page.evaluate("() => [...document.querySelectorAll('g[data-cell-id]')].filter(g => g.style.transform).length")
+            glowing = page.evaluate("() => [...document.querySelectorAll('.dgm-m-glow')].map(g => g.dataset.cellId)")
+            page.wait_for_timeout(1700)
+            left = page.evaluate(DRAWIO_LEFTOVERS)
+        finally:
+            browser.close()
+    assert not errors
+    assert moving == 0 and glowing == ["d"] and left == 0

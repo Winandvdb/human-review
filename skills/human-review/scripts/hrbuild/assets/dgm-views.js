@@ -1,6 +1,8 @@
 // Diff / New / Old. Delegated on `document` rather than bound per widget, so a
 // `.dgmviews` that reaches a section body some other way — expanded from `{{drawio:...}}`,
 // or written by hand — picks up the identical behaviour with no registration step.
+// On a draw.io card the swap is animated by focus.js, which watches `data-state` here:
+// this file only flips the panes, and must keep flipping them through that attribute.
 (function () {
   function show(views, state) {
     views.setAttribute('data-state', state);

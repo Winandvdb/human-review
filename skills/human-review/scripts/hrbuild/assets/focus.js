@@ -17,45 +17,138 @@
   });
 })();
 
-// The morph between radii. Each radius is its own PlantUML render with its own layout, so
-// a bare visibility flip throws every box somewhere new and the reader loses the change
-// they were looking at. Instead: scroll so the changed entities (the ripple-1 boxes) stay
-// where the eye already is, slide every box both views share from its old spot to its
-// new one, ghost out the ones that left, and fade the newcomers in with a short glow —
-// the one thing a wider radius exists to show is what it added. Edges are re-routed by
-// every render, so they are not tracked: they fade in once the boxes have landed.
-// Runs in the capture phase, ahead of the chooser above, and performs the same flip
-// itself so the order of the two listeners never matters.
+
+// The morph between two renders of one diagram. A picture that switches to another render
+// of itself — a wider radius, or a hand-drawn diagram's Diff / New / Old — comes back
+// with its own layout, so a bare visibility flip throws every box somewhere new and the
+// reader loses the change they were looking at. Instead: slide every box both renders
+// share from its old spot to its new one, ghost out the ones that left, and fade the
+// newcomers in with a short glow — what appeared is the thing the switch exists to show.
+// Edges are re-routed by every render, so they are not tracked: they fade in once the
+// boxes have landed.
+//
+// Two triggers, one animation. The radius chooser (PlantUML) runs in the capture phase,
+// ahead of the chooser above, and performs the same flip itself so the order of the two
+// listeners never matters; it also scrolls so the changed (ripple-1) boxes stay where
+// the eye already is. The Diff / New / Old switch (dgm-views.js) is watched instead of
+// intercepted: its `data-state` changes, and the morph reads the pane it left by
+// un-hiding it for one synchronous measurement — before the browser paints anything.
 (function () {
   if (window.__dgmMorph) return;
   window.__dgmMorph = true;
   var MOVE = 380, GLOW = 1400;
   var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  var CELL = 'g[data-cell-id]';
 
   function svgOf(box) { return box && box.querySelector('svg'); }
+  function isDrawio(svg) { return !!(svg && svg.querySelector(CELL)); }
+
+  // A draw.io cell's own marks: what it draws itself, not what the cells nested in it draw.
+  function own(g, sel) {
+    return Array.prototype.filter.call(g.querySelectorAll(sel), function (el) {
+      return el.closest(CELL) === g;
+    });
+  }
+  // An edge is the one cell whose line takes the pointer by its stroke; its labels are
+  // cells nested inside it; a layer (and the root) draws nothing of its own.
+  function cellKind(g) {
+    var mine = own(g, 'rect, path, ellipse, polygon, polyline, line, image, text, foreignObject');
+    if (!mine.length) return '';
+    if (mine.some(function (el) { return el.getAttribute('pointer-events') === 'stroke'; })) return 'edge';
+    var up = g.parentNode && g.parentNode.closest ? g.parentNode.closest(CELL) : null;
+    return up && cellKind(up) === 'edge' ? 'label' : 'vertex';
+  }
+  function label(g) {
+    return own(g, 'foreignObject, text').map(function (el) { return el.textContent; })
+      .join(' ').replace(/\s+/g, ' ').trim();
+  }
+
+  // The boxes of one picture, keyed so the same box can be found in another render of
+  // it: a PlantUML entity by its qualified name, a draw.io vertex by its cell id.
   function entities(svg) {
     var out = {};
     if (!svg) return out;
+    if (isDrawio(svg)) {
+      svg.querySelectorAll(CELL).forEach(function (g) {
+        if (cellKind(g) === 'vertex') out[g.getAttribute('data-cell-id')] = g;
+      });
+      return out;
+    }
     svg.querySelectorAll('g.entity[data-qualified-name]').forEach(function (g) {
       out[g.getAttribute('data-qualified-name')] = g;
     });
     return out;
   }
-  // The diff's own boxes: the first ripple, or anything painted as added or removed.
-  function isFocus(g) {
-    var shape = g.querySelector(':scope > rect, :scope > path, :scope > polygon');
-    var fill = shape ? (shape.getAttribute('fill') || '') : '';
-    return /dgm-ripple-1|dgm-diff-(add|del)/.test(fill);
+  // Everything that is not a box — edges, title, legend — waits for the boxes.
+  function waiting(svg) {
+    if (isDrawio(svg)) {
+      return Array.prototype.filter.call(svg.querySelectorAll(CELL), function (g) {
+        return cellKind(g) === 'edge';
+      });
+    }
+    return Array.prototype.slice.call(
+      svg.querySelectorAll('g.link, g.title, g.footer, g.caption, g.legend, g.cluster'));
+  }
+  // New key -> old key. By key first; then, on a draw.io picture, by label for the boxes
+  // a redraw handed a new id — only where the label names exactly one box on each side.
+  function match(oldEnt, newEnt, byLabel) {
+    var pairs = {}, taken = {};
+    Object.keys(newEnt).forEach(function (n) { if (n in oldEnt) { pairs[n] = n; taken[n] = true; } });
+    if (!byLabel) return pairs;
+    function index(ent, skip) {
+      var at = {};
+      Object.keys(ent).forEach(function (n) {
+        if (skip[n]) return;
+        var t = label(ent[n]);
+        if (t) at[t] = at[t] === undefined ? n : null;
+      });
+      return at;
+    }
+    var olds = index(oldEnt, taken), news = index(newEnt, pairs);
+    Object.keys(news).forEach(function (t) {
+      if (news[t] && olds[t]) pairs[news[t]] = olds[t];
+    });
+    return pairs;
+  }
+
+  function union(rs) {
+    var l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    rs.forEach(function (x) {
+      if (!x.width && !x.height) return;
+      l = Math.min(l, x.left); t = Math.min(t, x.top); r = Math.max(r, x.right); b = Math.max(b, x.bottom);
+    });
+    return l === Infinity ? null : { left: l, top: t, width: r - l, height: b - t, right: r, bottom: b };
+  }
+  // A draw.io cell's box is its own shape: the group's own rectangle would take in the
+  // cells nested in it, and a label's foreignObject is as large as the whole picture.
+  function rectOf(g) {
+    if (!g.hasAttribute('data-cell-id')) return g.getBoundingClientRect();
+    var r = union(own(g, 'rect, path, ellipse, polygon, polyline, image').map(function (el) {
+      return el.getBoundingClientRect();
+    }));
+    if (!r) {
+      r = union(own(g, 'foreignObject').map(function (fo) {
+        var d = fo.querySelector('div div') || fo.firstElementChild;
+        return d ? d.getBoundingClientRect() : { width: 0, height: 0 };
+      }).concat(own(g, 'text').map(function (el) { return el.getBoundingClientRect(); })));
+    }
+    return r || g.getBoundingClientRect();
   }
   function rects(map) {
     var out = {};
-    Object.keys(map).forEach(function (k) { out[k] = map[k].getBoundingClientRect(); });
+    Object.keys(map).forEach(function (k) { out[k] = rectOf(map[k]); });
     return out;
   }
   function centre(names, r) {
     var x = 0, y = 0;
     names.forEach(function (n) { x += r[n].left + r[n].width / 2; y += r[n].top + r[n].height / 2; });
     return { x: x / names.length, y: y / names.length };
+  }
+  // The diff's own boxes: the first ripple, or anything painted as added or removed.
+  function isFocus(g) {
+    var shape = g.querySelector(':scope > rect, :scope > path, :scope > polygon');
+    var fill = shape ? (shape.getAttribute('fill') || '') : '';
+    return /dgm-ripple-1|dgm-diff-(add|del)/.test(fill);
   }
   function scroller(el) {
     for (var p = el.parentElement; p && p !== document.body; p = p.parentElement) {
@@ -74,6 +167,147 @@
   function settle(diagram) {
     var done = diagram && diagram.__dgmMorphEnd;
     if (done) done();
+  }
+
+  // The animation itself, from a measured `before` to the picture now on screen in `to`.
+  // o: { diagram, to, oldSvg, oldSvgR, oldEnt, oldR, oldEdges, newSvg, newEnt, newR, pairs }
+  function play(o) {
+    var diagram = o.diagram, to = o.to, newSvg = o.newSvg, newEnt = o.newEnt, newR = o.newR;
+    var pairs = o.pairs, drawio = isDrawio(newSvg);
+    var shared = Object.keys(newEnt).filter(function (n) { return n in pairs; });
+    var arrived = Object.keys(newEnt).filter(function (n) { return !(n in pairs); });
+    var kept = {};
+    shared.forEach(function (n) { kept[pairs[n]] = true; });
+    var left = Object.keys(o.oldEnt).filter(function (n) { return !kept[n]; });
+
+    var still = !!(motion && motion.matches);
+    var touched = [], ghost = null, timers = [], shapes = [];
+    function end() {
+      timers.forEach(clearTimeout);
+      touched.forEach(function (el) {
+        el.style.transition = el.style.transform = el.style.opacity = '';
+        el.style.transformOrigin = el.style.transformBox = '';
+        el.classList.remove('dgm-m-new', 'dgm-m-glow', 'dgm-m-in', 'dgm-m-fade');
+      });
+      shapes.forEach(function (el) { el.classList.remove('dgm-m-shape'); });
+      if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+      to.classList.remove('dgm-morphing');
+      if (diagram.__dgmMorphEnd === end) diagram.__dgmMorphEnd = null;
+    }
+    diagram.__dgmMorphEnd = end;
+
+    arrived.forEach(function (n) {
+      var g = newEnt[n];
+      touched.push(g);
+      g.classList.add('dgm-m-glow');
+      // draw.io's shape sits a few groups down, under a link and a crisp-edge offset.
+      if (drawio) {
+        var s = own(g, 'rect, path, ellipse, polygon')[0];
+        if (s) { s.classList.add('dgm-m-shape'); shapes.push(s); }
+      }
+    });
+    timers.push(setTimeout(end, (still ? 0 : MOVE) + GLOW));
+    if (still) return;
+
+    var k = unit(newSvg), svgR = newSvg.getBoundingClientRect(), shift = {};
+    shared.forEach(function (n) {
+      var b = o.oldR[pairs[n]], c = newR[n];
+      shift[n] = [(b.left - c.left) * k, (b.top - c.top) * k];
+    });
+    // A draw.io box nested in another one rides along with it: it is moved only by the
+    // part of its own slide that its container does not already give it.
+    function carrier(g) {
+      for (var p = g.parentNode && g.parentNode.closest ? g.parentNode.closest(CELL) : null; p;
+           p = p.parentNode && p.parentNode.closest ? p.parentNode.closest(CELL) : null) {
+        var id = p.getAttribute('data-cell-id');
+        if (newEnt[id] === p && shift[id]) return shift[id];
+      }
+      return null;
+    }
+    shared.forEach(function (n) {
+      var g = newEnt[n], tx = shift[n][0], ty = shift[n][1];
+      var up = drawio ? carrier(g) : null;
+      if (up) { tx -= up[0]; ty -= up[1]; }
+      if (Math.abs(tx) < 0.5 && Math.abs(ty) < 0.5) return;
+      touched.push(g);
+      g.style.transition = 'none';
+      g.style.transform = 'translate(' + tx + 'px,' + ty + 'px)';
+    });
+    arrived.forEach(function (n) {
+      var g = newEnt[n];
+      // Grow from the box's own centre: a draw.io label's foreignObject spans the whole
+      // picture, so `fill-box` would grow it from the middle of the diagram.
+      if (drawio) {
+        var c = newR[n];
+        g.style.transformBox = 'view-box';
+        g.style.transformOrigin = ((c.left + c.width / 2 - svgR.left) * k) + 'px '
+          + ((c.top + c.height / 2 - svgR.top) * k) + 'px';
+      }
+      g.classList.add('dgm-m-new');
+    });
+    waiting(newSvg).forEach(function (el) {
+      // A draw.io line that is exactly where it was (Diff <-> New of one drawing, or a
+      // line between two boxes that stayed) stays put: a blink on it would read as a change.
+      var was = drawio && o.oldEdges && o.oldEdges[el.getAttribute('data-cell-id')];
+      if (was) {
+        var r = rectOf(el);
+        if (Math.abs(r.left - was.left) < 0.5 && Math.abs(r.top - was.top) < 0.5
+            && Math.abs(r.width - was.width) < 0.5 && Math.abs(r.height - was.height) < 0.5) return;
+      }
+      touched.push(el);
+      el.classList.add('dgm-m-fade');
+    });
+
+    // Nothing slid, arrived, left or re-routed (Diff <-> New of one drawing): no morph.
+    if (!left.length && !touched.length) { end(); return; }
+    to.classList.add('dgm-morphing');
+
+    // The ones that left: a copy of the old picture, pinned where it was, showing only them.
+    if (left.length && o.oldSvgR) {
+      var gone = {};
+      left.forEach(function (n) { gone[n] = true; });
+      ghost = o.oldSvg.cloneNode(true);
+      ghost.removeAttribute('id');
+      ghost.querySelectorAll('[id]').forEach(function (el) {
+        if (el.tagName.toLowerCase() !== 'filter' && el.tagName.toLowerCase() !== 'lineargradient') el.removeAttribute('id');
+      });
+      if (drawio) {
+        ghost.querySelectorAll(CELL).forEach(function (el) {
+          var id = el.getAttribute('data-cell-id');
+          el.style.visibility = gone[id] && cellKind(el) === 'vertex' ? 'visible' : 'hidden';
+        });
+      } else {
+        ghost.querySelectorAll('g.entity[data-qualified-name], g.link, g.title, g.footer, g.caption, g.legend, g.cluster').forEach(function (el) {
+          var n = el.getAttribute('data-qualified-name');
+          if (!n || !gone[n] || !el.classList.contains('entity')) el.style.visibility = 'hidden';
+        });
+      }
+      ghost.classList.add('dgm-m-ghost');
+      var boxR = to.getBoundingClientRect();
+      ghost.style.left = (o.oldSvgR.left - boxR.left - to.clientLeft + to.scrollLeft) + 'px';
+      ghost.style.top = (o.oldSvgR.top - boxR.top - to.clientTop + to.scrollTop) + 'px';
+      ghost.style.width = o.oldSvgR.width + 'px';
+      ghost.style.height = o.oldSvgR.height + 'px';
+      ghost.style.margin = '0';
+      ghost.style.background = 'transparent';
+      ghost.style.maxWidth = 'none';
+      to.appendChild(ghost);
+    }
+
+    void to.offsetWidth;                                  // commit the starting frame
+    requestAnimationFrame(function () {
+      shared.forEach(function (n) {
+        var g = newEnt[n];
+        if (!g.style.transform) return;
+        g.style.transition = 'transform ' + MOVE + 'ms cubic-bezier(.2,.7,.2,1)';
+        g.style.transform = '';
+      });
+      arrived.forEach(function (n) { newEnt[n].classList.add('dgm-m-in'); });
+      if (ghost) ghost.classList.add('dgm-m-out');
+      timers.push(setTimeout(function () {
+        newSvg.querySelectorAll('.dgm-m-fade').forEach(function (el) { el.classList.add('dgm-m-in'); });
+      }, MOVE * 0.8));
+    });
   }
 
   function morph(diagram, bar, button) {
@@ -99,9 +333,8 @@
     if (!oldSvg || !newSvg) return;
 
     var newEnt = entities(newSvg), newR = rects(newEnt);
-    var shared = Object.keys(newEnt).filter(function (n) { return n in oldR; });
-    var arrived = Object.keys(newEnt).filter(function (n) { return !(n in oldR); });
-    var left = Object.keys(oldEnt).filter(function (n) { return !(n in newEnt); });
+    var pairs = match(oldEnt, newEnt, isDrawio(newSvg));
+    var shared = Object.keys(newEnt).filter(function (n) { return n in pairs; });
 
     // Anchor: keep the change where it was on screen. Only the page scrolls, so the
     // final picture is exactly the un-animated one; whatever the scroll cannot absorb
@@ -110,7 +343,9 @@
     var anchors = shared.filter(function (n) { return isFocus(newEnt[n]); });
     if (!anchors.length) anchors = shared;
     if (anchors.length) {
-      var a = centre(anchors, oldR), b = centre(anchors, newR);
+      var was = {};
+      anchors.forEach(function (n) { was[n] = oldR[pairs[n]]; });
+      var a = centre(anchors, was), b = centre(anchors, newR);
       var sc = scroller(to), dy = b.y - a.y;
       var top = sc === document.scrollingElement || sc === document.documentElement
         ? 0 : sc.getBoundingClientRect().top;
@@ -125,78 +360,8 @@
       if (sc.scrollTop !== before || dx) newR = rects(newEnt);
     }
 
-    var still = !!(motion && motion.matches);
-    var touched = [], ghost = null, timers = [];
-    function end() {
-      timers.forEach(clearTimeout);
-      touched.forEach(function (el) {
-        el.style.transition = el.style.transform = el.style.opacity = '';
-        el.classList.remove('dgm-m-new', 'dgm-m-glow', 'dgm-m-in', 'dgm-m-fade');
-      });
-      if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
-      to.classList.remove('dgm-morphing');
-      if (diagram.__dgmMorphEnd === end) diagram.__dgmMorphEnd = null;
-    }
-    diagram.__dgmMorphEnd = end;
-
-    arrived.forEach(function (n) { touched.push(newEnt[n]); newEnt[n].classList.add('dgm-m-glow'); });
-    timers.push(setTimeout(end, (still ? 0 : MOVE) + GLOW));
-    if (still) return;
-
-    to.classList.add('dgm-morphing');
-    var k = unit(newSvg);
-    shared.forEach(function (n) {
-      var g = newEnt[n], o = oldR[n], c = newR[n];
-      var tx = (o.left - c.left) * k, ty = (o.top - c.top) * k;
-      if (Math.abs(tx) < 0.5 && Math.abs(ty) < 0.5) return;
-      touched.push(g);
-      g.style.transition = 'none';
-      g.style.transform = 'translate(' + tx + 'px,' + ty + 'px)';
-    });
-    arrived.forEach(function (n) { newEnt[n].classList.add('dgm-m-new'); });
-    // Everything that is not a box — edges, title, legend — waits for the boxes.
-    Array.prototype.forEach.call(newSvg.querySelectorAll('g.link, g.title, g.footer, g.caption, g.legend, g.cluster'), function (el) {
-      touched.push(el);
-      el.classList.add('dgm-m-fade');
-    });
-
-    // The ones that left: a copy of the old picture, pinned where it was, showing only them.
-    if (left.length && oldSvgR) {
-      ghost = oldSvg.cloneNode(true);
-      ghost.removeAttribute('id');
-      ghost.querySelectorAll('[id]').forEach(function (el) {
-        if (el.tagName.toLowerCase() !== 'filter' && el.tagName.toLowerCase() !== 'lineargradient') el.removeAttribute('id');
-      });
-      ghost.querySelectorAll('g.entity[data-qualified-name], g.link, g.title, g.footer, g.caption, g.legend, g.cluster').forEach(function (el) {
-        var n = el.getAttribute('data-qualified-name');
-        if (!n || n in newEnt || !el.classList.contains('entity')) el.style.visibility = 'hidden';
-      });
-      ghost.classList.add('dgm-m-ghost');
-      var boxR = to.getBoundingClientRect();
-      ghost.style.left = (oldSvgR.left - boxR.left - to.clientLeft + to.scrollLeft) + 'px';
-      ghost.style.top = (oldSvgR.top - boxR.top - to.clientTop + to.scrollTop) + 'px';
-      ghost.style.width = oldSvgR.width + 'px';
-      ghost.style.height = oldSvgR.height + 'px';
-      ghost.style.margin = '0';
-      ghost.style.background = 'transparent';
-      ghost.style.maxWidth = 'none';
-      to.appendChild(ghost);
-    }
-
-    void to.offsetWidth;                                  // commit the starting frame
-    requestAnimationFrame(function () {
-      shared.forEach(function (n) {
-        var g = newEnt[n];
-        if (!g.style.transform) return;
-        g.style.transition = 'transform ' + MOVE + 'ms cubic-bezier(.2,.7,.2,1)';
-        g.style.transform = '';
-      });
-      arrived.forEach(function (n) { newEnt[n].classList.add('dgm-m-in'); });
-      if (ghost) ghost.classList.add('dgm-m-out');
-      timers.push(setTimeout(function () {
-        newSvg.querySelectorAll('.dgm-m-fade').forEach(function (el) { el.classList.add('dgm-m-in'); });
-      }, MOVE * 0.8));
-    });
+    play({ diagram: diagram, to: to, oldSvg: oldSvg, oldSvgR: oldSvgR, oldEnt: oldEnt, oldR: oldR,
+           newSvg: newSvg, newEnt: newEnt, newR: newR, pairs: pairs });
   }
 
   document.addEventListener('click', function (ev) {
@@ -205,4 +370,47 @@
     var bar = button.closest('.focus'), diagram = button.closest('.diagram');
     try { morph(diagram, bar, button); } catch (e) { settle(diagram); }
   }, true);
+
+  // Diff / New / Old on a hand-drawn (draw.io) card. The switch has already flipped the
+  // panes when this runs, so the pane it left is shown again for one synchronous read of
+  // where its boxes were — layout only, nothing is painted in between.
+  function paneOf(views, state) {
+    return views.querySelector(':scope > .dgmpane[data-view="' + state + '"]');
+  }
+  function shownSvg(pane) { return svgOf(pane && pane.querySelector('.svgbox:not([hidden])')); }
+  function swap(views, was) {
+    var now = views.getAttribute('data-state');
+    if (!was || was === now) return;
+    var from = paneOf(views, was), to = paneOf(views, now);
+    var diagram = views.closest('.diagram') || views;
+    settle(diagram);
+    if (!from || !to || from === to) return;
+    var oldSvg = shownSvg(from), newSvg = shownSvg(to);
+    if (!isDrawio(oldSvg) || !isDrawio(newSvg)) return;
+    var fromHidden = from.hidden, toHidden = to.hidden;
+    to.hidden = true; from.hidden = false;
+    var oldEnt, oldR, oldSvgR, oldEdges = {};
+    try {
+      oldSvgR = oldSvg.getBoundingClientRect();
+      oldEnt = entities(oldSvg); oldR = rects(oldEnt);
+      waiting(oldSvg).forEach(function (g) { oldEdges[g.getAttribute('data-cell-id')] = rectOf(g); });
+    } finally {
+      from.hidden = fromHidden; to.hidden = toHidden;
+    }
+    if (!oldSvgR.width) return;                          // a card on a tab nobody is looking at
+    var newEnt = entities(newSvg);
+    play({ diagram: diagram, to: newSvg.parentNode, oldSvg: oldSvg, oldSvgR: oldSvgR, oldEnt: oldEnt,
+           oldR: oldR, oldEdges: oldEdges, newSvg: newSvg, newEnt: newEnt, newR: rects(newEnt),
+           pairs: match(oldEnt, newEnt, true) });
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(function (records) {
+      records.forEach(function (r) {
+        var views = r.target;
+        if (!views.classList || !views.classList.contains('dgmviews')) return;
+        try { swap(views, r.oldValue); } catch (e) { settle(views.closest('.diagram') || views); }
+      });
+    }).observe(document.documentElement, { subtree: true, attributes: true,
+                                           attributeFilter: ['data-state'], attributeOldValue: true });
+  }
 })();

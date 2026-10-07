@@ -143,6 +143,8 @@ from hrbuild.shared.diagrams import (
     _source_link, _sql_shape, _SQL_COLLATE, _SQL_COLUMN, _SQL_INDEX, _SQL_TABLE,
     _unchanged_body, _why_not_drawn, trace_legend
 )
+from hrbuild.shared.c4 import C4_DIR, C4_SCALE, C4_VIEWBOX, render_c4, _c4_badge, _c4_body, \
+    _c4_img, _c4_picture
 from hrbuild.shared.bands import (
     set_bands, _BANDS, _TOP_BANDS, _flush_bands, _flush_top_bands, _lede_above
 )
@@ -180,7 +182,7 @@ from hrbuild.shared.validate import (
 from hrbuild.shared.layout import (
     _layout_overridden, _layout_section, _video_step_ran, LAYOUT_ALWAYS, LAYOUT_MODEL_KEYS, LAYOUT_PRODUCER,
     LAYOUT_SECTIONS, LAYOUT_TABS, SHORT_TAB_LABELS, own_layout, LAYOUT_TESTPAIRS, _squash, _own_testpairs,
-    _own_diagram_title, LAYOUT_WHEN_WRITTEN
+    _own_diagram_title, LAYOUT_WHEN_WRITTEN, LAYOUT_BLOCK_WHEN_WRITTEN
 )
 from hrbuild.tabs.review import (
     AFTERMATH_FILES, aftermath_html, aftermath_reads_takeover, AFTERMATH_JSON, commits_after_review, CONFIDENCE_TIP,
@@ -1006,6 +1008,11 @@ def _main(argv=None) -> int:
         if kind == "puml":
             return (heading(block, "puml", block.get("title", ""))
                     + render_puml(block, root, out_dir), 1, 0)
+        if kind == "c4":
+            # The repository's Structurizr views, drawn by Structurizr. Weight per view;
+            # a change only where the DSL moved what a view shows.
+            frag, n, moved = render_c4(block, root, out_dir)
+            return heading(block, "c4", block.get("title", "")) + frag, n, moved
         if kind == "codeowners":
             frag, summary = codeowners_fragment(block, root, out_dir, page_rev)
             state, owned = summary["state"], summary["owned"]

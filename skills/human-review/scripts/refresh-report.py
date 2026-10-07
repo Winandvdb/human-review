@@ -206,7 +206,7 @@ HEAVY_STEPS = ("sequence", "video", "city", "dsaudit")
 #: :4200. Minutes, and a failure when nothing is listening. A reader who presses Rerun
 #: after editing a test body is asking for the page to catch up with the repository, not
 #: for a browser suite to be run at them.
-STATIC_STEPS = ("reviewpoints", "aftermath", "diagrams", "c2", "complexity", "api",
+STATIC_STEPS = ("reviewpoints", "aftermath", "diagrams", "c2", "c4", "complexity", "api",
                 "specchanges", "logging", "owners", "tests")
 
 
@@ -228,9 +228,28 @@ def steps_argv(steps: str) -> list[str] | None:
     return ["--only", steps]
 
 
+def c4_pending(review: Path) -> bool:
+    """A repository with a Structurizr DSL whose page has never had its C4 views drawn.
+
+    The `c4` step is newer than most pages: a page built before it carries no
+    `assets/c4/`, and a plain refresh — which runs no producer — would never draw them.
+    So that one step is run once, the way the UX tab's fragment is re-rendered when an
+    older ds-audit.py drew it. After that it is a producer like any other (`static`) —
+    except after a run that could not draw (no Docker): that one is retried, so starting
+    Docker and refreshing is the whole remedy the card's note promises."""
+    try:
+        held = json.loads((review / "assets" / "c4" / "verdict.json").read_text("utf-8"))
+    except (OSError, ValueError):
+        held = None
+    if isinstance(held, dict) and held.get("state") == "drawn":
+        return False
+    out = subprocess.run(["git", "ls-files", "--", "*.dsl"], capture_output=True, text=True)
+    return bool(out.stdout.strip())
+
+
 def plan(review: Path, steps: str, base: str | None, serve: bool,
          allow_model: bool, session: str | None, timing: bool = False,
-         force: bool = False) -> list[list[str]]:
+         force: bool = False, c4: bool = False) -> list[list[str]]:
     """Every command this run will make, in order, as argv lists.
 
     Built as data so the decisions above are testable without running a browser, a build or
@@ -247,6 +266,9 @@ def plan(review: Path, steps: str, base: str | None, serve: bool,
                    # and moving `.steps.json` costs the build the whole cost ledger, which
                    # is keyed on it. See `run-steps.Ctx`.
                    + ["--no-ledger"])
+    elif c4:
+        out.append([sys.executable, str(RUN_STEPS), "--only", "c4"]
+                   + (["--base", base] if base else []) + ["--no-ledger"])
     # The UX tab is a fragment pasted whole, written by a step no refresh runs (it needs both
     # sides' stacks up). Re-drawn here from its own JSON when an older ds-audit.py drew it —
     # a no-op otherwise — so a change to how the audit renders reaches every page on its next
@@ -392,7 +414,8 @@ def main(argv=None) -> int:
                 print(f"[refresh] removed {name}, a log from before this run", flush=True)
 
     commands = plan(review, args.steps, args.base, args.serve,
-                    args.allow_model, session_id(review), args.timing, args.force)
+                    args.allow_model, session_id(review), args.timing, args.force,
+                    c4=c4_pending(review))
     env = dict(os.environ)
     sid = session_id(review)
     if sid:

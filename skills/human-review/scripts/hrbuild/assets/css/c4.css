@@ -1,0 +1,14 @@
+/* The C4 views as Structurizr draws them (`hrbuild/shared/c4.py`). The card is the
+   gallery's; what differs is the picture: an <img> of Structurizr's own SVG, in its light
+   and its dark render, the page's colour scheme showing one. Its canvas is its own colour
+   (white, or Structurizr's near-black), so the box around it adds no padding and no tint
+   of the page's: a frame of --dgm-bg around a canvas of another grey is two backgrounds. */
+.diagram.dgm-c4 .head .c4-desc { margin-right:auto; font-family:inherit; font-size:.85rem; }
+.diagram .c4box { padding:0; background:none; }
+.diagram .c4box img { display:block; margin:0 auto; max-width:100%; height:auto;
+                      border-radius:6px; border:1px solid var(--line); }
+.diagram .c4box .c4-dark { display:none; }
+@media (prefers-color-scheme: dark) {
+  .diagram .c4box .c4-light { display:none; }
+  .diagram .c4box .c4-dark { display:block; }
+}

@@ -1208,6 +1208,30 @@ def _c2(ctx: Ctx):
            f"--out-dir {ART} --name deployment --traces {graph}" + extra, ctx)
 
 
+def has_dsl() -> bool:
+    """Whether the repository keeps a Structurizr DSL file — the `c4` step's whole input."""
+    out = subprocess.run(["git", "ls-files", "--", "*.dsl"], capture_output=True, text=True)
+    return bool(out.stdout.strip())
+
+
+def _c4(ctx: Ctx):
+    """The repository's own C4 views (Structurizr DSL), drawn by Structurizr itself.
+
+    `structurizr-views.py` exports the workspace as Structurizr's static viewer in a
+    throwaway container and asks that viewer for an SVG of every view, light and dark, at
+    the work tree and at the merge-base. Soft on a machine without Docker: the step is
+    skipped with the reason, and the card on the Structure tab says it in place."""
+    r = sh(f"{HERE}/structurizr-views.py --base {ctx.base} --out-dir {ART}/c4", ctx,
+           check=False)
+    if r.returncode == 3:
+        raise LookupError("no Structurizr DSL workspace in this repository")
+    if r.returncode == 4:
+        raise LookupError("Docker (or Playwright) is not available — the Structure tab "
+                          "says the C4 views were not drawn")
+    if r.returncode != 0:
+        raise RuntimeError(f"structurizr-views.py exit {r.returncode}")
+
+
 def _city_tests(ctx: Ctx) -> None:
     """Run `city.tests` — the traced browser suite — once, for everything that reads it.
 
@@ -2143,6 +2167,11 @@ STEP_INPUTS = {
                      "reads": ("assets/sequence.verdict.json",),
                      "tools": ("c2-from-sequence.py", "drawio-diff.py"),
                      "outputs": ("assets/c2",)},
+    # The DSL and anything it `!include`s by a path that does not end in .dsl is rare
+    # enough to leave out: a workspace split across files is split across .dsl files.
+    "c4":           {"paths": ("*.dsl",),
+                     "tools": ("structurizr-views.py",),
+                     "outputs": ("assets/c4",)},
     "complexity":   {"paths": ("*.java",),
                      "tools": ("endpoint-complexity.py", "endpoint-complexity-delta.py",
                                "complexity/ComplexityEngine.java"),
@@ -2402,6 +2431,11 @@ STEPS = [
      lambda c: has_genseq() or "no *.genseq.puml in this repository — nothing to project "
                                "a container view from",
      _c2),
+    # The repository's own C4 model, drawn by Structurizr: also a Structure-tab picture,
+    # and independent of every other step — it reads the DSL and nothing a step wrote.
+    ("c4",          "packages",      "C4 views drawn by Structurizr",
+     lambda c: has_dsl() or "no *.dsl in this repository — no Structurizr workspace to draw",
+     _c4),
     ("video",       "behaviour",     "feature recording",         None,              _video),
     ("complexity",  "complexity",    "entry-point complexity",
      lambda c: bool(c.step_cfg("complexity")) or has_java()

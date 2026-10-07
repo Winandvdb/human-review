@@ -41,8 +41,8 @@ def _script(name: str) -> str:
 # named here, and ``test_build_split_identity.py`` fails the build if one is not.
 CSS_FILES = (
     "core", "masthead", "chips", "commands", "demo", "review", "cost", "tests",
-    "snippets", "sequence", "logging", "diagrams", "genseq", "city", "adopt", "fixtures",
-    "frame",
+    "snippets", "sequence", "logging", "diagrams", "c4", "genseq", "city", "adopt",
+    "fixtures", "frame",
 )
 CSS = "".join(_text(f"css/{name}.css") for name in CSS_FILES)
 

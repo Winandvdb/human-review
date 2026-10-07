@@ -83,6 +83,10 @@ PIECES: dict[str, tuple[str, str]] = {
         "the C4 container (C2) diagram projected from traced test runs — every arrow an "
         "observed call — diffed base against branch",
         "scripts/c2-from-sequence.py, scripts/puml-diff.sh"),
+    "diagram.c4": (
+        "the C4 views of your Structurizr DSL workspace, rendered by Structurizr itself "
+        "(light and dark) and compared base against branch",
+        "scripts/structurizr-views.py, scripts/hrbuild/shared/c4.py"),
     "diagram": (
         "the {title} diagram, kept in the repository as PlantUML and diffed base against "
         "branch", "scripts/puml-diff.sh"),
@@ -204,6 +208,13 @@ EXPLAIN: dict[str, dict[str, object]] = {
         ],
         "ex": 'e.g. Browser → Backend: <code>GET /api/owners</code>.',
     },
+    'diagram.c4': {
+        "li": [
+            'A C4 view from the Structurizr DSL file, drawn by Structurizr itself.',
+            'The note under it says if a test checks it against the code, or if it is only hand-drawn.',
+        ],
+        "ex": 'e.g. C2: Frontend → Backend → Database, as written in the <code>.dsl</code>.',
+    },
     'diagram': {
         "li": [
             'A diagram kept in the repository as PlantUML.',
@@ -289,6 +300,8 @@ EXPLAIN: dict[str, dict[str, object]] = {
 
 #: A diagram card's piece, read off its head (title and source file), first match wins.
 DIAGRAM_KINDS = (
+    # First: a Structurizr card's head names a `.dsl` whose file name may say C2 too.
+    ("diagram.c4", re.compile(r"\.dsl\b|\bStructurizr\b", re.I)),
     ("diagram.drawio", re.compile(r"\.drawio\b", re.I)),
     ("diagram.domain", re.compile(r"domain\s*model", re.I)),
     ("diagram.db", re.compile(r"\bDB\b|\bERD\b|\bschema\b", re.I)),

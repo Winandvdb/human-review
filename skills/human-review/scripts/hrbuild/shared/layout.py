@@ -82,7 +82,7 @@ LAYOUT_TABS: dict[str, dict] = {
                      "sections": ("requirements-map",), "required": (), "first": True},
     "sequence":     {"label": "Sequence", "blocks": ("testpairs", "diagrams", "puml"),
                      "sections": (), "required": ()},
-    "packages":     {"label": "Structure", "blocks": ("diagrams", "puml"),
+    "packages":     {"label": "Structure", "blocks": ("diagrams", "puml", "c4"),
                      "sections": ("deployment",), "required": ()},
     "city":         {"label": "City", "blocks": ("codecity",), "sections": (),
                      "required": ()},
@@ -101,6 +101,13 @@ LAYOUT_TABS: dict[str, dict] = {
 #: container view it is checked against, only when the project configured one
 #: (`steps.c2.drawio`) — a model writing the content file cannot know that it did.
 LAYOUT_WHEN_WRITTEN = {"deployment": "assets/deployment-diff.json"}
+
+#: A block that is on its tab whenever the step that feeds it wrote this file, declared or
+#: not, after everything else the tab carries: the repository's own C4 views, drawn by
+#: Structurizr (`structurizr-views.py`), close the Structure tab. A model writing the
+#: content file cannot know the repository keeps a `.dsl`; the step does. Its verdict is
+#: written whether or not Docker was there, so a run that could not draw says so in place.
+LAYOUT_BLOCK_WHEN_WRITTEN = {"packages": ({"type": "c4"}, "assets/c4/verdict.json")}
 
 #: The tab that is on the page whenever its step ran, declared or not: no film is the case
 #: that most needs saying, and an absent pill says nothing.
@@ -231,6 +238,10 @@ def own_layout(spec: dict, out_dir) -> list[str]:
         sec_blocks = [{"type": "section", "id": sid} for sid in rule["sections"]
                       if sid in sections]
         tab["blocks"] = sec_blocks + kept if rule.get("first") else kept + sec_blocks
+        auto = LAYOUT_BLOCK_WHEN_WRITTEN.get(tid)
+        if auto and (out_dir / auto[1]).is_file() and not any(
+                b.get("type") == auto[0]["type"] for b in tab["blocks"]):
+            tab["blocks"].append(copy.deepcopy(auto[0]))
         used.update(sections)
 
     present = {t.get("id") for t in tabs}

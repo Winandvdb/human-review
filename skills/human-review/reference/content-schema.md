@@ -753,7 +753,7 @@ table, and `test_tab_ledger_wiring.py` fails until the two agree.
 | `behaviour` | Demo | `video` |
 | `sequence` | Sequence | `sequence` |
 | `requirements` | Tests | `tests` |
-| `data`, `packages` | Data, Structure | `diagrams`, and `c2` for the container view |
+| `data`, `packages` | Data, Structure | `diagrams`, `c2` for the container view, and `c4` for the repository's own Structurizr DSL views (drawn by Structurizr in Docker; its `c4` block is added by the build, never written here) |
 | `api` | API | `api`, `specchanges` |
 | `city` | Code City | `city` |
 | `complexity` | Complexity | `complexity` |

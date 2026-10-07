@@ -211,7 +211,7 @@ from hrbuild.tabs.sequence import (
     _trace_shot_html
 )
 from hrbuild.tabs.tests import (
-    LEDGER_TAB, CAT_LABELS, render_requirements, render_test_ledger, _names_by_file, render_tests,
+    LEDGER_TAB, CAT_LABELS, relabel_cats, TRACED_RANK, TRACED_LABEL, REQMAP_FIT_JS, render_requirements, render_test_ledger, _names_by_file, render_tests,
     render_traces,
     REQMAP_CSS, REQMAP_CUT, REQMAP_SEMCOV_JS, REQMAP_TIP_JS, reqmap_layout, resolve_tests,
     REQMAP_CATS_JS, REQMAP_LEDGER_JS, cats_filter,

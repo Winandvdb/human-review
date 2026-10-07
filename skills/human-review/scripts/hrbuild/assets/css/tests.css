@@ -72,6 +72,8 @@ ul.req-tests li { list-style:none; }
    names) on its hover. Plain text: it used to fold open into the list of every moved test,
    which on the requirements map repeated the covering card's own rows. */
 .tledger { margin:.9rem 0 1rem; font-variant-numeric:tabular-nums; }
+.tledger { display:inline-flex; gap:.6rem; align-items:baseline; }
+.rm-who[data-tip] { cursor:help; }
 .tledger[data-tip], .tledger [data-tip] { cursor:help; }
 .tledger .toff { color:#b26a00; }
 @media (prefers-color-scheme: dark) {

@@ -220,7 +220,7 @@ from hrbuild.tabs.tests import (
     SEMCOV, COV_NOT_MEASURED_SCRIPTED, _semcov_module, scripted_reqmap,
     RUN_TESTS_ACTION, run_tests_steps, declare_run_tests_rerun, run_tests_button,
     _gh_issue, _issue_url, _ms, _take, _test_changes_module,
-    COVERAGE_JSON, COVCARD_WHO, COVCARD_WHO_PR, covcard_who, COVCARD_TIP, COV_COMMON_SHARE,
+    COVERAGE_JSON, COVCARD_WHO, COVCARD_WHO_PR, covcard_who, covcard_tip, COV_COMMON_SHARE,
     COV_COMMON_MIN,
     COV_NOT_MEASURED, load_coverage, coverage_join, model_pairing, coverage_side, _model_key,
     TEMPLATE_UNSEEN, _rendered_templates,

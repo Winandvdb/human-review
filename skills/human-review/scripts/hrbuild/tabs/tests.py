@@ -647,8 +647,30 @@ COVERAGE_JSON = "assets/test-coverage.json"
 #: asking "covering what?".
 COVCARD_WHO = "Tests covering the change set"
 COVCARD_WHO_PR = "Tests covering the change set"
-COVCARD_TIP = ("Every test was run with a per-test coverage probe; a row is a test that "
-               "executed at least one line this branch changed")
+#: What each coverage probe is called, by the `source` a suite records in `test-coverage.json`.
+COV_PROBES = {"jacoco": "JaCoCo", "karma": "Karma", "v8": "V8"}
+
+
+def covcard_tip(doc: dict) -> str:
+    """How the card was computed, said from the measurement itself: how many tests were run,
+    and with which probe each suite — nothing here is a fixed list, so a build with another
+    suite says another thing. (Wired on the card title; `COVCARD_TIP` was defined once and
+    never emitted, so the title had no hover at all.)"""
+    suites = [x for x in doc.get("suites") or [] if isinstance(x, dict)]
+    total = sum(int(x.get("tests") or 0) for x in suites)
+    by_probe: dict[str, list[str]] = {}
+    for x in suites:
+        src = str(x.get("source") or "")
+        if not src or not x.get("tests"):
+            continue
+        probe = " + ".join(COV_PROBES.get(k, k) for k in src.split("+"))
+        by_probe.setdefault(probe, []).append(str(x.get("name") or "").strip())
+    probes = "; ".join(f"{p} for {', '.join(n)}" for p, n in by_probe.items())
+    return (f"All {total} tests were run one at a time with a coverage probe"
+            + (f" ({probes})" if probes else "")
+            + ". Listed here: every test that executed at least one line this branch changed.")
+
+
 #: A changed line counts as "passed through" when more than this share of a suite's
 #: reaching tests run it — a getter every GET calls, a component's constructor.
 COV_COMMON_SHARE = 0.5
@@ -991,7 +1013,8 @@ def coverage_side(side: str, frag: str, spec: dict, out_dir: Path, root: Path,
         note = COV_NOT_MEASURED_SCRIPTED if generated else COV_NOT_MEASURED
         return side[:span[1]] + f'<p class="cov-none">{note}</p>' + side[span[1]:]
     head = (f'<div class="rm-tkhead"><span class="rm-av cov-av" aria-hidden="true">📏</span>'
-            f'<span class="rm-who">{covcard_who(spec, out_dir)}</span></div>')
+            f'<span class="rm-who" data-tip="{html.escape(covcard_tip(doc), quote=True)}">'
+            f'{covcard_who(spec, out_dir)}</span></div>')
     side = re.sub(r'<div class="rm-tkhead">.*?</div>', lambda _: head, side, count=1, flags=re.S)
     # Last in the column, under the card: the suites missing from it are a footnote to it.
     after = coverage_after(doc)
@@ -1087,7 +1110,7 @@ def ticket_head(ref: dict | None) -> str:
     elif ref and ref.get("number") is not None:
         # "Issue" first, so the heading says what it names before it names it: over the
         # ticket's own frame, a bare title read as the PR's.
-        face = (f'Issue <span class="rm-num">#{ref["number"]}</span>: '
+        face = (f'<span class="rm-ref">Issue <span class="rm-num">#{ref["number"]}</span></span>: '
                 f'{html.escape(ref.get("title") or "")}')
         title = (f'<a class="rm-title" href="{html.escape(ref["url"])}">{face}</a>'
                  if ref.get("url") else f'<span class="rm-title">{face}</span>')
@@ -1184,6 +1207,9 @@ REQMAP_CSS = """
 .reqmap .rm-head .rm-title{color:var(--fg,#1c1c1c);text-decoration:none;overflow-wrap:anywhere}
 .reqmap .rm-head .rm-title:hover{text-decoration:underline}
 .reqmap .rm-head .rm-num{color:var(--muted,#6b6b6b);font-weight:400}
+/* "Issue #25" reads as the masthead's PR link does: link blue, the number not muted. */
+.reqmap .rm-head .rm-title .rm-ref{color:var(--link)}
+.reqmap .rm-head .rm-title .rm-ref .rm-num{color:inherit;font-weight:inherit}
 /* Both keys now sit under what they explain, so the margin that lifted them off it moves
    to the other side. The shared `--rm-key-h` band goes with them: above the frames it
    kept two unequal rows on one line, and under them there is nothing to keep level. */

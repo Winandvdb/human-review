@@ -119,7 +119,7 @@ def test_the_ticket_title_is_a_link_over_the_ticket(tmp_path):
     2026` with nothing saying what was opened."""
     out = _laid_out(tmp_path)
     assert ('<a class="rm-title" href="https://github.com/victorrentea/petclinic/issues/37">'
-            'Issue <span class="rm-num">#37</span>: Link Visit with Vet</a>') in out
+            '<span class="rm-ref">Issue <span class="rm-num">#37</span></span>: Link Visit with Vet</a>') in out
     head, ticket = _order(out, 'class="tabtitle rm-head"', 'class="rm-ticket"')
     assert head < ticket
 
@@ -453,3 +453,15 @@ def test_a_models_ui_label_is_renamed_e2e_at_build_time():
     assert 'data-cat="unit">Unit</span>' in out
     assert '"cats": {"e2e": "E2E", "api": "API", "unit": "Unit"}' in out
     assert ">UI<" not in out and T.relabel_cats(out) == out
+
+
+def test_the_card_title_says_how_the_list_was_computed():
+    tip = T.covcard_tip({"suites": [
+        {"name": "Backend JUnit", "source": "jacoco", "tests": 222},
+        {"name": "Frontend Karma", "source": "karma", "tests": 136},
+        {"name": "E2E Playwright", "source": "jacoco+v8", "tests": 5},
+        {"name": "Idle", "source": "jacoco", "tests": 0}]})
+    assert tip.startswith("All 363 tests were run one at a time")
+    assert "JaCoCo for Backend JUnit" in tip and "Karma for Frontend Karma" in tip
+    assert "JaCoCo + V8 for E2E Playwright" in tip and "Idle" not in tip
+    assert tip.endswith("executed at least one line this branch changed.")

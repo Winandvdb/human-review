@@ -545,9 +545,7 @@ def render(rows, base="main") -> str:
         # that, rather than the syntax tree the old wording implied.
         f'<p class="tabsub cx-lede">Computed by <a href="{EXTRACTOR_URL}" target="_blank" '
         'rel="noopener">endpoint-complexity.py</a> from regular expressions over the Java '
-        "sources (no parser, no syntax tree), scored as "
-        f'<a href="{SONAR_COGNITIVE}" target="_blank" rel="noopener">SonarSource</a> '
-        "defines it.</p>",
+        "sources (no parser, no syntax tree).</p>",
     ]
     known = {kind for kind, _ in KIND_TITLES}
     groups = KIND_TITLES + [

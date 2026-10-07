@@ -380,7 +380,10 @@
       // gets its wire on the column's edge, the way the card's rows do.
       var tc=textCol?view(textCol):t,
           mid=Math.min(Math.max((top+bot)/2,tc.top+8),tc.bottom-8)-base.top,
-          dx=Math.max(12,Math.abs(ay-mid)*0.16);
+          // The bend grows with the drop, but never past the gutter: a control point
+          // further out than the gap is wide pulls the curve backwards mid-way, over the
+          // card it is leaving - in a 20px gutter any drop over ~125px did that.
+          dx=Math.min(Math.max(12,Math.abs(ay-mid)*0.16),Math.max(4,(ax-x0)*0.9));
       d+='<path class="rm-wire" d="M'+x0+' '+mid+'C'+(x0+dx)+' '+mid+' '
         +(ax-dx)+' '+ay+' '+ax+' '+ay+'"/>'
         +'<circle class="rm-dot" cx="'+x0+'" cy="'+mid+'" r="3"/>';

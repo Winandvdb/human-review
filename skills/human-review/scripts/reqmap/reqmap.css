@@ -62,11 +62,10 @@
 .reqmap .rm-issue{padding:16px}
 .reqmap .rm-issue > :last-child{margin-bottom:0}
 .reqmap *{box-sizing:border-box}
-.reqmap .rm-body{display:flex;gap:46px;align-items:flex-start;position:relative}
-/* The gutter used to be 20px of nothing. It is now the one place on the page where the
-   relation is actually drawn, so it is wide enough for a fan of wires to leave the ticket
-   horizontally and turn - the left column pays 26px for it, which costs the ticket about
-   three characters a line. */
+.reqmap .rm-body{display:flex;gap:20px;align-items:flex-start;position:relative}
+/* The gutter is where the relation is drawn: a fan of wires leaves the ticket and turns
+   into the card. It was 46px for them; it is the page's 20px gutter again (Victor, 7 Oct
+   2026), and the wires bend tighter to fit (reqmap.js caps the bend at the gap). */
 .reqmap .rm-wires{position:absolute;inset:0;overflow:visible;pointer-events:none;z-index:2;
   opacity:0;transition:opacity .18s ease}
 .reqmap .rm-body[data-wired=yes] .rm-wires{opacity:1}

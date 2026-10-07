@@ -136,7 +136,7 @@ def test_the_title_is_a_row_of_the_grid_and_not_a_child_of_the_left_column(tmp_p
     text = out.index('class="rm-text"')
     assert body < head < text
     css = out[out.rindex("<style>"):]
-    assert "grid-template-columns:1fr 50%" in css
+    assert "grid-template-columns:minmax(0,474fr) minmax(0,520fr)" in css
     assert ".reqmap .rm-head{grid-column:1;grid-row:1" in css
     assert ".reqmap .rm-text{grid-column:1;grid-row:2}" in css
     assert "grid-row:2" in css[css.index(".reqmap .rm-side{"):]
@@ -275,7 +275,7 @@ def test_a_ticket_nobody_can_resolve_costs_a_heading_and_not_the_tab(monkeypatch
     # with `gh`'s mood.
     assert 'class="tabtitle rm-head"' in out
     # …and the columns are still laid out, which is what keeps them level.
-    assert "grid-template-columns:1fr 50%" in out
+    assert "grid-template-columns:minmax(0,474fr) minmax(0,520fr)" in out
 
 
 def test_a_pr_that_names_no_ticket_asks_nobody_anything(monkeypatch, tmp_path):
@@ -460,7 +460,10 @@ def test_the_tab_is_exactly_one_window_tall_footer_included(scheme, tmp_path):
         '<footer><p class="footrow">Built by somebody.</p><p class="diskline">/a/path</p></footer>'
         '</div></body></html>', encoding="utf-8")
     measure = """() => ({sh: document.documentElement.scrollHeight, ih: innerHeight,
-      foot: document.querySelector('footer').getBoundingClientRect().bottom})"""
+      foot: document.querySelector('footer').getBoundingClientRect().bottom,
+      gap: document.querySelector('.rm-side').getBoundingClientRect().left
+           - document.querySelector('.rm-text').getBoundingClientRect().right,
+      gutter: parseFloat(getComputedStyle(document.querySelector('.wrap')).paddingLeft)})"""
     with sync.sync_playwright() as p:
         try:
             browser = p.chromium.launch()
@@ -472,8 +475,8 @@ def test_the_tab_is_exactly_one_window_tall_footer_included(scheme, tmp_path):
             page.goto(page_file.as_uri())
             page.wait_for_timeout(100)
             got = [page.evaluate(measure)]
-            for h in (900, 480, 625):
-                page.set_viewport_size({"width": 1152, "height": h})
+            for w, h in ((1152, 900), (1152, 480), (1500, 900), (1152, 625)):
+                page.set_viewport_size({"width": w, "height": h})
                 page.wait_for_timeout(100)
                 got.append(page.evaluate(measure))
         finally:
@@ -481,6 +484,9 @@ def test_the_tab_is_exactly_one_window_tall_footer_included(scheme, tmp_path):
     for g in got:
         assert g["sh"] <= g["ih"], f"the page scrolls: {g}"
         assert g["foot"] <= g["ih"], f"the footer is under the fold: {g}"
+        # The cards are as far apart as they are from the window's edge (Victor, 7 Oct
+        # 2026), at every width: the cards take what the window adds, not the gap.
+        assert abs(g["gap"] - g["gutter"]) < 0.5, f"gap {g['gap']} != gutter {g['gutter']}"
 
 
 def test_the_fit_script_rides_with_the_matrix_and_the_sheet_reads_it(tmp_path):

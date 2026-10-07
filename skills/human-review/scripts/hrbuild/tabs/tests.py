@@ -1242,10 +1242,15 @@ REQMAP_CSS = """
    no ticket could be resolved. Widths are the flex layout's, restated: the card was
    `flex:0 0 50%` of the body and is now a 50% track, and its `max-width:50%` has to go or
    it would be read against its own track and halve the card. `row-gap` has to be said as
-   well: the 46px `gap` under it is a gutter between two columns, and inherited downwards
-   it opened half a screen between the title and the ticket it names. */
-.reqmap .rm-body{display:grid;grid-template-columns:1fr 50%;column-gap:46px;row-gap:0;
-  align-items:start}
+   well: the `gap` under it is a gutter between two columns, and inherited downwards it
+   opened half a screen between the title and the ticket it names.
+   The gutter is the page's own 20px side gutter (`.wrap`'s padding), not the 46px it was
+   widened to for the wires (Victor, 7 Oct 2026): two cards a different distance apart
+   than they are from the window's edge read as two layouts. The 26px it gives back goes
+   to the cards, in the proportion they had at the 1040px body (474 : 520), and they
+   share any width the window adds - the gap never grows with it. */
+.reqmap .rm-body{display:grid;grid-template-columns:minmax(0,474fr) minmax(0,520fr);
+  column-gap:20px;row-gap:0;align-items:start}
 .reqmap .rm-text{grid-column:1;grid-row:2}
 .reqmap .rm-side{grid-column:2;grid-row:2;max-width:none}
 /* Its size, weight and margins are `h2.tabtitle`'s (core.css), the same title every tab

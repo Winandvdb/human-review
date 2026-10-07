@@ -321,76 +321,6 @@ def touched_via(test_rel: str, root: Path) -> tuple[str, ...]:
     return tuple(hits)
 
 
-def _names(tests, limit: int = 4) -> str:
-    said = [f"<i>{html.escape(str(t.get('name', '')))}</i> "
-            f"({html.escape(Path(str(t.get('path', ''))).name)})" for t in tests[:limit]]
-    more = len(tests) - limit
-    return ", ".join(said) + (f" and {more} more" if more > 0 else "")
-
-
-#: Up to this many names are said inline; a longer list folds under its own count.
-SEL_INLINE = 2
-
-
-def _sel_item(label: str, items: list[str]) -> str:
-    """One fact of the selection line: `label: a, b` when short, a closed fold when not.
-
-    Eval run 10 printed this as one italic run-on paragraph — 'Not traced, over the cap of
-    6: requestedPage_returns… and 22 more. 28 more of the branch's tests…' — a wall of
-    method names standing between the reader and the first picture."""
-    if len(items) <= SEL_INLINE:
-        return (f'<span class="seqsel-k">{label}'
-                + (": " + ", ".join(items) if items else "") + "</span>")
-    return (f'<details class="seqsel-k"><summary>{label}</summary><ul>'
-            + "".join(f"<li>{x}</li>" for x in items) + "</ul></details>")
-
-
-def _sel_name(t: dict) -> str:
-    return (f"<code>{html.escape(str(t.get('name', '')))}</code> "
-            f"<span class=\"seqsel-f\">{html.escape(Path(str(t.get('path', ''))).name)}</span>")
-
-
-def selection_note_html(selection: dict | None, drew: set[int]) -> str:
-    """One compact line at the top of the tab: which of the branch's own tests were traced,
-    which drew nothing, and which were left out — over the cap, or in files no traced suite
-    runs. Each fact is a count; a list longer than `SEL_INLINE` folds under it.
-
-    `drew` holds the indexes into `picked` that a pair on this tab matched."""
-    if not selection:
-        return ""
-    picked = [t for t in selection.get("picked") or [] if isinstance(t, dict)]
-    left = [t for t in selection.get("left") or [] if isinstance(t, dict)]
-    capped = [t for t in left if t.get("suite")]
-    nosuite = [t for t in left if not t.get("suite")]
-    if not picked and not left:
-        return ""
-    items = []
-    if picked:
-        # Why they carry no tag, and which rows they are, is the lead's hover: said inline
-        # it pushed the counts onto a second line.
-        items.append(f'<span class="seqsel-k"><b>Also traced: {len(picked)} '
-                     f"test{'s' if len(picked) != 1 else ''} this branch wrote or edited</b>"
-                     "</span>")
-        missed = [t for i, t in enumerate(picked) if i not in drew]
-        if missed:
-            items.append(_sel_item(f"{len(missed)} of them came back with no picture",
-                                   [_sel_name(t) for t in missed]))
-    if capped:
-        items.append(_sel_item(
-            f"{len(capped)} not traced, over the cap of {int(selection.get('max') or 0)}",
-            [_sel_name(t) for t in capped]))
-    if nosuite:
-        per_file: dict[str, int] = {}
-        for t in nosuite:
-            f = Path(str(t.get("path", ""))).name
-            per_file[f] = per_file.get(f, 0) + 1
-        items.append(_sel_item(
-            f"{len(nosuite)} in files no traced suite runs",
-            [f'<span class="seqsel-f">{html.escape(f)}</span> \u00d7{n}'
-             for f, n in per_file.items()]))
-    return '<div class="seqsel">' + "".join(items) + "</div>"
-
-
 def _scenarios_drawn(puml_rel: str, test_rel: str, root: Path) -> list[tuple[int, str]]:
     """Which scenarios this diagram actually drew, as (line, title).
 
@@ -1150,7 +1080,6 @@ def render_testpairs(block, dspec, manifest_rows, root: Path, out_dir: Path,
         head += trace_how_html(out_dir, root, {rel: test_rel for test_rel, entries in plan.items()
                                                for rel, _ in entries}, len(tests_shown))
     head += f'<p>{block["body"]}</p>' if block.get("body") else ""
-    head += selection_note_html(selection, drew)
     # Invisible, and last: nothing to look at, only the map's way back in. `</` cannot
     # appear inside a script element, whatever its type.
     if index:

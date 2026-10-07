@@ -2604,8 +2604,8 @@ def test_the_mark_ends_the_ref_chip_and_carries_its_own_tooltip(tmp_path):
     out = build.ref_badges({"pr": {"branch": "feature", "base": "main"}},
                            build.base_state(r, "main"))
     assert out.count('class="chip refchip') == 1
-    assert ('from <b class="refname base">main</b><span class="drift" role="img" '
-            'aria-label="stale base"') in out and "\u26a0\ufe0f</span>" in out
+    assert ('from <span class="drift" role="img" aria-label="stale base"') in out
+    assert '1\u2193</span><b class="refname base">main</b>' in out and "\u26a0" not in out
     assert "1 commit ahead of the fork point" in out
     # No repo named, so the refs link nowhere and carry no hover; the mark's is the only one.
     assert out.count("data-tip") == 1
@@ -4473,12 +4473,7 @@ def test_a_picture_says_whether_it_is_there_by_tag_or_because_the_branch_wrote_t
     sorting = sorting.split('<details class="testpair"')[0]
     assert "I sort the owners by" in html.unescape(sorting)
     assert "not excerpted here" not in sorting
-    note = out[out.index('class="seqsel"'):]
-    note = html.unescape(re.sub(r"<[^>]+>", "", note[:note.index("</div>")]))
-    assert "Also traced: 2 tests this branch wrote or edited" in note
-    assert "1 of them came back with no picture: Paging forward owner-search.feature" in note
-    assert "1 not traced, over the cap of 6: getAll OwnerListTest.java" in note
-    assert "1 in files no traced suite runs: owner-list.component.spec.ts ×1" in note
+    assert "seqsel" not in out, "the badges say why each diagram is there; no summary line"
 
     # Tagged AND written by this branch: the row says both, as the Tests tab does.
     ledger = [{"path": feat, "line": 4, "status": "added",
@@ -4693,33 +4688,7 @@ def test_direct_imports_resolve_java_classes_and_relative_ts_modules(tmp_path):
     assert seq._direct_imports(feature, tmp_path) == []
 
 
-def test_the_selection_line_folds_a_long_list_under_its_count():
-    """Eval run 10: 'Not traced, over the cap of 6: requestedPage_returns… and 22 more.
-    28 more of the branch's tests…' — one italic run-on paragraph. Each fact is now a count
-    on one line, and a list longer than two names is a closed fold, never prose."""
-    capped = [{"path": f"src/test/T{i}.java", "name": f"case{i}", "suite": "java"}
-              for i in range(26)]
-    nosuite = [{"path": f"web/spec{i % 3}.ts", "name": f"spec{i}", "suite": None}
-               for i in range(28)]
-    picked = [{"path": "a.feature", "name": f"p{i}", "line": i} for i in range(6)]
-    out = build.selection_note_html({"max": 6, "picked": picked, "left": capped + nosuite},
-                                    set(range(6)))
-    assert out.startswith('<div class="seqsel">') and "<p" not in out
-    assert "came back with no picture" not in out, "every picked test drew"
-    folds = re.findall(r'<details class="seqsel-k"><summary>([^<]*)</summary><ul>(.*?)</ul>',
-                       out)
-    assert [f[0] for f in folds] == ["26 not traced, over the cap of 6",
-                                     "28 in files no traced suite runs"]
-    assert folds[0][1].count("<li>") == 26, "all of them, folded — no 'and 22 more'"
-    assert folds[1][1].count("<li>") == 3 and "spec0.ts</span> ×10" in folds[1][1]
-    assert " more" not in re.sub(r"<[^>]+>", "", out), "no run-on 'and N more' left"
-    assert "<details" not in out.split("</span>")[0], "the lead is plain text"
-    assert "details.seqsel-k[open] { flex-basis:100%; }" in build.CSS
-
-
 def test_without_a_selection_the_tab_says_nothing_new(tmp_path):
-    assert build.selection_note_html(None, set()) == ""
-    assert build.selection_note_html({"picked": [], "left": []}, set()) == ""
     assert build.picked_for("a.java", [(9, "defaultRequest_returnsFirstTen()")], {"picked": [
         {"path": "a.java", "name": "defaultRequest_returnsFirstTen", "line": 3}]}) is not None, \
         "a JUnit display name is matched by the method's name, whatever line it was found on"

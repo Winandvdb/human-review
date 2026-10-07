@@ -1860,6 +1860,53 @@ def load_model_mapping(review: Path) -> dict | None:
     return doc
 
 
+#: The per-test coverage the right-hand column is drawn from (`tests.py:COVERAGE_JSON`).
+COVERAGE = "assets/test-coverage.json"
+#: The note over the ticket when the pairing is older than the evidence it should have read.
+STALE_NOTE = "Pairing predates the coverage run — re-run the pairing step:"
+
+
+def rerun_command(out_dir: Path, root: Path) -> str:
+    """The command that re-runs the pairing, as a reader at the repository root types it."""
+    try:
+        rel = Path(out_dir).resolve().relative_to(Path(root).resolve()).as_posix()
+    except ValueError:
+        rel = str(out_dir)
+    return "rerun-model.py" + ("" if rel == ".human-review" else f" --dir {rel}")
+
+
+def pairing_stale(out_dir: Path, offered_now=None, spec: dict | None = None) -> str | None:
+    """Why the model's pairing (`test-mapping.json`) predates the coverage it should have
+    read, or None when it does not.
+
+    The visit-vet demo (5 Oct 2026): the pairing ran at 19:35 over 30 candidates, no e2e
+    test among them; the coverage that put 13 e2e runs on changed lines was written at
+    21:10. Every later build drew that matrix as if the model had read the e2e tests and
+    found nothing, and nothing said otherwise. Two signals, either one enough: the mapping
+    is older than the coverage file, or it records the tests it was offered (`offered`,
+    written by rerun-model.py) and the candidates drawn from today's coverage include one
+    it never saw. Never runs the model — it only says the command."""
+    m = Path(out_dir) / MAPPING
+    if not m.is_file():
+        return None
+    reasons = []
+    cov = Path(out_dir) / ((spec or {}).get("testCoverage") or COVERAGE)
+    if cov.is_file() and m.stat().st_mtime < cov.stat().st_mtime:
+        fmt = "%d %b %H:%M"
+        reasons.append(
+            f"{MAPPING} ({datetime.datetime.fromtimestamp(m.stat().st_mtime).strftime(fmt)}) is "
+            f"older than {cov.name} ({datetime.datetime.fromtimestamp(cov.stat().st_mtime).strftime(fmt)})")
+    doc = _read_json(m)
+    offered = doc.get("offered") if isinstance(doc, dict) else None
+    if isinstance(offered, list) and offered_now:
+        unseen = [t for t in offered_now if t not in set(offered)]
+        if unseen:
+            names = ", ".join(Path(t).name for t in unseen[:4])
+            reasons.append(f"{len(unseen)} candidate test(s) the model was never shown: "
+                           f"{names}" + (" …" if len(unseen) > 4 else ""))
+    return "; ".join(reasons) or None
+
+
 #: Said on a sentence the script paired on shared words and no model has read yet.
 UNCONFIRMED_GAP = ("Paired on shared words only — no model has read these tests to confirm "
                    "one asserts this sentence's claim, so it is not shown as covered. Run the "
@@ -2181,8 +2228,10 @@ def spec_sections(blocks: list[dict]) -> tuple[dict, dict]:
 
 
 def render(ticket: dict, blocks: list[dict], rows: list[dict], entries: list[dict],
-           root: Path, measured: bool = True, who: str | None = None) -> str:
-    """The matrix fragment: same inputs, same bytes."""
+           root: Path, measured: bool = True, who: str | None = None,
+           stale: tuple[str, str] | None = None) -> str:
+    """The matrix fragment: same inputs, same bytes. `stale` is `(why, command)` when the
+    pairing predates the coverage (`pairing_stale`): a note over the ticket says so."""
     T = _tests_tab()
     by_sid = {e["id"]: e for e in entries}
     rows_by = {r["id"]: r for r in rows}
@@ -2238,7 +2287,12 @@ def render(ticket: dict, blocks: list[dict], rows: list[dict], entries: list[dic
             'ticket by a script, and by AI where the script could not">🤖</span>'
             + f'<span class="rm-who">{who}</span></div>'
             + '<div class="rm-list"></div></aside></div>')
-    text = ('<div class="rm-text">' + legend + _ticket_html(ticket, blocks, by_sid)
+    note = ""
+    if stale:
+        why, cmd = stale
+        note = (f'<p class="rm-stale" role="note" data-tip="{html.escape(why, quote=True)}">'
+                f'{html.escape(STALE_NOTE)} <code>{html.escape(cmd)}</code></p>')
+    text = ('<div class="rm-text">' + note + legend + _ticket_html(ticket, blocks, by_sid)
             + '<div class="rm-gap" hidden></div></div>')
     css = (ASSETS / "reqmap.css").read_text(encoding="utf-8")
     js = (ASSETS / "reqmap.js").read_text(encoding="utf-8")
@@ -2328,8 +2382,20 @@ def write_fragment(spec: dict, out_dir: Path, root: Path) -> str | None:
     if g is None:
         return None
     entries = merge(g["sentences"], g["scripted"], model, g["decisions"])
+    offered_now = [t["id"] for t in model_input(g["ticket"], g["sentences"], g["rows"],
+                                                g["scripted"], g["docs"], g["decisions"])["tests"]]
+    why = pairing_stale(out_dir, offered_now, spec) if model is not None else None
+    cmd = rerun_command(out_dir, root)
+    if why:
+        # Loud on purpose: the matrix below is drawn from a pairing that never read some of
+        # the tests now on the card. The model is never run from here — it costs money.
+        bar = "!" * 78
+        print(f"[semcov] {bar}\n[semcov] WARNING: the Tests tab's pairing predates the "
+              f"coverage run — {why}.\n[semcov] Re-run the pairing step from the repository "
+              f"root: {cmd}\n[semcov] {bar}", file=sys.stderr)
     page = render(g["ticket"], g["blocks"], g["rows"], entries, root, g["measured"],
-                  who=_tests_tab().covcard_who(spec, out_dir))
+                  who=_tests_tab().covcard_who(spec, out_dir),
+                  stale=(why, cmd) if why else None)
     if old and GENERATED not in old:
         # The model-written matrix this replaces is a paid judgement; keep one copy.
         # `.model-prev/` is "the copy just replaced", as rerun-model.py uses it.
@@ -2345,6 +2411,9 @@ def write_fragment(spec: dict, out_dir: Path, root: Path) -> str | None:
                        f"rejected by the model; {c['sentences']['unmapped']} sentences not "
                        "paired yet"),
               "sentences": [e for e in entries if e["coverage"] != "unmapped"]}
+    if why:
+        # Read back by refresh-report.py, which repeats the warning as its last word.
+        merged["stale"] = {"why": why, "command": cmd}
     (out_dir / MERGED).write_text(json.dumps(merged, indent=1, ensure_ascii=False) + "\n",
                                   encoding="utf-8")
     return (f"{len(g['sentences'])} sentences × {len(g['rows'])} tests — "

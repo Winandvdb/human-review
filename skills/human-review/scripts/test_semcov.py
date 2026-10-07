@@ -1085,6 +1085,8 @@ def test_the_model_step_asks_about_every_scripted_link_in_one_call(tmp_path, mon
     assert prompt.count('"scripted"') == 3 and '"decisions"' in prompt
     assert "test/VisitTest.java:3" in prompt
     written = json.loads((review / S.MAPPING).read_text())
+    # The answer as given, plus what the model was shown (`test_pairing_stale.py`).
+    assert "test/VisitTest.java:3" in written.pop("offered")
     assert written == answer
     said = S.write_fragment(S._spec(review), review, root)
     assert "1 rejected" not in said and "by model" in said

@@ -472,3 +472,13 @@
 .reqmap .rm-run .rm-play,.reqmap .cov-av .rm-play{fill:var(--bg,#1e1e24)}
 /* Half the row's 8px gap between the shield and the stamp that follows it. */
 .reqmap .rm-tw + .rm-run,.reqmap .rm-run + .rm-st{margin-left:-4px}
+/* The pairing is older than the coverage it should have read (`semcov.pairing_stale`): one
+   small amber line over the legend, the command to re-run it in code, the reason on hover.
+   Never a button - the step costs money and only a human starts it. */
+.reqmap{--rm-stale-bg:#fff8c5;--rm-stale-edge:#d4a72c;--rm-stale-fg:#7d4e00}
+@media (prefers-color-scheme:dark){.reqmap{
+  --rm-stale-bg:rgba(187,128,9,.15);--rm-stale-edge:rgba(187,128,9,.6);--rm-stale-fg:#e3b341}}
+.reqmap .rm-stale{margin:0 0 8px;padding:4px 10px;font-size:12.5px;line-height:1.45;
+  color:var(--rm-stale-fg);background:var(--rm-stale-bg);border:1px solid var(--rm-stale-edge);
+  border-radius:6px;cursor:help}
+.reqmap .rm-stale code{font-size:12px;color:inherit;user-select:all;white-space:nowrap}

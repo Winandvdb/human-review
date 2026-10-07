@@ -9,6 +9,8 @@
   "properties": {
     "schema": {"const": "test-mapping/1"},
     "note": {"type": "string"},
+    "offered": {"type": "array", "items": {"type": "string"},
+                "description": "Written by rerun-model.py, never by the model: the ids of every test the model was shown. A build whose coverage now lists a candidate outside this set warns that the pairing predates the coverage run."},
     "sentences": {"type": "array", "items": {"$ref": "#/$defs/sentence"}}
   },
   "$defs": {

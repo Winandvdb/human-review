@@ -256,6 +256,37 @@ def plan(review: Path, steps: str, base: str | None, serve: bool,
     return out
 
 
+#: Where the build leaves the merged pairing, and — when the model's half is older than the
+#: coverage it should have read — why (`semcov.write_fragment`, key `stale`).
+MERGED_MAPPING = "assets/test-mapping.merged.json"
+
+
+def stale_pairing(review: Path, since: float | None = None) -> dict | None:
+    """`{"why", "command"}` when the build just drew the Tests tab from a pairing that
+    predates the coverage run, else None. Only a merged file this run wrote counts
+    (`since`): one left by an earlier build says nothing about this one."""
+    p = review / MERGED_MAPPING
+    try:
+        if since is not None and p.stat().st_mtime < since:
+            return None
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    got = doc.get("stale") if isinstance(doc, dict) else None
+    return got if isinstance(got, dict) and got.get("why") else None
+
+
+def warn_stale_pairing(stale: dict) -> None:
+    """The warning, loud, on stderr — repeated after the build's own output so it is the
+    last thing on the screen rather than one line in a scroll of build chatter. It never
+    runs the model: the pairing is the one paid step, and only a human starts it."""
+    bar = "!" * 78
+    print(f"[refresh] {bar}\n[refresh] WARNING: the Tests tab's pairing predates the coverage "
+          f"run — {stale['why']}.\n[refresh] The page says so over the ticket. Re-run the "
+          f"pairing step (a paid model call), then refresh:\n[refresh]   "
+          f"{stale.get('command') or 'rerun-model.py'}\n[refresh] {bar}", file=sys.stderr)
+
+
 def session_id(review: Path) -> str | None:
     """The session that did the work, so a rebuilt page keeps reporting its real cost.
 
@@ -363,6 +394,7 @@ def main(argv=None) -> int:
         env.pop("CLAUDE_CODE_SESSION_ID", None)
 
     url = ""
+    began = time.time()
     phases: list[tuple[str, float]] = []
     for cmd in commands:
         printable = " ".join(Path(c).name if c.startswith("/") and Path(c).exists() else c
@@ -406,6 +438,10 @@ def main(argv=None) -> int:
         for phase, secs in phases:
             print(f"[refresh]   {phase:<16} {secs:7.2f}")
         print(f"[refresh]   {'TOTAL':<16} {sum(s for _, s in phases):7.2f}")
+    if not args.dry_run:
+        stale = stale_pairing(review, since=began)
+        if stale:
+            warn_stale_pairing(stale)
     if url:
         print(url)
     return 0

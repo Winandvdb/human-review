@@ -255,7 +255,11 @@ row of `.model-runs.json` and shows on the cost tab. **Under GitHub Copilot**, p
 model (*Auto*, or `gpt-5-mini`) yourself: `rerun-model.py --prompt-only` prints the prompt
 with its input, you answer it as JSON, and `rerun-model.py --answer reply.json` checks and
 installs the answer; `--check-prompt` and `--check-answer check.json` do the same for the
-second read. Never write the matrix HTML yourself — the build draws it.
+second read. Never write the matrix HTML yourself — the build draws it. **A pairing older than
+the coverage** (`test-mapping.json` older than `assets/test-coverage.json`, or a candidate
+test it was never shown — `rerun-model.py` records what it showed in `offered`) makes the
+build and `refresh-report.py` warn on stderr and the Tests tab say so over the ticket, with
+the command. Nothing re-runs it for you: run `rerun-model.py` again.
 
 ### The prose that is left
 

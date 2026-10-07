@@ -192,7 +192,7 @@ def voice_switch(rel: str, voices: list[tuple[str, str, str, list, str]],
 
 # ── what the content file used to have to type ─────────────────────────────────────
 #
-# The Deployed-app row and the dotted links in the transcript were both drawn only from
+# The Running-app row and the dotted links in the transcript were both drawn only from
 # what the review's model wrote into the `video` section: `runtime` and `appLinks`. Eval
 # run 5's model wrote no `video` section at all, so its Demo tab had neither — while every
 # fact behind them was on disk: how the film's own instance is started, named and stopped
@@ -330,7 +330,7 @@ def video_html(s, out_dir: Path) -> str:
     # two-column grid, so a band emitted as one of its children takes a column and stands
     # next to the picture instead of across the top of it. What it contradicts is the
     # picture, so it has to be the thing read first, full width.
-    # The voices ride at the right end of the Deployed app row: under the player they were
+    # The voices ride at the right end of the Running app row: under the player they were
     # a line of their own, height the film and its transcript did not get (5 Oct 2026). A
     # page with no such row keeps them under the player, the one place left for them.
     head = runtime_html(rt, switch) if rt else ""

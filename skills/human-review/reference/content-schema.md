@@ -451,12 +451,12 @@ shown) and `{base}` to the URL in the bar. `drive-to-cue.js` replays the project
 and stops after the nth `say()`, leaving a headed browser on that screen for you to take
 over. Nothing describes the journey twice, so nothing can drift.
 
-`runtime` puts a **Deployed app** row above the player — one line, with the state of the
+`runtime` puts a **Running app** row above the player — one line, with the state of the
 environment first and the verbs that act on it after:
 
 ```
-served    Deployed app   http://localhost:53421     Stop ■   Reset DB to: [default] [green]
-off disk  Deployed app   Offline    Start App in Docker 📋   Stop 📋
+served    Running app    http://localhost:53421     Stop ■   Reset DB to: [default] [green]
+off disk  Running app    Offline    Start App in Docker 📋   Stop 📋
 ```
 
 It was two lines: word buttons that only did anything on a served page, and under them

@@ -23,8 +23,139 @@
 // Everything is written to start in the degraded state and *rise*. A button drawn as live
 // that falls back 30ms later has already been clicked by then, and has already lied.
 (function () {
+  // The containers a Start is bringing up, one chip each, while it brings them up.
+  //
+  // "Starting…" can stand in this row for minutes — a first build, then a database that
+  // takes its time to say healthy — and on a stage, with a room watching, nothing on it
+  // told "still coming" from "broken" (7 Oct 2026). Docker Desktop could, one window away.
+  // So the row shows what Docker Desktop shows, as small as it can be said: one chip per
+  // container, its service name and a light — grey while it is created or its healthcheck
+  // is still out, green once it runs (or a one-shot exited 0), red once it exited non-zero
+  // or went unhealthy, with the last line it printed as the hover, which is where the
+  // reason is. Before there are containers there are images being built, and those are
+  // chips too, so a first build is not a blank minute.
+  //
+  // Read from the server's `/__compose__`, which follows the run's own `docker compose`
+  // output — so it is served-only, like the Start that feeds it, and off disk the row is
+  // exactly what it was. The chips leave once the Start succeeds, because the address is
+  // then the whole story; they stay when it fails, because then they are the story.
+  //
+  // A factory over the row and nothing else, so the same lines can be lifted into a page
+  // built before this existed (a `live-patch-docker-status` script) without dragging the
+  // rest of the row's state machine with them.
+  // >>> appenv-pods
+  function appenvPods(bar) {
+    var box = bar.querySelector('.appenv-pods');
+    if (!box) {
+      box = document.createElement('span');
+      box.className = 'appenv-pods';
+      box.hidden = true;
+      box.setAttribute('aria-live', 'polite');
+      var at = bar.querySelector('.appenv-at');
+      if (at && at.parentNode) at.parentNode.insertBefore(box, at.nextSibling);
+      else (bar.querySelector('.appenv-run') || bar).appendChild(box);
+    }
+    var run = null, timer = null, live = false;
+
+    // `petclinic-env-backend:806e3de6` and `petclinic-env-frontend:806e3de6` are
+    // "backend" and "frontend": the tag and whatever every name starts with say nothing
+    // a chip has room for. One image keeps its whole name, there being nothing to compare.
+    function shortNames(images) {
+      var bare = images.map(function (i) {
+        return String(i).replace(/:[^/:]*$/, '').replace(/^.*\//, '');
+      });
+      if (bare.length < 2) return bare;
+      var head = bare.reduce(function (a, b) {
+        var n = 0;
+        while (n < a.length && a[n] === b[n]) n++;
+        return a.slice(0, n);
+      });
+      var cut = head.lastIndexOf('-') + 1;
+      return bare.map(function (b) { return b.slice(cut) || b; });
+    }
+
+    var WORD = {up: 'running', done: 'finished', starting: 'starting', down: 'failed',
+                build: 'building image', built: 'image built'};
+
+    function chip(light, name, tip) {
+      var el = document.createElement('span');
+      el.className = 'appenv-pod';
+      el.dataset.light = light;
+      el.textContent = name;
+      el.dataset.tip = tip;
+      return el;
+    }
+
+    function draw(j) {
+      var rows = (j && j.containers) || [], imgs = (j && j.images) || [];
+      var parts = [];
+      if (rows.length) {
+        rows.forEach(function (r) {
+          var said = WORD[r.light] + (r.status ? ' — ' + r.status : '');
+          parts.push(chip(r.light, r.service,
+                          r.light === 'down' && r.tip ? r.service + ': ' + r.tip
+                                                      : r.service + ' ' + said));
+        });
+      } else if (imgs.length) {
+        var names = shortNames(imgs.map(function (i) { return i.image; }));
+        imgs.forEach(function (i, n) {
+          var light = i.state === 'Built' ? 'built' : 'build';
+          parts.push(chip(light, names[n], i.image + ' — ' + WORD[light]));
+        });
+      }
+      if (!parts.length) { box.hidden = true; box.textContent = ''; return; }
+      var count = document.createElement('span');
+      count.className = 'appenv-pods-n';
+      count.textContent = rows.length
+        ? j.up + '/' + j.total + ' up'
+        : imgs.filter(function (i) { return i.state === 'Built'; }).length + '/'
+          + imgs.length + ' built';
+      box.textContent = '';
+      parts.forEach(function (el) { box.appendChild(el); });
+      box.appendChild(count);
+      box.hidden = false;
+    }
+
+    function ask() {
+      var id = run;
+      return fetch('/__compose__?run=' + encodeURIComponent(id), {cache: 'no-store'})
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { if (j && id === run) draw(j); })
+        .catch(function () {});
+    }
+
+    // Once a second while the run is going. A chained timeout, not an interval: a poll
+    // that took longer than a second (docker is slow to answer mid-build) must not stack.
+    function loop() {
+      if (!live) return;
+      ask().then(function () { if (live) timer = setTimeout(loop, 1000); });
+    }
+
+    return {
+      // Called with every snapshot of the Start; only the first one of a run starts it.
+      watch: function (id) {
+        if (!id || id === run) return;
+        run = id; live = true;
+        clearTimeout(timer);
+        loop();
+      },
+      // The run is over. One last look, so a container that died in the final second is
+      // on screen red; then, on success, the chips step out for the address.
+      finish: function (ok) {
+        live = false;
+        clearTimeout(timer);
+        if (!run) return;
+        if (ok) { run = null; draw(null); return; }
+        ask();
+      },
+      clear: function () { live = false; clearTimeout(timer); run = null; draw(null); }
+    };
+  }
+  // <<< appenv-pods
+
   var bar = document.querySelector('.appenv');
   if (!bar) return;
+  var pods = appenvPods(bar);
   var state = bar.querySelector('.appenv-state');
   var addr = bar.querySelector('.appenv-url');
   // The wrapper per verb, not the button: each wrapper holds the clipboard/play pair that
@@ -277,15 +408,22 @@
     busy = true;
     setLive(false, 'Waiting for the app \u2014 ' + face.toLowerCase() + '\u2026');
     say('unknown', face + '\u2026');
+    // Start is the one verb that brings containers up; Stop's chips would only be a row
+    // of things going away, which the address disappearing already says.
+    var watched = id === 'demo-env';
+    pods.clear();
     return window.HR.run(id, {}, function (snap) {
       var line = window.HR.tail(snap);
       if (line) state.dataset.tip = line;
+      if (watched) pods.watch(snap.run);
     }).then(function (done) {
       busy = false;
       state.removeAttribute('data-tip');
+      if (watched) pods.finish(done.state === 'done');
       then(done);
     }).catch(function (e) {
       busy = false;
+      if (watched) pods.finish(false);
       say('down', face + ' failed');
       state.dataset.tip = e.message || 'the review server is no longer running';
       setLive(false, state.dataset.tip);

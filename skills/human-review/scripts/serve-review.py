@@ -89,6 +89,9 @@ REVEAL_FOLDER = "/__reveal_folder__"
 # The red ■ beside `Served`: shut this server down now instead of waiting out
 # `--idle-minutes`. The page that pressed it stays on screen, and falls back to static.
 STOP = "/__stop__"
+# The Demo tab's Start, while it runs: which containers its `docker compose up` has made,
+# and how each one is doing. Read-only, polled once a second by the row's chips.
+COMPOSE = "/__compose__"
 
 # The page asks "is there a review server here?" and a *wrong* yes is expensive: the demo
 # published on GitHub Pages is https, so the protocol check this replaced said yes, and
@@ -1152,6 +1155,9 @@ class Run:
             self._timeout = float(self.DEFAULT_TIMEOUT)
         self._lines = collections.deque(maxlen=self.KEEP)
         self._lock = threading.Lock()
+        # What `docker compose` has said so far about the stack this run is bringing up —
+        # see `compose_scrape`. Empty for every command that is not a compose up.
+        self.compose = {}
         self._proc = subprocess.Popen(
             argv, cwd=str(cwd), stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -1170,6 +1176,7 @@ class Run:
                 line = line.rstrip("\n")
                 with self._lock:
                     self._lines.append(line)
+                    compose_scrape(self.compose, line)
                     if self._scrape == "url":
                         found = URL_IN_OUTPUT.findall(line)
                         if found:
@@ -1212,6 +1219,189 @@ class Run:
                     "exit": self.exit, "output": "\n".join(self._lines),
                     "result": dict(self.result), "reload": self.reload,
                     "started": self.started}
+
+
+# What `docker compose up` says about itself when stdout is not a terminal — the plain
+# progress format, one event per line: ` Image petclinic-env-backend:806e3de6 Building`,
+# then ` Container petclinic-806e3de6-db-1 Started`. Not the command the page declared but
+# the tool underneath it, so a host script that wraps compose in its own words still gets
+# its containers watched, and nothing here has to know how that script names things.
+COMPOSE_IMAGE_LINE = re.compile(r"^\s*Image\s+(\S+)\s+(Building|Built)\b")
+COMPOSE_CONTAINER_LINE = re.compile(r"^\s*Container\s+([A-Za-z0-9][A-Za-z0-9_.-]*)\s+[A-Z][a-z]+\b")
+
+
+def compose_scrape(facts: dict, line: str) -> None:
+    """Fold one output line into what a run knows about the stack it is bringing up:
+    `images` (name -> Building|Built, in the order they appeared) and `container`, the
+    first container compose named — the handle the project is read off, by label."""
+    m = COMPOSE_IMAGE_LINE.match(line)
+    if m:
+        facts.setdefault("images", {})[m.group(1)] = m.group(2)
+        return
+    m = COMPOSE_CONTAINER_LINE.match(line)
+    if m and not facts.get("container"):
+        facts["container"] = m.group(1)
+
+
+def _docker(*args, timeout=5.0) -> str | None:
+    """`docker <args>`'s stdout, or None when docker is absent, slow or says no. A poll
+    that hangs on a wedged daemon must not hang the page's poller with it."""
+    try:
+        r = subprocess.run(["docker", *args], capture_output=True, text=True,
+                           timeout=timeout, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout if r.returncode == 0 else None
+
+
+# `docker ps` Status column: `Up 4 seconds (healthy)`, `Up 2s (health: starting)`,
+# `Exited (3) 2 seconds ago`, `Restarting (1) 1 second ago`, `Created`.
+_HEALTH = re.compile(r"\((healthy|unhealthy|health: starting)\)")
+_EXIT = re.compile(r"^(?:Exited|Restarting)\s+\((-?\d+)\)")
+
+
+def container_light(state: str, status: str) -> tuple[str, str, int | None]:
+    """`(light, health, exit)` for one container: `light` is the chip's colour —
+    `up` (running and healthy, or running with no healthcheck to wait for), `done` (a
+    one-shot that exited 0), `starting` (created, or running while its healthcheck is still
+    out), `down` (exited non-zero, unhealthy, restarting, dead)."""
+    state = (state or "").lower()
+    h = _HEALTH.search(status or "")
+    health = {"health: starting": "starting"}.get(h.group(1), h.group(1)) if h else ""
+    e = _EXIT.match(status or "")
+    code = int(e.group(1)) if e else None
+    if state == "running":
+        light = {"healthy": "up", "unhealthy": "down", "starting": "starting"}.get(health, "up")
+    elif state == "exited":
+        light = "done" if code == 0 else "down"
+    elif state in ("restarting", "dead", "removing"):
+        light = "down"
+    else:                                   # created, paused, anything compose adds later
+        light = "starting"
+    return light, health, code
+
+
+# One JSON object per container, the service named by its own label rather than fished
+# out of `{{json .}}`'s comma-joined label string, where a value with a comma in it (a
+# multi-file `config_files`) would split in the wrong place.
+PS_FORMAT = ('{"Names":{{json .Names}},"State":{{json .State}},"Status":{{json .Status}},'
+             '"Service":{{json (.Label "com.docker.compose.service")}}}')
+
+
+def parse_compose_ps(text: str) -> list[dict]:
+    """The rows of `docker ps -a --format PS_FORMAT` for one project, one JSON object
+    per line, as the chips want them: service, container, light, health, exit. Sorted by
+    service so the chips stand still while their colours change."""
+    rows = []
+    for raw in (text or "").splitlines():
+        try:
+            row = json.loads(raw)
+        except ValueError:
+            continue
+        if not isinstance(row, dict):
+            continue
+        # `Service` is what PS_FORMAT asks for; a plain `{{json .}}` row only has the
+        # labels as one comma-joined string, read as a fallback.
+        labels = dict(kv.split("=", 1) for kv in str(row.get("Labels") or "").split(",")
+                      if "=" in kv)
+        service = row.get("Service") or labels.get("com.docker.compose.service")
+        name = str(row.get("Names") or "").split(",")[0]
+        light, health, code = container_light(str(row.get("State") or ""),
+                                              str(row.get("Status") or ""))
+        rows.append({"service": str(service or name),
+                     "name": name, "light": light, "state": str(row.get("State") or ""),
+                     "status": str(row.get("Status") or ""), "health": health,
+                     "exit": code})
+    rows.sort(key=lambda r: (r["service"], r["name"]))
+    return rows
+
+
+# A line that says why, as against a frame of the stack trace under it. Spring Boot dies
+# on a bad datasource with eighty lines whose last is `... 28 common frames omitted`; the
+# reason is the deepest `Caused by:` above it, which is the line a red chip should show.
+_REASON = re.compile(r"caused by:|error|exception|fatal|failed|refused|denied|not found|"
+                     r"cannot|could not|unable to|no such", re.I)
+_FRAME = re.compile(r"^(?:at\s|\.\.\.\s|\d+\s+common frames|~\[|\^)")
+
+
+def reason_line(text: str) -> str:
+    """The line of a container's last output that best says why it died: the last
+    `Caused by:` if there is one, else the last line that sounds like an error and is not a
+    stack frame, else simply the last line."""
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    if not lines:
+        return ""
+    caused = [ln for ln in lines if ln.lower().startswith("caused by:")]
+    if caused:
+        return caused[-1][:300]
+    for ln in reversed(lines):
+        if not _FRAME.match(ln) and _REASON.search(ln):
+            return ln[:300]
+    return lines[-1][:300]
+
+
+def last_log_line(name: str) -> str:
+    """Why a container died, out of what it printed last, stdout and stderr together: on a
+    red chip it is the reason, the one line a reader would otherwise have gone to Docker
+    Desktop to find."""
+    try:
+        r = subprocess.run(["docker", "logs", "--tail", "200", name], capture_output=True,
+                           text=True, timeout=5, stdin=subprocess.DEVNULL, errors="replace")
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return reason_line((r.stdout or "") + "\n" + (r.stderr or ""))
+
+
+_PROJECT_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+
+
+def compose_status(run, docker=None, log_line=None) -> dict:
+    """What the Demo tab's chips draw for one Start: the images being built while there are
+    no containers yet, then one row per container of the compose project the run created.
+
+    The project is never guessed from the declared command. It is read off the first
+    container compose itself named in the run's output, by the label compose put on it —
+    so it is right for any host script, and empty (no chips, the row as it always was)
+    for a Start that found its stack already up and printed no container at all."""
+    # Looked up per call rather than bound as defaults, so a test can stand in for docker.
+    docker = docker or _docker
+    log_line = log_line or last_log_line
+    with run._lock:
+        facts = {"images": dict(run.compose.get("images") or {}),
+                 "container": run.compose.get("container"),
+                 "project": run.compose.get("project")}
+        running = run.state == "running"
+    out = {"run": run.id, "state": run.state, "project": facts["project"] or "",
+           "images": [{"image": k, "state": v} for k, v in facts["images"].items()],
+           "containers": [], "up": 0, "total": 0}
+    project = facts["project"]
+    if not project and facts["container"]:
+        got = docker("inspect", "--format",
+                     '{{index .Config.Labels "com.docker.compose.project"}}',
+                     facts["container"])
+        project = (got or "").strip()
+        if project and _PROJECT_NAME.match(project):
+            with run._lock:
+                run.compose["project"] = project
+            out["project"] = project
+        else:
+            project = ""
+    if not project:
+        return out
+    rows = parse_compose_ps(docker("ps", "-a", "--filter",
+                                   f"label=com.docker.compose.project={project}",
+                                   "--format", PS_FORMAT) or "")
+    for row in rows:
+        if row["light"] == "down":
+            # Only the red ones, and only these few lines: a `docker logs` per container
+            # per second while ten of them come up would be the poll costing more than the
+            # thing it watches.
+            row["tip"] = log_line(row["name"])
+    out["containers"] = rows
+    out["total"] = len(rows)
+    out["up"] = sum(r["light"] in ("up", "done") for r in rows)
+    out["running"] = running
+    return out
 
 
 # Keyed by run id, and kept after the process exits: the page polls for the final state,
@@ -1761,6 +1951,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                                 "reload": bool(e.get("reload")),
                                                 "label": e.get("label") or ""}
                                          for name, e in declared.items()}})
+            return
+        if self.path.split("?")[0] == COMPOSE:
+            problem = refuse_reason(self.headers)
+            if problem:
+                self.reply_text(problem, 403)
+                return
+            q = urllib.parse.parse_qs(self.path.partition("?")[2])
+            with RUNS_LOCK:
+                run = RUNS.get(q.get("run", [""])[0])
+            if run is None:
+                self.reply_text("no such run", 404)
+                return
+            self.reply_json(compose_status(run))
             return
         if self.path.split("?")[0] == RUN_STATUS:
             problem = refuse_reason(self.headers)

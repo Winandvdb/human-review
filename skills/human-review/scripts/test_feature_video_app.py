@@ -347,7 +347,7 @@ def _section(tmp_path, verdict=None, film=True):
 
 
 # ── what the Demo tab shows when the content file said nothing ──────────────────────
-# Eval run 5's model wrote no `video` section, so its Demo tab had no Deployed-app row and
+# Eval run 5's model wrote no `video` section, so its Demo tab had no Running-app row and
 # no linked words in the transcript — while everything behind both was on disk.
 
 def _project(tmp_path, app=None):
@@ -370,7 +370,7 @@ def _project(tmp_path, app=None):
 def test_the_deployed_app_row_is_the_films_own_app_block(tmp_path):
     root, out, sha, short = _project(tmp_path)
     page = build.video_html({"video": "assets/feature.webm"}, out)
-    assert "Deployed app" in page and "Start App in Docker" in page
+    assert "Running app" in page and "Start App in Docker" in page
     assert html.escape(f"cd {root} && ./start-docker.sh up --ref {sha} --ttl 1800") in page
     assert html.escape(f"./start-docker.sh down petclinic-{short}") in page
     assert 'data-reset="/__reset"' in page

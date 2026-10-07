@@ -33,8 +33,41 @@
                       user-select:none; }
 .voice-switch input { margin:0; cursor:pointer; }
 .voice-switch label:has(input:checked) { color:var(--fg); font-weight:600; }
-/* In the Deployed app row: pushed to its right end, at the row's own size. */
+/* In the Running app row: pushed to its right end, at the row's own size. */
 .appenv .voice-switch { margin:0 0 0 auto; font-size:inherit; gap:.3rem .9rem; }
+/* The containers a Start is bringing up (APP_ENV_JS `appenvPods`): one chip per service,
+   its light a dot in front of the name — grey while created or still waiting on its
+   healthcheck, green once running, red once it exited non-zero or went unhealthy. Images
+   being built before any container exists are chips too, outlined. Wraps under the row's
+   verbs rather than pushing them off screen. */
+.appenv .appenv-pods { display:inline-flex; flex-wrap:wrap; gap:.25rem .3rem;
+    align-items:center; }
+.appenv .appenv-pods[hidden] { display:none; }
+.appenv .appenv-pod { --pod:#9a9aa8; display:inline-flex; align-items:center; gap:.3em;
+    padding:.05rem .45rem; border:1px solid var(--line); border-radius:999px;
+    background:var(--bg); font:11.5px/1.5 ui-monospace,Menlo,monospace; cursor:help;
+    white-space:nowrap; }
+.appenv .appenv-pod::before { content:""; width:.62em; height:.62em; border-radius:50%;
+    background:var(--pod); flex:none; }
+.appenv .appenv-pod[data-light="up"], .appenv .appenv-pod[data-light="done"] { --pod:#2e7d32; }
+.appenv .appenv-pod[data-light="built"] { --pod:#2e7d32; color:var(--muted); }
+.appenv .appenv-pod[data-light="down"] { --pod:#c62828; border-color:#c62828;
+    color:#c62828; font-weight:600; }
+.appenv .appenv-pod[data-light="build"]::before, .appenv .appenv-pod[data-light="built"]::before {
+    background:transparent; border:2px solid var(--pod); box-sizing:border-box; }
+@keyframes appenv-pod-wait { 50% { opacity:.3; } }
+.appenv .appenv-pod[data-light="starting"]::before, .appenv .appenv-pod[data-light="build"]::before {
+    animation:appenv-pod-wait 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .appenv .appenv-pod[data-light="starting"]::before,
+  .appenv .appenv-pod[data-light="build"]::before { animation-duration:3s; } }
+.appenv .appenv-pods-n { color:var(--muted); font-variant-numeric:tabular-nums;
+    margin-left:.15rem; }
+@media (prefers-color-scheme: dark) {
+  .appenv .appenv-pod[data-light="up"], .appenv .appenv-pod[data-light="done"],
+  .appenv .appenv-pod[data-light="built"] { --pod:#6fce93; }
+  .appenv .appenv-pod[data-light="down"] { --pod:#f0757f; border-color:#f0757f;
+    color:#f0757f; } }
 .transcript { margin:0; padding:.3rem; list-style:none; border:1px solid var(--line);
               border-radius:8px; background:var(--card); max-height:26rem; overflow-y:auto; }
 .transcript li { display:grid; grid-template-columns:2.9rem 1fr; gap:.5rem; align-items:baseline;

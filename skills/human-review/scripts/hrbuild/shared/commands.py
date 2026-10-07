@@ -439,7 +439,7 @@ def command_html(cmd: str, action_id: str | None = None, *, tip: str = "",
     "what does this glyph belong to" without a hover.
 
     `run_face` replaces the play on the run half, for the verbs in the Demo tab's
-    **Deployed app** row: Start begins something that then keeps running, Stop ends it,
+    **Running app** row: Start begins something that then keeps running, Stop ends it,
     and a play triangle on both would say the same thing about two different things. Everywhere else the mark is the play, because everywhere else
     the offer is *do this here*.
 
@@ -791,5 +791,5 @@ def runtime_html(rt, tail: str = "") -> str:
     return (f'<div class="appenv" data-fallback="{html.escape(fallback)}"'
             f'{f' data-reset="{html.escape(rt["reset"])}"' if rt.get("reset") else ""}'
             f'{f' data-drive="{html.escape(rt["drive"])}"' if rt.get("drive") else ""}>'
-            '<div class="appenv-run"><span class="appenv-title">Deployed app</span>'
+            '<div class="appenv-run"><span class="appenv-title">Running app</span>'
             + at + controls + tail + '</div></div>')

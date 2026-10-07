@@ -31,7 +31,7 @@ document.querySelectorAll('.vidwrap').forEach(function (wrap) {
   // lands on the same caption, as far into it as the reader was, and playing stays
   // playing. The choice is remembered per browser — whoever picked a voice once wants it
   // on the next review too.
-  // It sits in the Deployed app row above this wrap (under the player only when there is
+  // It sits in the Running app row above this wrap (under the player only when there is
   // no row), so it is found by what it switches, not by where it is: the group whose
   // standard radio plays this film's own src.
   var src = video.getAttribute('src');

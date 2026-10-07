@@ -271,7 +271,7 @@
       "//18": "shoot: a path is POSTed to the instance (the Demo tab's Reset button presses",
       "//19": "the same one), anything else is a command. Without it, an instance another",
       "//20": "step already wrote into (the browser suite) is recycled — down, then up.",
-      "//21": "This block is also the Demo tab's Deployed-app row when content.json has none.",
+      "//21": "This block is also the Demo tab's Running-app row when content.json has none.",
       "out": ".human-review/assets/feature.webm",
       "app": {
         "up": "./start-docker.sh up --ref {sha} --ttl 1800",

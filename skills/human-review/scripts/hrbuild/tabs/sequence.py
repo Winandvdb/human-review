@@ -176,8 +176,8 @@ SEQ_SELECTION = "assets/sequence.selection.json"
 #: which was the whole reason they had none.
 SEQ_WHY = {
     "tagged": ("tagged", "Has the tracing tag"),
-    "added": ("new test", "No tracing tag; traced because it is new"),
-    "modified": ("edited test", "No tracing tag; traced because it was edited"),
+    "added": ("new test", "Decided to trace it because it is new."),
+    "modified": ("edited test", "Decided to trace it because this branch edited it."),
 }
 
 

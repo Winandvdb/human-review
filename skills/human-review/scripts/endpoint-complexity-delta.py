@@ -556,9 +556,13 @@ def render(rows, base="main") -> str:
         if not of_kind:
             continue
         out.append('<div class="cx-group">')
+        # The two numbers at the right end of every row had no names, and a `+1` beside a
+        # `12` was read as one number. The group's own header line names them, in its own
+        # small caps, over the columns they sit in.
         out.append(
-            f'<div class="cx-kind">{html.escape(title)} <span class="cx-count">'
-            f"{len(of_kind)}</span></div>"
+            f'<div class="cx-kind cx-kind-cols"><span>{html.escape(title)} '
+            f'<span class="cx-count">{len(of_kind)}</span></span>'
+            '<span class="cx-colh">added</span><span class="cx-colh">total</span></div>'
         )
         out.append('<div class="cx-list">')
         out.extend(render_row(r, peak, base) for r in of_kind)
@@ -638,11 +642,19 @@ CSS = """
 .cx-lede a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
 .cx-lede a:hover { color:var(--link); }
 .cx-lede { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; }
-.cx-group { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; }
+/* The last two columns of a row — the delta and the score — are named once, on the
+    group's header line, so their widths live here and both grids read them: a label that
+    copied the numbers would drift off its column the day one of them is widened. */
+.cx-group { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; --cx-col-added:4.4rem; --cx-col-total:2.2rem; }
 .cx-group + .cx-group { margin-top:1.1rem; }
 .cx-kind { font:600 11px/1 system-ui,sans-serif; text-transform:uppercase; letter-spacing:.07em;
             color:var(--muted); margin:0 0 .35rem .15rem; }
 .cx-count { opacity:.65; font-weight:400; }
+/* Same tracks and the same right edge as `.cx-head`: its .8rem right padding plus the
+    list's 1px border. */
+.cx-kind-cols { display:grid; grid-template-columns:1fr var(--cx-col-added) var(--cx-col-total);
+    gap:.4rem; align-items:baseline; padding-right:calc(.8rem + 1px); }
+.cx-kind-cols .cx-colh { text-align:right; }
 .cx-key { font-weight:700; }
 .cx-list { border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--card); }
 /* The grid moved off the row and onto `.cx-head`, because the row now has a second thing
@@ -658,7 +670,8 @@ CSS = """
     one: at 3.6rem + .55rem a `GET` sat 46px from its own path and read as two columns of
     unrelated things. The caret column in front is the fold's second handle, next to the
     word a reader looks at first. */
-.cx-head { display:grid; grid-template-columns:1.1rem 2.45rem minmax(9rem,17rem) 1fr 4.4rem 2.2rem;
+.cx-head { display:grid; grid-template-columns:1.1rem 2.45rem minmax(9rem,17rem) 1fr
+              var(--cx-col-added) var(--cx-col-total);
           align-items:center; gap:.4rem; padding:.3rem .8rem .3rem .5rem; font-size:.84rem;
           cursor:default; list-style:none; }
 /* The full-size triangles (U+25B6/U+25BC, forced to text with U+FE0E so macOS does not

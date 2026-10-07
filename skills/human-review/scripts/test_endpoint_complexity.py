@@ -459,7 +459,7 @@ def test_a_simpler_flow_says_so_in_words_and_is_never_drawn_in_alarm_red():
         assert not (r > g + 60 and r > b + 60), f"{block} is a red; the removed colour is neutral"
     assert "--cx-added:#2e9e5b" in delta.CSS, "an increase stays green, as on the reference"
     # The badge column holds `−12 simpler` without the word wrapping under the number.
-    cols = re.search(r"\.cx-head \{[^}]*grid-template-columns:([^;]*);", delta.CSS)[1].split()
+    cols = _head_columns()
     assert float(cols[4].rstrip("rem")) >= 4.2
 
 
@@ -660,8 +660,41 @@ def test_the_row_offers_a_caret_and_the_group_is_not_titled_http_slash():
     size = re.search(r"\.cx-caret \{[^}]*font-size:(\d+)px", delta.CSS)[1]
     assert int(size) >= 13, "the caret is a handle, not punctuation"
     assert "HTTP /" not in delta.render([_row(why=[])], "main")
-    cols = re.search(r"\.cx-head \{[^}]*grid-template-columns:([^;]*);", delta.CSS)[1].split()
+    cols = _head_columns()
     assert cols[1] == "2.45rem", "the verb column is as wide as DELETE and no wider"
+
+
+def _css_vars() -> dict[str, str]:
+    return dict(re.findall(r"(--cx-[\w-]+):\s*([^;}]+?)\s*[;}]", delta.CSS))
+
+
+def _columns(selector: str) -> list[str]:
+    """The grid tracks of `selector`, with the shared `var(--cx-…)` widths resolved."""
+    raw = re.search(rf"{re.escape(selector)} \{{[^}}]*grid-template-columns:([^;]*);", delta.CSS)[1]
+    names = _css_vars()
+    return [names.get(m[1], m[0]) if (m := re.fullmatch(r"var\((--[\w-]+)\)", t)) else t
+            for t in raw.split()]
+
+
+def _head_columns() -> list[str]:
+    return _columns(".cx-head")
+
+
+def test_the_group_header_names_the_two_numbers_over_their_own_columns():
+    """`+1` beside `12` had no names and was read as one number. The group's header line
+    says which is "added" and which is the "total", and its last two tracks are the row's
+    last two — the same variables, not a copy that drifts the day one is widened."""
+    page = delta.render([_row(why=[])], "main")
+    assert ('<div class="cx-kind cx-kind-cols"><span>REST APIs <span class="cx-count">1</span>'
+            '</span><span class="cx-colh">added</span><span class="cx-colh">total</span></div>'
+            in page)
+    head, kind = _columns(".cx-head"), _columns(".cx-kind-cols")
+    assert kind[-2:] == head[-2:] and len(kind) == 3
+    raw = re.search(r"\.cx-head \{[^}]*grid-template-columns:([^;]*);", delta.CSS)[1]
+    assert "var(--cx-col-added) var(--cx-col-total)" in raw, "the widths are shared, not copied"
+    # The right edges line up: the row's right padding plus the list's border.
+    assert re.search(r"\.cx-kind-cols \{[^}]*padding-right:calc\(\.8rem \+ 1px\)", delta.CSS)
+    assert re.search(r"\.cx-head \{[^}]*padding:[^;]*\.8rem [^;]*;", delta.CSS)
 
 
 def test_the_straight_line_callees_are_not_listed_under_their_caller():

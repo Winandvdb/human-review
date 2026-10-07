@@ -434,7 +434,7 @@ def _main(argv=None) -> int:
                   % f.get("title", "")[:60], file=sys.stderr)
         f["_diffs"] = "".join(
             diff_html(d["path"], d.get("base") or default_diff_base, root, d.get("caption"),
-                      d.get("head"))
+                      d.get("head"), fold=True)
             for d in diffs
             if d.get("base") or default_diff_base
         )

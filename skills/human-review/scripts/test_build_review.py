@@ -5935,7 +5935,7 @@ def test_a_fixed_card_shows_the_fix_commits_hunks_whenever_one_follows_the_imple
                               "provenance": {"implementation": impl, "reviewCommit": fix}}}
     build.attribute_fix_hunks(spec, tmp_path, root=tmp_path)
     assert "line 3 fixed" in card["_fixDiffs"] and card["snippets"] == []
-    assert f"vs <code>{impl[:8]}</code>" in card["_fixDiffs"]
+    assert "vs <code>" not in card["_fixDiffs"] and '<details class="ghfold">' in card["_fixDiffs"]
     # No review commit recorded (an uncommitted record, an older report): the newest
     # `[auto-fix]` commit after the implementation is the fix commit.
     assert build.fix_commit({"provenance": {"implementation": impl}}, tmp_path) == fix
@@ -6199,7 +6199,8 @@ def test_a_long_quote_opens_on_its_anchored_lines_and_folds_the_rest(tmp_path):
     assert '<span class="ln">1</span>' in shown and '<span class="ln">2</span>' not in shown
     assert "<summary>31 more lines</summary>" in folded and '<span class="ln">32</span>' in folded
     long = build.snippet_card("K.java:2-25", None, tmp_path)
-    assert long.split("<details")[0].count('class="ln-row') == build.SNIPPET_LINES
+    assert long.startswith('<details class="ghfold snipfold">'), "2+ lines fold"
+    assert long.split('<details class="snipmore">')[0].count('class="ln-row') == build.SNIPPET_LINES
     assert "12 more lines" in long
     assert "snipmore" not in build.snippet_card("K.java:3-5", None, tmp_path)
 
@@ -6245,7 +6246,7 @@ def test_a_hook_fix_that_only_rewraps_lines_is_one_folded_line_labelled_hook(tmp
     build.attribute_fix_hunks(spec, tmp_path, root=tmp_path)
     assert card["_fixDiffs"].startswith(
         '<details class="fmtonly"><summary data-tip="wrapped each line">2 lines re-wrapped'
-        '</summary><div class="ghdiff">')
+        '</summary><details class="ghfold">')
     page = build.render_autofixes([card], badge="fixed")
     assert "<b>Hook:</b> the hook refused" in page and "Reviewer:" not in page
     assert "f-fix" not in page, "the fix is the fold's hover"

@@ -122,7 +122,7 @@ def review_step_rev(out_dir: Path) -> str | None:
 
 
 def diff_html(rel: str, base: str, root: Path, caption: str | None = None,
-              head: str | None = None, hunks=None) -> str:
+              head: str | None = None, hunks=None, fold: bool = False) -> str:
     """One file's change, rendered as a GitHub-style two-gutter table.
 
     `head` is the right-hand side, and defaults to the working tree. Name it when the fix
@@ -190,22 +190,23 @@ def diff_html(rel: str, base: str, root: Path, caption: str | None = None,
     # it, which is what this page's tooltips are for. A file at the repo root has no path
     # to move, and a tooltip repeating the name is a tooltip saying nothing.
     # The same source bar every other quoted block on this page wears, built by the same
-    # function: the file, then the stat as this block's badge — `+8 -4 vs 5acf2472` is
+    # function: the file, then the stat as this block's badge — `+8 -4` is
     # exactly the "what changed in it" a snippet's file mark answers. No VS Code / GitHub
     # icons in front of the name any more (Victor, 5 Oct 2026): the name is the link.
     stat = (f'<span class="stat"><span class="added">+{adds}</span> '
-            f'<span class="removed">&minus;{dels}</span> vs '
-            f'<code>{html.escape(base[:8])}</code></span>')
+            f'<span class="removed">&minus;{dels}</span></span>')
     bar = _extract_module().srcbar_html(
         f"vscode://file/{src.resolve()}", rel, "", stat)
-    return (
-        '<div class="ghdiff">'
-        f'{bar}'
-        f'<div class="ghdiff-scroll"><table class="ghdiff-body"><tbody>{"".join(body)}</tbody></table></div>'
-        + (f'<p class="ghdiff-note">{caption}</p>' if caption else "")
-        + '</div>'
-    )
-
+    scroll = (f'<div class="ghdiff-scroll"><table class="ghdiff-body"><tbody>{"".join(body)}'
+              '</tbody></table></div>')
+    note = f'<p class="ghdiff-note">{caption}</p>' if caption else ""
+    if fold:
+        # Review tab: the code is reviewed in VS Code through the PR, so the snippet only
+        # obscures the discussion. The file bar is the fold's summary (caret, name, stat),
+        # the table is its body; collapsed until asked for.
+        return ('<details class="ghfold"><summary>' + bar + '</summary>'
+                '<div class="ghdiff">' + scroll + note + '</div></details>')
+    return '<div class="ghdiff">' + bar + scroll + note + '</div>'
 
 
 @functools.lru_cache(maxsize=None)

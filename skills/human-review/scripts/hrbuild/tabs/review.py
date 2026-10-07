@@ -2349,12 +2349,12 @@ def attribute_fix_hunks(spec: dict, out_dir: Path, root: Path | None = None) -> 
                 if path in mine and path not in order:
                     order.append(path)
             order += [p for p in mine if p not in order]
-            body = "".join(diff_html(p, base, root, None, head, hunks=mine[p])
+            body = "".join(diff_html(p, base, root, None, head, hunks=mine[p], fold=True)
                            for p in order)
             # Drawn once, under the first card it serves, with no caption: the other
             # card's pointer below says where it is (eval run 11 cut the caption here).
             for rel, idx, takers in shared[i]:
-                body += diff_html(rel, base, root, None, head, hunks=[idx])
+                body += diff_html(rel, base, root, None, head, hunks=[idx], fold=True)
             # A card whose every hunk only re-wraps or re-indents lines (a pre-push hook's
             # line-length refusal) is one line, `6 lines re-wrapped in 5 files`, its diffs
             # folded and its `fix:` the fold's hover (eval run 11: ~1,100px of line wraps).
@@ -2396,7 +2396,7 @@ def attribute_fix_hunks(spec: dict, out_dir: Path, root: Path | None = None) -> 
                 f'<summary class="fixother-h"><b>Other changes in the {which}</b>: '
                 f'{n} hunk{"" if n == 1 else "s"} in {nf} file{"" if nf == 1 else "s"}'
                 '</summary>'
-                + "".join(diff_html(p, base, root, None, head, hunks=v)
+                + "".join(diff_html(p, base, root, None, head, hunks=v, fold=True)
                           for p, v in unowned.items())
                 + '</details>')
         gen = sorted(p for p in listed.splitlines() if p in generated)
@@ -3255,7 +3255,7 @@ def _first_lines(spans: list[tuple[int, int]], n: int) -> list[tuple[int, int]]:
     return out
 
 
-def snippet_card(ref: str, caption: str | None, root: Path) -> str:
+def _snippet_card_open(ref: str, caption: str | None, root: Path) -> str:
     """One card's quote: the anchor widened to its statement (`widen_anchor`), and at most
     `SNIPPET_LINES` lines open. A window that would draw more — a long range, or a one-line
     anchor on a class opener that the snippet closes 40 lines down (eval run 11:
@@ -3278,6 +3278,22 @@ def snippet_card(ref: str, caption: str | None, root: Path) -> str:
                 f'{"" if more == 1 else "s"}</summary>'
                 + snippet_html(_spans_ref(rel, rest), None, root, exact=True) + "</details>")
     return out
+
+
+def snippet_card(ref: str, caption: str | None, root: Path) -> str:
+    """`_snippet_card_open`, folded when it quotes two lines or more: the same `details.ghfold`
+    the diffs wear — file bar as the summary, collapsed — because a reader who reviews the
+    code in the editor reads the discussion here, and the excerpt only obscures it. A
+    one-line excerpt is as short as its own summary, so it stays inline."""
+    out = _snippet_card_open(ref, caption, root)
+    if out.count('class="ln-row') < 2:
+        return out
+    m = re.search(r'<div class="srcbar">.*?</div>\n', out, re.S)
+    if not m:
+        return out
+    bar = m.group(0).strip()
+    return ('<details class="ghfold snipfold"><summary>' + bar + '</summary>'
+            + out.replace(m.group(0), "", 1) + '</details>')
 
 
 # There is no `verdict_band_html` any more, and that is the point of this note: the band

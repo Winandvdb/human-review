@@ -27,7 +27,7 @@
    is allowed to wrap the masthead onto a second row, so the title is the part that gives
    — it ellipsises rather than pushing the score down, and the full text is in the tab
    title anyway. `min-width:0` is what lets a flex child shrink below its content. */
-.titlerow.oneline { flex-wrap:nowrap; align-items:baseline; }
+.titlerow.oneline { flex-wrap:nowrap; align-items:center; }
 .titlerow.oneline h1 { min-width:0; overflow:hidden; text-overflow:ellipsis;
                         white-space:nowrap; }
 .titlerow.oneline .titleside { flex:0 0 auto; }
@@ -93,7 +93,7 @@ h1 .nopr { font-size:.55em; font-weight:600; vertical-align:middle; color:var(--
 /* Even padding round the figure: an empty verdict label still cost its gap and margin
    (~7px) after `/10`, and the row's .7rem on top of that left the right edge far airier
    than the left. Row-level rule is `.titlerow .titlescore`, hence the doubled selector. */
-.titlerow .titlescore { padding-right:.5rem; }
+.titlerow .titlescore { padding:.05rem .5rem .05rem .55rem; }
 .titlescore i:empty { display:none; }
 .titlescore b { font-size:1em; line-height:inherit; letter-spacing:0; }
 .titlescore small { font-size:1em; opacity:.6; }

@@ -314,12 +314,20 @@ button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
             /* Pinned rather than left to the line box: a chip whose face is an emoji takes
                its height from the emoji font's ascent in a real Chrome, and the row stood
                at two heights. The glyphs are `line-height:1`, so nothing overflows it. */
-            height:1.75rem; box-sizing:border-box; }
+            height:var(--tr-h,21px); box-sizing:border-box; }
 /* `[hidden]` is spelled out because the `display` these carry would otherwise beat the
    attribute. */
 /* The three presses are round (`rerun_face`): the row's padding, set for the word badges
    beside them, would stretch them back into pills. */
 .titlerow .chip-rerun { padding:0; width:var(--rr-size); border:0; background:none; }
+/* The title row's badges as tall as the text beside them (~21px, was 28): one pinned
+   height shared by every badge so VSC, Served/Static, the rings and the grade pill cannot
+   drift apart, whatever their borders or faces add, all centred on the title. */
+.titlerow .titleside { --tr-h:21px; --rr-size:21px; gap:.35rem; display:inline-flex; align-items:center; }
+.titlerow .titleside .chip, .titlerow .titleside .titlescore {
+            display:inline-flex; align-items:center; padding:.05rem .55rem; line-height:1.25;
+            font-size:.8rem; height:var(--tr-h,21px); box-sizing:border-box; }
+.titlerow .titleside button.chip-rerun { --rr-size:var(--tr-h); padding:0; width:var(--tr-h); height:var(--tr-h); }
 .titlerow .chip-vsc[hidden], .titlerow .chip-mode[hidden], .titlerow .chip-serve[hidden], .titlerow .chip-rerun[hidden] { display:none; }
 /* Stop: the ⏹️ after the word `Served`, inside its pill. A bare glyph with no ring of its
    own — the pill's border is the only border — at about the text's cap height, and its own

@@ -161,7 +161,7 @@ def test_the_limit_keeps_the_failures(tmp_path):
 def test_the_limit_keeps_the_tests_of_the_files_the_branch_touched_and_cuts_skipped_first(tmp_path):
     """Twenty recorded, sixteen carried — and the four cut were the tests of the file the
     branch changed, while a skipped suite's recordings stayed. The covering test on the
-    Tests tab then had no 📺, and the reader asked why. Failures still outrank everything;
+    Tests tab then had no 🎭, and the reader asked why. Failures still outrank everything;
     below them the change set's own tests come before the rest, and a skipped result is
     the first thing to go. The cut rows are still counted."""
     doc = harvest(tmp_path, [_test("skipped but recorded", line=1, status="skipped",
@@ -266,14 +266,14 @@ def test_an_unreadable_envelope_says_so_instead_of_harvesting_nothing(tmp_path):
 #
 # `render_traces` draws nothing. The list it used to write — one collapsible row per
 # recording, the viewer framed inside it — repeated the covering-tests map above it row
-# for row, so it was dropped; what it writes now is a registry the 📺 on those rows reads,
+# for row, so it was dropped; what it writes now is a registry the 🎭 on those rows reads,
 # keyed by the file basename and declaration line the map already addresses a row with.
 # These tests therefore read the JSON, not markup: what the page *shows* for a recording
 # is the covering-tests row's business and is pinned in test_build_review.py.
 
 
 def _registry(frag):
-    """The registry as the 📺 parses it: the JSON inside the one script element.
+    """The registry as the 🎭 parses it: the JSON inside the one script element.
 
     No unescaping step here on purpose — the `<\\/` the renderer writes so that nothing in
     the payload can close the element is a plain JSON escape, and a parser puts it back."""
@@ -305,7 +305,7 @@ def test_a_recording_is_keyed_by_the_test_the_map_addresses_it_by(tmp_path):
 
 
 def test_a_result_that_recorded_nothing_is_not_in_the_registry(tmp_path):
-    """The 📺 is drawn from this list. An entry with no zip behind it would be a door
+    """The 🎭 is drawn from this list. An entry with no zip behind it would be a door
     onto a viewer with nothing to show."""
     doc = _manifest(tmp_path)
     doc["tests"][0]["trace"] = ""
@@ -316,7 +316,7 @@ def test_a_result_that_recorded_nothing_is_not_in_the_registry(tmp_path):
 def test_the_viewer_is_named_once_and_no_frame_is_ever_written(tmp_path):
     """Eleven rows would otherwise boot eleven copies of a browser application on load,
     each fetching its own multi-megabyte zip, to show the one the reader asked for. The
-    📺 opens the viewer in a window of its own, so the page carries no frame at all."""
+    🎭 opens the viewer in a window of its own, so the page carries no frame at all."""
     frag, _ = build.render_traces(_manifest(tmp_path), tmp_path, tmp_path / '.human-review')
     assert "<iframe" not in frag
     assert _registry(frag)["viewer"] == "assets/traceviewer/index.html"
@@ -351,7 +351,7 @@ def test_the_command_names_the_directory_the_page_was_built_into(tmp_path):
 
 
 def test_the_offline_copy_says_it_copied_the_way_every_other_copy_does():
-    """The 📺 was the only silent copy control on the page.
+    """The 🎭 was the only silent copy control on the page.
 
     It wrote its own "Copied" by swapping `data-tip` for two seconds — an attribute the
     tooltip has already rendered by the time the click happens, so nothing appeared. Every
@@ -382,7 +382,7 @@ def test_the_screen_says_what_a_press_will_actually_do():
 
 def test_the_native_command_is_not_in_the_servers_manifest(tmp_path):
     """`.actions.json` is the list of things the *server* may be asked to run, and
-    `show-trace` opens a desktop window. Served, the 📺 has a better answer anyway — the
+    `show-trace` opens a desktop window. Served, the 🎭 has a better answer anyway — the
     trace viewer copied beside this page — so the command exists for exactly the reader
     who has no server to ask."""
     build.ACTIONS.clear()

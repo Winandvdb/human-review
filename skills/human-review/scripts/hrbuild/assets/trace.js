@@ -1,11 +1,11 @@
-// The 📺 on a covering-tests row whose test was recorded: the way into the recording.
+// The 🎭 on a covering-tests row whose test was recorded: the way into the recording.
 //
 // Served, it is a link to the Playwright trace viewer copied beside this page, opened in
 // a window of its own — the viewer is a three-pane application and gets the whole
 // screen, where the review page keeps its place in this one. The viewer reads the
 // recording with `fetch`, so a page opened off disk — out of the downloadable zip, or
 // straight from `.human-review/` — has nothing to hand it, not even a file sitting
-// beside it. There the 📺 copies the line that opens the same recording natively.
+// beside it. There the 🎭 copies the line that opens the same recording natively.
 //
 // The registry is written per build by `render_traces`; the map's rows are drawn by its
 // own inline script and do not know what the run recorded, and should not have to. So
@@ -31,7 +31,7 @@
       if (!where) return;
       var tv = document.createElement('a');
       tv.className = 'rm-tv';
-      tv.textContent = '📺';
+      tv.textContent = '🎭';
       // Said once, by the branch that is actually taken. The label used to be written
       // before the fork and claimed "open the recording of this test" in both, so off
       // disk a screen reader announced an open over a control that copies — the one

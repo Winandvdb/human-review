@@ -387,7 +387,7 @@ Which recordings the harvester's `--limit` carries is a ranking, not the report'
 failures first and never cut; then the tests of the files the change set touched — the
 rows the Tests tab marks as covering the change, read off `test-changes.json` (written by
 the `tests` step, which runs first) — then the rest by file and line; skipped results are
-cut first, since a test that never ran recorded nothing. So a covering test's 📺 is only
+cut first, since a test that never ran recorded nothing. So a covering test's 🎭 is only
 missing when the run genuinely did not trace it, and whatever fell past the limit is still
 in the *not carried* count.
 

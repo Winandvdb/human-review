@@ -834,7 +834,7 @@ def _run_traced(ctx: Ctx, cfg: dict, commands, runs: list[dict],
         # A Playwright suite in these commands writes its html report to a folder of its
         # own. The default is the one the traced browser run (`city.tests`, run by
         # `traces`) writes and `traces` harvests: eval run 17's one-test sequence run overwrote it 6 s before
-        # the harvest, and every Playwright UI row lost its 📺 replay. The env var beats
+        # the harvest, and every Playwright UI row lost its 🎭 replay. The env var beats
         # the config's outputFolder; a suite that is not Playwright ignores it.
         # Outside .human-review/, which is published whole.
         scratch = Path(tempfile.gettempdir()) / ("hr-sequence-report-" + hashlib.sha1(

@@ -676,7 +676,7 @@ def deleted_rows(test_doc: dict | None, root: Path, live: list[dict] = ()) -> li
 
     Keyed where the test stood at the base (`file:baseLine@base`): its HEAD `line` is only
     where the removal landed, and a plain `file:line` key could collide with a live test at
-    that line, whose 📺 and sequence diagram hang off the same key. `baseRef` is the commit
+    that line, whose 🎭 and sequence diagram hang off the same key. `baseRef` is the commit
     its original source is read from (`render` → `base_part`). Its kind is the kind of the
     live tests in the same file (`live`), when there are any: a deleted scenario of a
     feature the browser suite runs is UI like its siblings, not whatever the file's text

@@ -576,7 +576,7 @@ def test_the_whole_pair_folds_away_and_starts_open(tmp_path):
     html_out = _pairs_fixture(tmp_path)
     assert '<details class="testpair" open id=' in html_out
     # Both inside the fold: to the pair's own closing tag, which is the last one on the
-    # block — only the registry the tab writes for the 🎭 comes after it.
+    # block — only the registry the tab writes for the 🎼 comes after it.
     pair = html_out[html_out.index('<details class="testpair"'):html_out.rindex("</details>")]
     assert 'class="srcref seqfile"' in pair and 'class="diagram' in pair
 

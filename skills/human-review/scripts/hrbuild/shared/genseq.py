@@ -395,7 +395,7 @@ def genseq_by_test(root: Path) -> dict[str, tuple[str, ...]]:
 def pair_anchor(rel: str) -> str:
     """The id of the pair a sequence is drawn in, derived from the diagram's own path.
 
-    Derived rather than counted, because the thing that links to it — the 🎭 on a
+    Derived rather than counted, because the thing that links to it — the 🎼 on a
     covering-tests row, a tab away — knows the test and nothing else about this tab. A
     path is unique inside a checkout, so the slug is too. It is the *diagram's* path that
     is passed now, one per scenario, so two scenarios of one file get two anchors."""

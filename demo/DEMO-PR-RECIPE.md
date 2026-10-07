@@ -107,7 +107,7 @@ under it.
 ### 3 — Sequence + Tests tabs: a Gherkin UI scenario, and diagrams re-recorded
 
 A browser-level Cucumber (Gherkin) + Playwright scenario, so Tests gets one row
-tagged 🕵️ (Gherkin) *and* 📺 (Playwright) instead of only a TypeScript DSL spec,
+tagged 🕵️ (Gherkin) *and* 🎭 (Playwright) instead of only a TypeScript DSL spec,
 and Sequence gets a UI · Gherkin pairing alongside the UI · Playwright one that
 was already there.
 

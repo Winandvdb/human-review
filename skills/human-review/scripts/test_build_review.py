@@ -3732,7 +3732,7 @@ def test_shift_wheel_scrolls_a_wide_block_sideways():
 def test_the_recordings_are_a_registry_the_tv_reads_not_a_list(tmp_path):
     """There used to be a list of rows here, one per recording, each framing the viewer.
     Every word on it was already on the covering-tests map, so what is emitted now is
-    only the registry the 📺 on those rows reads: the viewer, and per test the key the
+    only the registry the 🎭 on those rows reads: the viewer, and per test the key the
     map uses, the zip, and the line that opens it natively off disk."""
     doc = {"recorded": 3, "omitted": 0, "untraced": 0, "viewer": "assets/tv/index.html",
            "tests": [
@@ -3761,7 +3761,7 @@ def test_the_recordings_are_a_registry_the_tv_reads_not_a_list(tmp_path):
 
 def test_a_trace_row_is_addressed_by_its_test_and_the_header_says_which_page_this_is(tmp_path):
     """The covering-tests map names a test by file and declaration line; a trace row
-    carries the same key, so the 📺 the page hangs on the map's row is a lookup. And the
+    carries the same key, so the 🎭 the page hangs on the map's row is a lookup. And the
     header carries one chip that says whether this copy is served or static, emitted as
     static and promoted by the probe — never drawn live and demoted later."""
     doc = {"recorded": 1, "omitted": 0, "untraced": 0, "viewer": "assets/tv/index.html",
@@ -3797,7 +3797,7 @@ def test_a_trace_row_is_addressed_by_its_test_and_the_header_says_which_page_thi
     # the button needs to what it does.
     assert "b.getAttribute('data-tip-served')" in page
     assert "querySelectorAll('.rm-t[data-id]')" in page
-    # Served, the 📺 is a link into the viewer in a new window; off disk it copies the
+    # Served, the 🎭 is a link into the viewer in a new window; off disk it copies the
     # show-trace line. The page carries no trace list, no frame, no rows.
     assert "'Open test replay'" in page
     assert "tv.target = '_blank'" in page and "copy(t.cmd)" in page
@@ -3805,7 +3805,7 @@ def test_a_trace_row_is_addressed_by_its_test_and_the_header_says_which_page_thi
 
 
 # --------------------------------------------------------------------------- #
-# the 🎭: from a test on the Tests tab to the sequence it drew
+# the 🎼: from a test on the Tests tab to the sequence it drew
 # --------------------------------------------------------------------------- #
 def _genseq_fixture(tmp_path: Path) -> tuple[str, str]:
     """A feature file with two scenarios, one of them tagged, and the picture the
@@ -4053,11 +4053,11 @@ def test_a_pair_is_born_open_and_folded_by_a_script_that_runs_after_the_measurin
 
 def test_the_sequences_are_a_registry_the_detective_reads(tmp_path):
     """The map addresses a row by repo-relative path and declaration line. The registry
-    carries the same key per drawn scenario, so the 🎭 is a lookup and not a guess."""
+    carries the same key per drawn scenario, so the 🎼 is a lookup and not a guess."""
     js = build.SEQLINK_JS
     assert "document.getElementById('hr-genseq')" in js
     assert "querySelectorAll('.rm-t[data-id]')" in js
-    assert "'.rm-seq'" in js and "\\uD83C\\uDFAD" in js
+    assert "'.rm-seq'" in js and "\\uD83C\\uDFBC" in js
     # It must not toggle the row it sits on, and it must open a pair a reader folded away.
     assert "ev.stopPropagation()" in js and "target.open = true" in js
     assert "'seq-hit'" in js, "the pair says once that it is the one that was asked for"

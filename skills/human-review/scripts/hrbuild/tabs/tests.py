@@ -268,13 +268,13 @@ def _ms(value) -> str:
 
 def render_traces(doc: dict, root: Path, out_dir: Path,
                   touched: set[tuple[str, int]] | None = None) -> tuple[str, int]:
-    """What the run recorded, as a registry the 📺 on the covering-tests rows reads.
+    """What the run recorded, as a registry the 🎭 on the covering-tests rows reads.
 
     Nothing visible. There used to be a list here — "Step through what the tests did",
     one collapsible row per recording with the viewer framed inside it — and every word
     on it was already on the covering-tests map above: the test's title, its file and
     line, whether it passed. The one thing the row added was the way into the recording,
-    and that is now the 📺 itself: served, it opens the viewer in a window of its own,
+    and that is now the 🎭 itself: served, it opens the viewer in a window of its own,
     where a three-pane application belongs, instead of in 78vh of a text column that has
     to be scrolled to keep the snapshot pane in view.
 
@@ -301,7 +301,7 @@ def render_traces(doc: dict, root: Path, out_dir: Path,
     #
     # Not in `.actions.json`, though, and that is deliberate: the manifest is the list of
     # things the *server* may be asked to run, and `show-trace` opens a desktop window.
-    # Served, the 📺 has a better answer anyway — the trace viewer copied beside this page,
+    # Served, the 🎭 has a better answer anyway — the trace viewer copied beside this page,
     # in a browser window of its own — so the command exists for exactly the reader who
     # has no server to ask.
     home = shlex.quote(str(root.resolve()))
@@ -920,7 +920,7 @@ def coverage_tests(frag: str, doc: dict, test_doc: dict | None, root: Path) -> s
     """The matrix's own test list, grown to every test coverage says runs changed code.
 
     The card is the model's, and so is its renderer: the UI/API/unit badge, the new/edited
-    stamp, the 📺 replay and the sequence diagram hang off a row by its `file:line` key.
+    stamp, the 🎭 replay and the sequence diagram hang off a row by its `file:line` key.
     A test coverage found and the model did not name is added to `rm-data` in the model's
     own shape — its body as the one excerpt — so it is drawn by the same code as every other
     row, not by a second list that looks different and knows none of that."""

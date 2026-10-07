@@ -1,7 +1,7 @@
-// The 🎭 on a covering-tests row whose test drew a sequence: the way from the test to
+// The 🎼 on a covering-tests row whose test drew a sequence: the way from the test to
 // the picture of what its run actually did, over on the Sequence tab.
 //
-// The 📺 beside it opens the same run as a Playwright recording — frame by frame, from
+// The 🎭 beside it opens the same run as a Playwright recording — frame by frame, from
 // the browser's side. This opens the other account of it: the calls the run made, in
 // order, across the stack. Two doors out of one row, which is why they look alike.
 //
@@ -67,7 +67,7 @@
       if (!where) return;
       var a = document.createElement('a');
       a.className = 'rm-seq';
-      a.textContent = '\uD83C\uDFAD';
+      a.textContent = '\uD83C\uDFBC';
       a.href = '#' + entry.pair;
       a.setAttribute('aria-label', 'open the sequence this test drew');
       a.setAttribute('data-tip', 'Sequence diagram');

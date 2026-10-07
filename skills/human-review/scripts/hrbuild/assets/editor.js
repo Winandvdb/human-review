@@ -51,7 +51,7 @@
 
   // Published for the same reason `copy` is: the page has ONE toast, and a second script
   // that wanted one grew its own way of saying "copied" instead. TRACE_JS did exactly
-  // that \u2014 it swapped the 📺's `data-tip` for two seconds, which changes an attribute
+  // that \u2014 it swapped the 🎭's `data-tip` for two seconds, which changes an attribute
   // the tooltip had already rendered, so the only copy control on the page that said
   // nothing at all was the one that had written itself a message. Declared here rather
   // than in SERVER_JS because the toast and its stylesheet are this file's; SERVER_JS

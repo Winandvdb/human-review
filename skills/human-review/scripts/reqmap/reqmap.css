@@ -241,7 +241,7 @@
    spent a third of the row on a file name nobody was reading. */
 .reqmap .rm-tw{flex:0 0 auto;font-size:10.5px;margin-bottom:0;padding-top:1px}
 /* One width for every extension, right-aligned: `.feature`/`.spec.ts` came out 50.6px and
-   `.java` 31.6px, so the 🎭/📺 left of it jumped 19px between rows (UX review, 7 Oct 2026). */
+   `.java` 31.6px, so the 🎼/🎭 left of it jumped 19px between rows (UX review, 7 Oct 2026). */
 .reqmap .rm-tw{min-width:51px;text-align:right;box-sizing:border-box}
 /* What the branch did to this test, on the test itself. It is the fact the deleted
    evidence cards carried in prose ("the new one", "the pre-existing flow, extended") -

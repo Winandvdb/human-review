@@ -238,7 +238,7 @@ def harvest(report: Path, out: Path, prefix: str, root: Path,
     # and the page is offered as a downloadable zip; a limit that could drop the recording
     # of the one test that failed would be a limit on exactly the wrong thing. Below the
     # failures, the tests of the files the branch touched: those are the rows the Tests
-    # tab marks as covering the change, and a reader who clicks the 📺 on one of them and
+    # tab marks as covering the change, and a reader who clicks the 🎭 on one of them and
     # finds nothing has been told the run was not recorded, when it was — the recording
     # was cut in favour of a test of something else. Skipped results go last: a test that
     # never ran recorded a browser opening and closing, and a limit spent on that has

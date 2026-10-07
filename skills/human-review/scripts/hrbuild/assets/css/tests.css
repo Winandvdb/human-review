@@ -83,7 +83,7 @@ ul.req-tests li { list-style:none; }
    itself. The row is deliberately the same furniture as a ledger row — the same flag
    column, the same `.tloc` — because it is the same test seen from a different angle,
    and a second vocabulary for "this one failed" would be a second thing to learn. */
-/* The 📺 a covering-tests row wears when the run recorded that test. Served, it opens
+/* The 🎭 a covering-tests row wears when the run recorded that test. Served, it opens
    the replay in a window of its own; off disk it copies the line that does. */
 .rm-tv { flex:0 0 auto; text-decoration:none; font-size:12px; line-height:1; }
 .rm-tv:hover { filter:brightness(1.2); }

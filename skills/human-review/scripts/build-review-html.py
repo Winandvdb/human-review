@@ -1008,7 +1008,7 @@ def _main(argv=None) -> int:
             frag, n = render_traces(traces_doc, root, out_dir, touched)
             if not frag:
                 return "", 0, 0
-            # No heading: the block is a registry the 📺 on the covering-tests rows read,
+            # No heading: the block is a registry the 🎭 on the covering-tests rows read,
             # not a thing to look at. Weight, and no changes — the same call `codecity`
             # and `puml` make. A trace is a recording of how the code behaves now; it is
             # evidence *about* the branch, not a thing the branch moved.

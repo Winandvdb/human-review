@@ -40,7 +40,22 @@ only when the previous push's record (`pr-comments.posted.json`) lists it as thi
 pipeline's; any other comment is left where it is, and the script says so.
 
 After a push, `.human-review/pr-comments.posted.json` records each marker's `html_url`, so
-the page can put a link to its GitHub comment beside every item.
+the page can put a link to its GitHub comment beside every item — **whatever the outcome**:
+`status` is `complete` or `partial`, with `present` of `expected` and a `message` in plain
+words ("GitHub timed out — 30 of 43 posted; click Retry to post the remaining 13"), so the
+page shows what is on GitHub and not what was meant to be.
+
+**One review never carries more than `BATCH` comments.** PR #51's 41 inline comments went
+out as one *create a review* call; GitHub gave up answering after its 10 seconds ("If GitHub
+takes more than 10 seconds to process an API request, GitHub will terminate the request…
+try to simplify your request", docs: *Troubleshooting the REST API*), answered 504 — and
+created the review anyway, its comments appearing over the following seconds (30 visible
+when the error was shown, all 41 a minute later). So the comments are sent in reviews of
+`BATCH`, the first carrying the summary and the rest a one-line "continued", serially and
+`GAP` seconds apart (docs: *Best practices* — serial, at least one second between
+mutative requests). And a 5xx or a timeout is never simply retried: the script waits until
+what that call may have made stops appearing (`settle`), lists the PR again and plans the
+rest from what is there, so a re-send can only post what is missing.
 
 `--from-review-points` writes the payload deterministically out of `review-points.md` —
 for a branch whose agent predates this file. It is the fallback, not the flow: the agent's
@@ -60,12 +75,14 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import hashlib
 import html
 import importlib.util
 import json
 import re
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -86,6 +103,21 @@ PILES = {"fixed": "F", "ignored": "I", "assumption": "A"}
 PILE_OF_KEY = {"autofixes": "fixed", "findings": "ignored", "assumptions": "assumption"}
 SLUG_MAX = 48
 BODY_MAX = 700          # a PR comment is a pointer to the page, not a copy of it
+BATCH = 15              # line comments per *create a review* call — 41 in one timed out
+GAP = 1.0               # seconds between two mutative calls (GitHub's best practices)
+SETTLE_TRIES = 10       # polls after a 5xx/timeout before deciding what it left behind
+SETTLE_WAIT = 3.0       # seconds between those polls
+MAX_REPLANS = 3         # 5xx/timeouts survived in one push before it stops and says so
+#: The last line of `--dry-run` and of a push: one JSON object the page reads, so it never
+#: has to show — or parse — anything else the script prints.
+PREVIEW_TAG = "::hr-push-preview::"
+RESULT_TAG = "::hr-push-result::"
+
+
+def more_marker(round_id: str | None) -> str:
+    """The hidden line of a review that continues a round's summary in another batch."""
+    return f"<!-- hr:review-more:{round_id[:ROUND_LEN]} -->" if round_id else \
+        "<!-- hr:review-more -->"
 
 
 # --------------------------------------------------------------------------- #
@@ -442,6 +474,8 @@ class Call:
     path: str
     payload: dict
     why: str
+    #: The markers this call puts on the PR — what `settle` waits for after a 5xx.
+    expect: list = field(default_factory=list)
 
     def shell(self) -> str:
         return (f"gh api -X {self.method} {self.path} --input - <<'JSON'\n"
@@ -454,6 +488,12 @@ class Plan:
     resolved: list[Resolved] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     marker: str = REVIEW_MARKER        # the hidden line that names this round's summary
+    #: Per item: "new" (not on GitHub yet), "update" (there, body edited), "move" (there,
+    #: on other lines: deleted and posted again) or "same" (there as it should be).
+    fate: dict = field(default_factory=dict)
+
+    def to_send(self) -> list[Resolved]:
+        return [r for r in self.resolved if self.fate.get(r.cid) != "same"]
 
 
 def _face(r: Resolved) -> str:
@@ -474,6 +514,12 @@ def review_body(payload: dict, folded: list[Resolved]) -> str:
                      + (f"\n\n{r.permalink}" if r.permalink else "")
                      for r in folded))
     return f"{body}\n\n{review_marker(payload.get('commit_id'))}".lstrip()
+
+
+def in_summary(r: Resolved, review_body_text: str) -> bool:
+    """Whether a folded item is quoted in a review's body as this push would quote it."""
+    text = MARKER.sub("", r.comment["body"]).strip()
+    return f"**`{_face(r)}`** — {text}" in review_body_text
 
 
 def _place(c: dict) -> tuple:
@@ -542,6 +588,7 @@ def plan(payload: dict, diff: Diff, repo: str, pr: int,
                                     f"delete {r.cid}: at {_where(old)}, it belongs {there}"))
                 p.notes.append(f"{r.cid}: posted at {_where(old)}; deleted and posted again "
                                + there)
+                p.fate[r.cid] = "move"
                 old = None
             elif moved:
                 p.notes.append(f"{r.cid}: posted earlier at {_where(old)}, which is not in "
@@ -551,14 +598,20 @@ def plan(payload: dict, diff: Diff, repo: str, pr: int,
             if (old.get("body") or "").strip() != r.comment["body"].strip():
                 p.calls.append(Call("PATCH", f"repos/{repo}/pulls/comments/{old['id']}",
                                     {"body": r.comment["body"]}, f"update {r.cid}"))
+                p.fate[r.cid] = "update"
             else:
                 p.notes.append(f"{r.cid}: already posted, unchanged")
+                p.fate[r.cid] = "same"
             continue
+        p.fate.setdefault(r.cid, "new")
         if r.mode == "body":
             folded.append(r)
+            if ours is not None and in_summary(r, ours.get("body") or ""):
+                p.fate[r.cid] = "same"
         elif r.mode == "file":
             p.calls.append(Call("POST", f"repos/{repo}/pulls/{pr}/comments",
-                                {**r.comment, "commit_id": diff.head}, f"file comment {r.cid}"))
+                                {**r.comment, "commit_id": diff.head}, f"file comment {r.cid}",
+                                expect=[r.cid]))
         else:
             new_lines.append(r)
 
@@ -567,14 +620,24 @@ def plan(payload: dict, diff: Diff, repo: str, pr: int,
         if (ours.get("body") or "").strip() != body.strip():
             p.calls.append(Call("PUT", f"repos/{repo}/pulls/{pr}/reviews/{ours['id']}",
                                 {"body": body}, "update the review's body"))
-    if new_lines or ours is None:
+    # In reviews of BATCH: one review with 41 comments outlived GitHub's 10 s and came back
+    # 504 while it was being created anyway. The first batch carries the summary when this
+    # round has none yet; every other one says it continues it.
+    batches = [new_lines[i:i + BATCH] for i in range(0, len(new_lines), BATCH)] or \
+        ([[]] if ours is None else [])
+    more = more_marker(payload.get("commit_id"))
+    for k, chunk in enumerate(batches):
+        first = k == 0 and ours is None
         p.calls.append(Call("POST", f"repos/{repo}/pulls/{pr}/reviews", {
             "commit_id": diff.head,
             "event": "COMMENT",
-            "body": body if ours is None else
-            f"{len(new_lines)} more from the same review record.\n\n<!-- hr:review-more -->",
-            "comments": [r.comment for r in new_lines],
-        }, f"create a review with {len(new_lines)} line comment(s)"))
+            "body": body if first else
+            f"Review record, continued — {len(chunk)} more comment"
+            f"{'' if len(chunk) == 1 else 's'} on the lines they are about.\n\n{more}",
+            "comments": [r.comment for r in chunk],
+        }, f"create a review with {len(chunk)} line comment(s)"
+           + (f" (part {k + 1} of {len(batches)})" if len(batches) > 1 else ""),
+            expect=[r.cid for r in chunk]))
     # Last: a comment is deleted only once its replacement has been accepted.
     p.calls.extend(deletes)
     return p
@@ -584,6 +647,47 @@ def plan(payload: dict, diff: Diff, repo: str, pr: int,
 # GitHub, through gh
 # --------------------------------------------------------------------------- #
 
+#: What a 5xx or a timeout looks like in `gh`'s words — a call GitHub may have carried out
+#: anyway, so the next step is to look, not to send it again.
+TRANSIENT = re.compile(r"\(HTTP 5\d\d\)|HTTP 5\d\d|timed? ?out|couldn't respond to your request "
+                       r"in time|bad gateway|connection reset|unexpected EOF", re.I)
+
+
+class GhError(RuntimeError):
+    """A `gh` call that failed, with GitHub's HTTP status when it said one."""
+
+    def __init__(self, text: str):
+        super().__init__(text)
+        m = re.search(r"\(HTTP (\d{3})\)|HTTP (\d{3})", text)
+        self.status = int(m.group(1) or m.group(2)) if m else None
+
+    @property
+    def transient(self) -> bool:
+        return (self.status or 0) >= 500 or bool(TRANSIENT.search(str(self)))
+
+
+def is_transient(e: Exception) -> bool:
+    return getattr(e, "transient", None) if isinstance(e, GhError) else \
+        bool(TRANSIENT.search(str(e)))
+
+
+def plain_reason(e: Exception) -> str:
+    """What went wrong, in the reader's words — never the command line."""
+    text = str(e)
+    status = getattr(e, "status", None)
+    if is_transient(e):
+        return "GitHub timed out"
+    if status == 422:
+        return "GitHub refused a comment (a line it does not show in the diff?)"
+    if status in (401, 403) and "rate limit" not in text.lower():
+        return "GitHub did not accept your gh login (run `gh auth status`)"
+    if "rate limit" in text.lower() or status == 429:
+        return "GitHub asked us to slow down"
+    if status == 404:
+        return "GitHub could not find the pull request"
+    return "GitHub refused the request"
+
+
 class Gh:
     """Everything this script asks of GitHub goes through `gh api`, so the credentials are
     the reader's own and nothing here ever sees a token."""
@@ -592,8 +696,14 @@ class Gh:
         r = subprocess.run(["gh", *args], input=json.dumps(data) if data is not None else None,
                            capture_output=True, text=True)
         if r.returncode:
-            raise RuntimeError(f"gh {' '.join(args[:4])}: {r.stderr.strip() or r.stdout.strip()}")
+            raise GhError(f"gh {' '.join(args[:4])}: {r.stderr.strip() or r.stdout.strip()}")
         return r.stdout
+
+    def login(self) -> str | None:
+        try:
+            return self.run(["api", "user", "--jq", ".login"]).strip() or None
+        except RuntimeError:
+            return None
 
     def list(self, path: str) -> list[dict]:
         out = self.run(["api", "--paginate", path, "--jq", ".[]"])
@@ -619,16 +729,94 @@ class Gh:
         return r.stdout.strip()
 
 
-def execute(p: Plan, gh, repo: str, pr: int, posted_path: Path, meta: dict) -> dict:
-    for call in p.calls:
-        gh.send(call)
-    after = gh.list(f"repos/{repo}/pulls/{pr}/comments")
-    reviews = gh.list(f"repos/{repo}/pulls/{pr}/reviews")
-    by_marker = {}
-    for e in sorted(after, key=lambda e: e.get("id") or 0):
+def _markers(comments: list[dict]) -> dict[str, list[dict]]:
+    out: dict[str, list[dict]] = {}
+    for e in sorted(comments, key=lambda e: e.get("id") or 0):
         m = MARKER.search(e.get("body") or "")
         if m:
-            by_marker[m.group(1)] = e          # the newest: what this push just posted
+            out.setdefault(m.group(1), []).append(e)
+    return out
+
+
+def settle(gh, repo: str, pr: int, call: Call, sleep=time.sleep,
+           tries: int = SETTLE_TRIES, wait: float = SETTLE_WAIT) -> int:
+    """After `call` came back as a 5xx or a timeout: wait until what it may have made anyway
+    has stopped appearing, and return how many of its comments are on the PR.
+
+    PR #51's review answered 504 and was created all the same, its comments showing up over
+    the next seconds — so "is it there?" asked once, at once, would have said "30 of 41" and
+    a retry would have posted the other 11 twice. Done when every comment the call carried is
+    there, or when the count has not moved for two polls in a row."""
+    want = set(call.expect)
+    if not want:
+        sleep(wait)
+        return 0
+    last, still = -1, 0
+    seen = 0
+    for _ in range(tries):
+        sleep(wait)
+        try:
+            seen = len(want & set(_markers(gh.list(f"repos/{repo}/pulls/{pr}/comments"))))
+        except RuntimeError:
+            continue
+        if seen == len(want):
+            return seen
+        still = still + 1 if seen == last else 0
+        if still >= 2:
+            return seen
+        last = seen
+    return seen
+
+
+def execute(p: Plan, gh, repo: str, pr: int, posted_path: Path, meta: dict,
+            replan=None, sleep=time.sleep) -> dict:
+    """Send the plan's calls one by one, `GAP` apart, and record what is on GitHub after —
+    on every outcome, so the page shows the truth.
+
+    A 5xx or a timeout is not retried as it was: `settle` waits for what that call may
+    have made anyway, then `replan()` (the PR listed again, the payload planned against it)
+    yields only what is still missing. Any other refusal stops the push. Either way the
+    record says `partial`, how many are on the PR, and why, in plain words."""
+    calls = list(p.calls)
+    error: Exception | None = None
+    replans = 0
+    sent = 0
+    while calls:
+        call = calls.pop(0)
+        try:
+            gh.send(call)
+            sent += 1
+        except RuntimeError as e:
+            if not is_transient(e) or replan is None or replans >= MAX_REPLANS:
+                error = e
+                break
+            replans += 1
+            print(f"  ! {call.why}: {plain_reason(e)} — checking what GitHub made anyway",
+                  file=sys.stderr)
+            settle(gh, repo, pr, call, sleep)
+            try:
+                p2 = replan()
+            except RuntimeError as e2:
+                error = e2
+                break
+            calls = list(p2.calls)
+            print(f"  · {len(calls)} call(s) left after looking again", file=sys.stderr)
+            continue
+        if calls:
+            sleep(GAP)
+    return record_state(p, gh, repo, pr, posted_path, meta, error=error, sent=sent)
+
+
+def record_state(p: Plan, gh, repo: str, pr: int, posted_path: Path, meta: dict,
+                 error: Exception | None = None, sent: int = 0) -> dict:
+    """What is on the PR now, item by item, written to `pr-comments.posted.json`."""
+    try:
+        after = gh.list(f"repos/{repo}/pulls/{pr}/comments")
+        reviews = gh.list(f"repos/{repo}/pulls/{pr}/reviews")
+    except RuntimeError as e:
+        after, reviews = [], []
+        error = error or e
+    marks = _markers(after)
     review = next((r for r in reviews if p.marker in (r.get("body") or "")), None)
     record = {
         **meta,
@@ -637,24 +825,69 @@ def execute(p: Plan, gh, repo: str, pr: int, posted_path: Path, meta: dict) -> d
         "review_marker": p.marker,
         "comments": {},
     }
+    present, missing = 0, []
     for r in p.resolved:
-        e = None if r.mode == "body" else by_marker.get(r.cid)
-        e = e or {}
+        if r.mode == "body":
+            there = review is not None and in_summary(r, review.get("body") or "")
+            e = {}
+        else:
+            e = (marks.get(r.cid) or [{}])[-1]          # the newest: what this push posted
+            there = bool(e.get("html_url"))
+        present += there
+        if not there:
+            missing.append(r.cid)
         rev, a, b = r.lines or (None, None, None)
         start = e.get("start_line") or r.comment.get("start_line") or (a if b and a != b else None)
         # `line` and `commit_id` together: the lines are lines of that commit, whether the
         # comment sits on them or the summary quotes them.
         record["comments"][r.cid] = {
             "pile": r.pile, "title": r.title, "mode": r.mode,
-            "html_url": e.get("html_url") or (record["review_url"] if r.mode == "body" else None),
+            "html_url": e.get("html_url") or (record["review_url"] if r.mode == "body"
+                                               and there else None),
             "path": r.comment.get("path"),
             "line": e.get("line") or r.comment.get("line") or b,
             **({"start_line": start} if start else {}),
             "commit_id": e.get("commit_id") or rev or meta.get("head"),
             **({"permalink": r.permalink} if r.permalink else {}),
         }
+    ours = {r.cid for r in p.resolved}
+    dups = sorted(cid for cid, es in marks.items() if cid in ours and len(es) > 1)
+    total = len(p.resolved)
+    record.update(expected=total, present=present, missing=missing, duplicates=dups,
+                  sent=sent, status="complete" if present == total and error is None
+                  else "partial")
+    if record["status"] == "complete":
+        msg = (f"All {total} comments are on GitHub PR #{pr}." if sent else
+               f"All {total} comments were already on GitHub PR #{pr}.")
+    else:
+        why = plain_reason(error) if error else "Not everything reached GitHub"
+        left = total - present
+        msg = (f"{why} — {present} of {total} posted; click Retry to post the remaining "
+               f"{left}." if left else f"{why} — all {total} are on GitHub, but the last "
+               "step failed; click Retry.")
+        record["error"] = str(error) if error else None
+    if dups:
+        msg += (f" {len(dups)} appear more than once on GitHub — left as they are; "
+                "delete the extra copies by hand.")
+    record["message"] = msg
     posted_path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return record
+
+
+def preview(p: Plan, pr: int, repo: str, url: str | None, user: str | None) -> dict:
+    """What `--dry-run` hands the page: the comments a push would post or edit, readable —
+    where, which item, the text — and nothing about how they are sent."""
+    items = []
+    for r in p.to_send():
+        rev, a, b = r.lines or (None, None, None)
+        where = (_where(r.comment) if r.mode != "body"
+                 else _face(r) + " (in the review's summary)")
+        items.append({"id": r.cid, "fate": p.fate.get(r.cid, "new"), "where": where,
+                      "pile": r.pile, "title": r.title,
+                      "text": MARKER.sub("", r.comment["body"]).strip()})
+    return {"pr": pr, "repo": repo, "url": url, "user": user, "total": len(p.resolved),
+            "already": len(p.resolved) - len(items), "items": items,
+            "calls": len(p.calls)}
 
 
 # --------------------------------------------------------------------------- #
@@ -955,15 +1188,29 @@ def main(argv=None) -> int:
         print(f"\n{len(p.calls)} call(s) would be made:\n")
         for c in p.calls:
             print(f"# {c.why}\n{c.shell()}\n")
+        # Last, on one line: what the page's confirmation shows — never the calls above.
+        print(PREVIEW_TAG + " " + json.dumps(preview(p, pr, repo, info["url"], gh.login()),
+                                             ensure_ascii=False))
         return 0
-    try:
-        record = execute(p, gh, repo, pr, posted_path,
-                         {"repo": repo, "pr": pr, "url": info["url"], "head": head})
-    except RuntimeError as e:
-        print(f"GitHub refused: {e}", file=sys.stderr)
-        return 4
-    print(f"posted {len(p.calls)} call(s); review: {record.get('review_url')}")
-    return 0
+
+    def replan() -> Plan:
+        return plan(payload, diff, repo, pr, gh.list(f"repos/{repo}/pulls/{pr}/comments"),
+                    gh.list(f"repos/{repo}/pulls/{pr}/reviews"), owned)
+
+    record = execute(p, gh, repo, pr, posted_path,
+                     {"repo": repo, "pr": pr, "url": info["url"], "head": head,
+                      # What it was pushed from: the page offers "re-publish" only when the
+                      # payload on disk is no longer this file.
+                      "payload_sha256": hashlib.sha256(file.read_bytes()).hexdigest()},
+                     replan=replan)
+    print(record["message"], file=sys.stderr if record["status"] != "complete" else sys.stdout)
+    if record.get("error"):
+        print(f"  ({record['error']})", file=sys.stderr)
+    print(RESULT_TAG + " " + json.dumps(
+        {k: record.get(k) for k in ("status", "expected", "present", "missing", "duplicates",
+                                    "message", "review_url", "pr", "url")},
+        ensure_ascii=False))
+    return 0 if record["status"] == "complete" else 4
 
 
 if __name__ == "__main__":

@@ -1,12 +1,14 @@
 """The Review tab: findings, assumptions, auto-fixes, the aftermath band."""
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import re
 import shlex
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
 
 from ..shared.actions import ACTIONS, declare_action, RERUN_ACTION
@@ -3388,13 +3390,20 @@ def prepare_pr_push(spec: dict, out_dir: Path, root: Path, skill_dir: Path) -> d
     except ValueError:
         return None
     here, py = shlex.quote(str(root.resolve())), shlex.quote(sys.executable)
-    push = (f"cd {here} && {py} {shlex.quote(str(script))}"
+    push = (f"{py} {shlex.quote(str(script))}"
             f" --file {shlex.quote(rel + '/' + PR_COMMENTS_JSON)}")
     refresh = (f"{py} {shlex.quote(str(skill_dir / 'refresh-report.py'))}"
                f" --dir {shlex.quote(rel)} --steps reviewpoints,aftermath --no-serve")
-    declare_action(PUSH_PR_DRY_ACTION, f"{push} --dry-run",
-                   label="Print the exact GitHub calls the push would make")
-    declare_action(PUSH_PR_ACTION, f"{push} && {refresh}", reload=True,
+    declare_action(PUSH_PR_DRY_ACTION, f"cd {here} && {push} --dry-run",
+                   label="List the comments a push would post")
+    # The push alone, no rebuild after it: the page reads `pr-comments.posted.json` back
+    # from the server and puts the ↗ beside every item itself (`PR_PUSH_JS`). It used to be
+    # `push && refresh`: PR #51's push timed out half-way, `&&` skipped the refresh, and the
+    # page went on saying nothing had been posted while 41 comments sat on the PR — and on
+    # a success the rebuild rewrote review.html under the reader. The next build bakes the
+    # links in anyway, from the same record.
+    del refresh
+    declare_action(PUSH_PR_ACTION, f"cd {here} && {push}",
                    label="Post the Review tab's items as comments on the pull request")
     try:
         posted = json.loads((out_dir / PR_POSTED_JSON).read_text(encoding="utf-8"))
@@ -3412,6 +3421,10 @@ def prepare_pr_push(spec: dict, out_dir: Path, root: Path, skill_dir: Path) -> d
                 # Where the thread sits, for the click that opens the card's lines in VS
                 # Code to bring it up there too (`gh_comment_link`'s data-pr-*).
                 c = (posted.get("comments") or {}).get(cid) or {}
+                if c.get("path"):
+                    item["_ghFile"] = (f"vscode://file/{root.resolve()}/{c['path']}"
+                                       f":{c.get('line') or 1}:1")
+                    item["_ghWhere"] = f"{c['path']}:{c.get('line') or 1}"
                 if not item["_ghInSummary"] and c.get("path") and c.get("line"):
                     item["_ghThread"] = {"path": c["path"], "line": c["line"],
                                          "start": c.get("start_line") or c["line"]}
@@ -3420,8 +3433,28 @@ def prepare_pr_push(spec: dict, out_dir: Path, root: Path, skill_dir: Path) -> d
     spec["_prPush"] = {"count": len(comments), "counts": counts,
                        "posted": sum(1 for u in urls.values() if u),
                        "pushedAt": posted.get("pushed_at"),
-                       "reviewUrl": posted.get("review_url"), "prUrl": posted.get("url")}
+                       "reviewUrl": posted.get("review_url"), "prUrl": posted.get("url"),
+                       # A push that stopped half-way says so on the page until a retry
+                       # completes it — the record is what is on GitHub, not what was meant.
+                       "status": posted.get("status") or (
+                           "complete" if urls and all(urls.values()) else None),
+                       "message": posted.get("message"),
+                       # Edited since it went out: the payload is not the one the record
+                       # was posted from, so "Published" gets a small re-publish beside it.
+                       "changed": _payload_changed(out_dir, posted)}
     return spec["_prPush"]
+
+
+def _payload_changed(out_dir: Path, posted: dict) -> bool:
+    """Whether `pr-comments.json` is no longer the file the record was pushed from. Only a
+    record that says what it was pushed from (`payload_sha256`) can answer yes."""
+    want = (posted or {}).get("payload_sha256")
+    if not want:
+        return False
+    try:
+        return hashlib.sha256((out_dir / PR_COMMENTS_JSON).read_bytes()).hexdigest() != want
+    except OSError:
+        return False
 
 
 def pr_exists(spec: dict, out_dir: Path) -> bool:
@@ -3432,6 +3465,51 @@ def pr_exists(spec: dict, out_dir: Path) -> bool:
     if pr.get("number") or "/pull/" in str(pr.get("url") or ""):
         return True
     return (out_dir / PR_POSTED_JSON).is_file()
+
+
+#: The GitHub Pull Requests extension's URI handler (microsoft/vscode-pull-request-github,
+#: `src/common/uri.ts` `UriHandlerPaths.OpenPullRequestWebview`, parsed by
+#: `fromOpenOrCheckoutPullRequestWebviewUri`): `?uri=` must be the bare PR URL — its regex
+#: is anchored at `/pull/<n>$`, so a `#discussion_r…` would fail it. It opens the PR's
+#: overview in the window that takes the URI, without a prompt; no path of the handler
+#: takes a comment or a thread, so the PR is as close as the link can aim.
+VSCODE_PR_URI = "vscode://github.vscode-pull-request-github/open-pull-request-webview?uri="
+_PR_URL = re.compile(r"^(https://github\.com/[^/#?]+/[^/#?]+/pull/\d+)")
+
+
+#: The VS Code mark, in its blue, in front of every *in VS Code*.
+VSC_ICON = ('<svg class="vsc-ico" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="#007ACC" d="M23.15 2.587L18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z"/></svg>')
+
+
+def vscode_pr_uri(url: str | None) -> str | None:
+    """The PR an `html_url` belongs to, as the extension's open-in-VS-Code URI."""
+    m = _PR_URL.match(url or "")
+    return VSCODE_PR_URI + urllib.parse.quote(m.group(1), safe="") if m else None
+
+
+def vscode_pr_link(url: str | None, cls: str = "f-vsc") -> str:
+    """*in VS Code* — the same PR in the GitHub Pull Requests view. Served, the page first
+    brings forward the VS Code window on this checkout (`PR_PUSH_JS`), so the URI lands
+    there and not in whichever window was used last."""
+    uri = vscode_pr_uri(url)
+    if not uri:
+        return ""
+    n = _PR_URL.match(url).group(1).rsplit("/", 1)[1]
+    return (f' <a class="{cls}" href="{html.escape(uri, quote=True)}" '
+            f'data-tip="Open PR #{n} in VS Code (GitHub Pull Requests)">{VSC_ICON} in VS Code</a>')
+
+
+def vscode_file_link(href: str | None, where: str) -> str:
+    """*in VS Code* beside an item's *on GitHub ↗*: the commented file at the comment's line,
+    as every other reference on the page opens one — editor.js sends it to the VS Code
+    window on this checkout, and because the card names its thread (`data-pr-*` on the ↗)
+    it asks for the thread too, which the GitHub Pull Requests extension renders inline
+    under the line when the PR's branch is checked out."""
+    if not href:
+        return ""
+    return (f' <a class="f-vsc" href="{html.escape(href, quote=True)}" '
+            f'data-tip="{html.escape(f"Open {where} in VS Code, with the PR comment", quote=True)}">'
+            f'{VSC_ICON} in VS Code</a>')
 
 
 def gh_comment_link(f) -> str:
@@ -3453,64 +3531,292 @@ def gh_comment_link(f) -> str:
              f' data-pr-line="{int(t["line"])}" data-pr-start="{int(t["start"])}"'
              if t.get("path") and t.get("line") else "")
     return (f' <a class="f-gh" href="{html.escape(url, quote=True)}" target="_blank" '
-            f'rel="noopener" data-tip="{html.escape(tip, quote=True)}"{where}>on GitHub ↗</a>')
+            f'rel="noopener" data-tip="{html.escape(tip, quote=True)}"{where}>on GitHub ↗</a>'
+            + vscode_file_link(f.get("_ghFile"), f.get("_ghWhere") or "the file"))
 
+
+#: The last line `push-pr-comments.py` prints after `--dry-run` and after a push: one JSON
+#: object, the only part of its output the page reads.
+PR_PREVIEW_TAG = "::hr-push-preview::"
+PR_RESULT_TAG = "::hr-push-result::"
 
 # Run on DOMContentLoaded, not inline: this sits in the Review tab, far above the page's
 # own scripts, and `window.HR` (server.js) does not exist yet where it is parsed — an
 # inline IIFE returned early and the button was never raised.
-PR_PUSH_JS = """<script>document.addEventListener('DOMContentLoaded', function(){
-  var b = document.querySelector('.pr-push');
-  if (!b || !window.HR) return;
-  HR.onready(function () { if (HR.can(b.dataset.push)) b.hidden = false; });
+#
+# The confirmation asks one question in the reader's words — "Post 13 comments on GitHub
+# PR #51 as @victorrentea?" — and keeps the comments themselves one click away. It used to
+# show the dry run's `gh api` calls, "done on GitHub in my name": the right facts in the
+# wrong language. Failures land on the counts line, in words, with Retry on the button —
+# never an alert() quoting a command line, and never a button left on "Posting…".
+#
+# Written so it can also be dropped into a page built before it (a live patch): it
+# rebuilds the dialog's inside and the message slot when they are the old ones, and swaps
+# the button for a clone, which sheds the old click handler.
+PR_PUSH_JS = """<script>(function () {
+  // *in VS Code*: bring the window on this checkout forward first (served), then hand the
+  // OS the extension's URI — VS Code gives a URI to the window used last. In the capture
+  // phase, ahead of editor.js, which takes every vscode: link for a file reference.
+  var token = null;
+  if (window.HR) HR.onready(function (caps) { token = caps && caps.token; });
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('a.pr-vsc');
+    if (!a || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button !== 0) return;
+    ev.preventDefault(); ev.stopPropagation();
+    var href = a.getAttribute('href');
+    function go() { window.location.href = href; }
+    if (!token) return go();
+    fetch('/__editor_open__', {method: 'POST', cache: 'no-store',
+      headers: {'Content-Type': 'application/json', 'X-Human-Review-Token': token},
+      body: '{}'})
+      .then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (j) { setTimeout(go, j && j.how === 'focused' ? 250 : 1500); }, go);
+  }, true);
+})();
+var HR_VSC_PR = '""" + VSCODE_PR_URI + """';
+var HR_VSC_ICON = '""" + VSC_ICON + """';
+function hrVscPr(url) {
+  var m = /^(https:\\/\\/github\\.com\\/[^\\/#?]+\\/[^\\/#?]+\\/pull\\/\\d+)/.exec(url || '');
+  return m ? HR_VSC_PR + encodeURIComponent(m[1]) : null;
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var old = document.querySelector('.pr-push');
+  if (!old || !window.HR) return;
+  var b = old.cloneNode(true); old.replaceWith(b);
   var dlg = document.getElementById('pr-push-dlg');
-  var face = b.textContent;
-  function done(msg) { b.disabled = false; b.textContent = face; if (msg) alert(msg); }
-  b.addEventListener('click', function () {
-    b.disabled = true; b.textContent = 'Preparing the calls\\u2026';
+  if (!dlg.querySelector('.pp-q')) dlg.innerHTML = '<form method="dialog">'
+    + '<p class="pp-q"></p><p class="pp-sub"></p>'
+    + '<details class="pp-what"><summary>Show what will be posted</summary>'
+    + '<ol class="pp-list"></ol></details>'
+    + '<menu><button value="cancel">Cancel</button> '
+    + '<button value="post" class="primary">Post</button></menu></form>';
+  var line = b.parentNode;
+  var msg = line.querySelector('.pr-push-msg');
+  if (!msg) { msg = document.createElement('span'); msg.className = 'pr-push-msg';
+    msg.setAttribute('role', 'status'); msg.hidden = true; b.after(msg); }
+  var rep = line.querySelector('.pr-repub');
+  if (!rep) { rep = document.createElement('button'); rep.type = 'button';
+    rep.className = 'pr-repub'; rep.textContent = 're-publish'; rep.hidden = true;
+    rep.dataset.tip = 'The comments changed since they were published \\u2014 post the '
+      + 'difference; nothing already there is posted twice';
+    b.after(rep); }
+  var vsc = line.querySelector('.pr-vsc');
+  if (!vsc) { vsc = vscLink('pr-vsc', HR_VSC_PR); vsc.hidden = true; b.after(vsc); }
+  var face = b.dataset.face || 'Publish on GitHub';
+  var rec = null, changed = false;
+  function tagged(out, tag) {
+    var ls = String(out || '').split('\\n');
+    for (var i = ls.length - 1; i >= 0; i--) if (ls[i].indexOf(tag) === 0) {
+      try { return JSON.parse(ls[i].slice(tag.length)); } catch (e) { return null; } }
+    return null;
+  }
+  function say(text, kind) {
+    msg.textContent = text || ''; msg.hidden = !text;
+    msg.className = 'pr-push-msg' + (kind ? ' pp-' + kind : '');
+  }
+  function n(k, w) { return k + ' ' + w + (k === 1 ? '' : 's'); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag); if (cls) e.className = cls;
+    if (text != null) e.textContent = text; return e;
+  }
+  // push-pr-comments.py's `slug`, on the title as the page shows it (tags gone, entities
+  // read): the key of each item in the record.
+  function slug(t) {
+    var s = String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    if (s.length > 48) { s = s.slice(0, 48); var k = s.lastIndexOf('-'); if (k > 0) s = s.slice(0, k); }
+    return s || 'item';
+  }
+  // The ↗ beside every item the record says is on GitHub — what a rebuild would bake in,
+  // put there without one.
+  function decorate(r) {
+    var by = {};
+    Object.keys(r.comments || {}).forEach(function (cid) {
+      by[cid.replace(/^[A-Za-z]:/, '')] = r.comments[cid]; });
+    document.querySelectorAll('.f-title').forEach(function (t) {
+      var c = by[slug(t.textContent)];
+      if (!c || !c.html_url) return;
+      var a = t.nextElementSibling;
+      if (!a || !a.classList.contains('f-gh')) {
+        a = el('a', 'f-gh', 'on GitHub \\u2197'); a.target = '_blank'; a.rel = 'noopener';
+        t.after(document.createTextNode(' '), a);
+      }
+      a.href = c.html_url;
+      a.dataset.tip = c.mode === 'body'
+        ? 'In the review\\u2019s summary on GitHub \\u2014 this line is not in the PR\\u2019s diff'
+        : 'PR comment';
+      if (c.mode !== 'body' && c.path && c.line) {
+        a.dataset.prPath = c.path; a.dataset.prLine = c.line;
+        a.dataset.prStart = c.start_line || c.line; }
+      // The commented file at the comment's line, opened the way every reference on the
+      // page is (editor.js): in the checkout's window, the thread brought up with it.
+      var root = (document.documentElement.dataset.hrRoot || '').replace(/\\/+$/, '');
+      if (!root || !c.path) return;
+      var where = c.path + ':' + (c.line || 1);
+      var v = a.nextElementSibling;
+      if (!(v && v.classList.contains('f-vsc'))) {
+        v = vscLink('f-vsc', '', ''); a.after(document.createTextNode(' '), v); }
+      v.href = 'vscode://file/' + root + '/' + where + ':1';
+      v.dataset.tip = 'Open ' + where + ' in VS Code, with the PR comment';
+    });
+  }
+  function vscLink(cls, uri, tip) {
+    var v = el('a', cls); v.innerHTML = HR_VSC_ICON + ' in VS Code';
+    if (uri) v.href = uri;
+    v.dataset.tip = tip != null ? tip : 'Open PR #' + decodeURIComponent(uri).split('/').pop()
+      + ' in VS Code (GitHub Pull Requests)';
+    return v;
+  }
+  // A record from before pushes said how they ended: complete when every item has its link.
+  function status(r) {
+    if (!r) return null;
+    if (r.status) return r.status;
+    var cs = Object.keys(r.comments || {}).map(function (k) { return r.comments[k] || {}; });
+    return cs.length && cs.every(function (c) { return c.html_url; }) ? 'complete' : null;
+  }
+  function show() {
+    var st = status(rec);
+    if (st === 'complete' && (rec.review_url || rec.url)) {
+      b.textContent = 'Published on GitHub \\u2197'; b.dataset.state = 'done';
+      b.dataset.tip = 'Open the review on GitHub' + (rec.pushed_at
+        ? ' \\u2014 published ' + rec.pushed_at.slice(0, 16).replace('T', ' ') : '');
+      rep.hidden = !changed;
+      var uri = hrVscPr(rec.url || rec.review_url);
+      if (uri) { vsc.href = uri; vsc.dataset.tip = 'Open PR #' + (rec.pr || '')
+        + ' in VS Code (GitHub Pull Requests)'; vsc.hidden = false; }
+    } else if (st === 'partial') {
+      b.textContent = 'Retry'; b.dataset.state = 'retry'; rep.hidden = true;
+      say(rec.message, 'err');
+    } else { b.textContent = face; b.dataset.state = ''; rep.hidden = true; }
+    b.disabled = false; rep.disabled = false;
+  }
+  function sha(text) {
+    if (text == null || !(window.crypto && crypto.subtle && window.TextEncoder))
+      return Promise.resolve(null);
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (h) {
+      return Array.prototype.map.call(new Uint8Array(h), function (x) {
+        return ('0' + x.toString(16)).slice(-2); }).join(''); });
+  }
+  function load() {
+    return fetch('pr-comments.posted.json', {cache: 'no-store'})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) {
+        if (!r) return;
+        rec = r; decorate(r);
+        if (!r.payload_sha256) { changed = false; return; }
+        return fetch('pr-comments.json', {cache: 'no-store'})
+          .then(function (x) { return x.ok ? x.text() : null; }).then(sha)
+          .then(function (h) { changed = !!h && h !== r.payload_sha256; });
+      }).catch(function () {}).then(show);
+  }
+  HR.onready(function () { if (HR.can(b.dataset.push)) { b.hidden = false; load(); } });
+  function done(text, kind) { show(); if (text) say(text, kind); }
+  function publish(from) {
+    b.disabled = rep.disabled = true; from.textContent = 'Checking GitHub\\u2026'; say('');
+    var label = from === rep ? 're-publish' : null;
+    function back(text, kind) { if (label) rep.textContent = label; done(text, kind); }
     HR.run(b.dataset.dry).then(function (s) {
-      if (s.exit !== 0) return done('The dry run failed:\\n\\n' + (s.output || ''));
-      dlg.querySelector('pre').textContent = s.output || '';
+      var pv = tagged(s.output, '""" + PR_PREVIEW_TAG + """');
+      if (s.exit !== 0 || !pv) return back('Could not read the pull request from GitHub '
+        + '\\u2014 check that gh is logged in, then try again.', 'err');
+      var items = pv.items || [];
+      if (!items.length) return back('All ' + n(pv.total, 'comment') + ' are already on '
+        + 'GitHub PR #' + pv.pr + '.', 'ok');
+      dlg.querySelector('.pp-q').textContent = 'Post ' + n(items.length, 'comment')
+        + ' on GitHub PR #' + pv.pr + (pv.user ? ' as @' + pv.user : '') + '?';
+      var edits = items.filter(function (i) { return i.fate === 'update'; }).length;
+      var sub = [];
+      if (pv.already) sub.push(n(pv.already, 'comment') + ' already there stay as they are.');
+      if (edits) sub.push(edits + ' of these edit a comment already there.');
+      var subEl = dlg.querySelector('.pp-sub');
+      subEl.textContent = sub.join(' '); subEl.hidden = !sub.length;
+      var list = dlg.querySelector('.pp-list'); list.textContent = '';
+      items.forEach(function (i) {
+        var li = el('li');
+        li.appendChild(el('code', 'pp-where', i.where));
+        li.appendChild(el('div', 'pp-text', i.text));
+        list.appendChild(li);
+      });
+      dlg.querySelector('.pp-what').open = false;
+      if (label) rep.textContent = label;
+      show(); b.disabled = rep.disabled = true;
       dlg.showModal();
       dlg.addEventListener('close', function once() {
         dlg.removeEventListener('close', once);
-        if (dlg.returnValue !== 'post') return done();
+        if (dlg.returnValue !== 'post') return back();
         b.textContent = 'Posting\\u2026';
-        HR.keepPlace();
+        say('Posting ' + n(items.length, 'comment') + ' on GitHub \\u2014 this can take a '
+          + 'minute.', 'info');
         HR.run(b.dataset.push).then(function (s2) {
-          if (s2.exit !== 0) return done('GitHub refused:\\n\\n' + (s2.output || ''));
-          location.reload();
-        }, function (e) { done(e.message); });
+          var r = tagged(s2.output, '""" + PR_RESULT_TAG + """');
+          var text = r ? r.message : (s2.exit === 0 ? 'Posted.' : 'Posting stopped before '
+            + 'GitHub answered \\u2014 click Retry; nothing already there is posted twice.');
+          load().then(function () {
+            if (s2.exit !== 0 && !(rec && rec.status === 'partial')) {
+              b.textContent = 'Retry'; b.dataset.state = 'retry'; }
+            say(text, s2.exit === 0 ? 'ok' : 'err');
+          });
+        }, function () {
+          back('Lost the review server while posting \\u2014 reload the page to see what '
+            + 'reached GitHub.', 'err');
+        });
       });
-    }, function (e) { done(e.message); });
+    }, function () {
+      back('The review server did not answer \\u2014 is it still running?', 'err');
+    });
+  }
+  b.addEventListener('click', function () {
+    if (b.dataset.state === 'done' && rec) {
+      window.open(rec.review_url || rec.url, '_blank', 'noopener'); return; }
+    publish(b);
   });
+  rep.addEventListener('click', function () { publish(rep); });
 });</script>"""
 
 
 def push_pr_button(spec) -> str:
-    """*Publish on GitHub*, at the end of the Review tab's sticky counts line.
+    """*Publish on GitHub*, at the end of the Review tab's sticky counts line, and the slot
+    after it where the outcome is said in words.
 
     Hidden until the probe says this server can run it — off disk, in the zip and on
-    GitHub Pages there is nothing to post with. A press runs `--dry-run` first and shows
-    its output (the summary, every downgrade, the exact `gh api` calls) in a dialog;
-    only *Post* sends anything, under the reader's own `gh` login, and then the Review
-    tab is re-derived so every item gets its ↗."""
+    GitHub Pages there is nothing to post with. A press asks GitHub what is already there
+    (`--dry-run`), then asks the reader one question — post N comments as @them? — with the
+    comments a click away; only *Post* sends anything, under the reader's own `gh` login.
+    Once everything is on the PR it reads *Published on GitHub ↗* and opens the review,
+    with a small *re-publish* beside it only when the comments changed since; a push that
+    stopped half-way leaves it on *Retry* with the record's sentence beside it. The page
+    keeps all three true without a rebuild, from the record the server serves."""
     pp = spec.get("_prPush")
     if not pp:
         return ""
     c = pp["counts"]
     again = pp["posted"] > 0
-    # One label whether or not it was pushed before — Victor's wording; the tooltip says
-    # when it last went out and that a second press updates rather than duplicates.
     face = "Publish on GitHub"
+    partial = pp.get("status") == "partial"
+    done = pp.get("status") == "complete" and bool(pp.get("reviewUrl") or pp.get("prUrl"))
     n = c['fixed'] + c['ignored'] + c['assumption']
-    tip = (f"{n} inline PR comment{'' if n == 1 else 's'}. Preview first; re-push updates, "
-           "never duplicates."
-           + (f" Last pushed {pp['pushedAt'][:16].replace('T', ' ')}."
-              if again and pp.get("pushedAt") else ""))
+    if done:
+        label, state = "Published on GitHub ↗", "done"
+        tip = "Open the review on GitHub" + (
+            f" — published {pp['pushedAt'][:16].replace('T', ' ')}" if pp.get("pushedAt") else "")
+    else:
+        label, state = ("Retry", "retry") if partial else (face, "")
+        tip = (f"{n} inline PR comment{'' if n == 1 else 's'}. Asks before posting; "
+               "re-pushing posts only what is missing, never twice."
+               + (f" Last pushed {pp['pushedAt'][:16].replace('T', ' ')}."
+                  if again and pp.get("pushedAt") else ""))
+    note = pp.get("message") if partial else ""
+    repub = done and pp.get("changed")
+    vsc = vscode_pr_link(pp.get("prUrl") or pp.get("reviewUrl"), "pr-vsc") if done else ""
     return (f' <button type="button" class="pr-push" hidden '
             f'data-dry="{PUSH_PR_DRY_ACTION}" data-push="{PUSH_PR_ACTION}" '
-            f'data-tip="{html.escape(tip, quote=True)}">{html.escape(face)}</button>')
+            f'data-face="{html.escape(face, quote=True)}" data-state="{state}" '
+            f'data-tip="{html.escape(tip, quote=True)}">{html.escape(label)}</button>'
+            + vsc.replace("<a ", "<a hidden ", 1)
+            + f'<button type="button" class="pr-repub"{"" if repub else " hidden"} '
+            'data-tip="The comments changed since they were published — post the difference; '
+            'nothing already there is posted twice">re-publish</button>'
+            f'<span class="pr-push-msg{" pp-err" if note else ""}" role="status"'
+            f'{"" if note else " hidden"}>{html.escape(note or "")}</span>')
 
 
 #: Said on hover of the counts line, where the publish button would be, when there is no pull
@@ -3530,12 +3836,15 @@ def no_pr_line(spec) -> str:
 
 
 def push_pr_dialog(spec) -> str:
-    """The dry run's output and the *Post* that follows it — after the counts line, not in
-    it: a `<dialog>` inside a `<p>` is not HTML the parser keeps where it was written."""
+    """The one question before posting, and the comments a click away — after the counts
+    line, not in it: a `<dialog>` inside a `<p>` is not HTML the parser keeps where it was
+    written. Filled by `PR_PUSH_JS` from the dry run's last line, never from its calls."""
     if not spec.get("_prPush"):
         return ""
     return ('<dialog id="pr-push-dlg" class="pr-push-dlg"><form method="dialog">'
-            '<p><b>These calls will be made to GitHub, under your account:</b></p><pre></pre>'
+            '<p class="pp-q"></p><p class="pp-sub"></p>'
+            '<details class="pp-what"><summary>Show what will be posted</summary>'
+            '<ol class="pp-list"></ol></details>'
             '<menu><button value="cancel">Cancel</button> '
             '<button value="post" class="primary">Post</button></menu></form></dialog>'
             + PR_PUSH_JS)

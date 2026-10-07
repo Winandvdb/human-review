@@ -4,9 +4,17 @@ The agent that writes `review-points.md` writes this file too, in the same sitti
 it still knows *which line* each item is about. It is the body of GitHub's *create a
 review* call — `POST /repos/{owner}/{repo}/pulls/{n}/reviews` — with every Fixed, Ignored
 and Assumptions item as an inline comment on the code it concerns. The Review tab's
-**Push to GitHub PR** button runs `scripts/push-pr-comments.py`, which re-checks the anchors
+**Publish on GitHub** button runs `scripts/push-pr-comments.py`, which re-checks the anchors
 against the PR as it is at that moment and sends the file. It does not write a word of it:
 no model runs at push time, so what lands on the PR is what you wrote here.
+
+It sends it in reviews of at most 15 comments, serially and a second apart (one review of 41
+timed out at GitHub's 10 seconds and was created anyway), never re-sends a call that came
+back 5xx without first looking at what it left on the PR, and skips every comment whose
+hidden `<!-- hr:… -->` marker is already there — a re-run posts only what is missing. What
+is on the PR afterwards, whatever the outcome, is in `pr-comments.posted.json`, which the
+served page reads back to put *on GitHub ↗* / *in VS Code* beside each item and to turn the
+button into *Published on GitHub ↗* (or *Retry*, with the reason in words).
 
 **Where:** `.human-review/pr-comments.json` (gitignored — it is a call, not a record; the
 record is `review-points.md`). Write it **after** commit #2, so `commit_id` is that commit.

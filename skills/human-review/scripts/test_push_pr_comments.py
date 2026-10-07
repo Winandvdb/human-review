@@ -177,7 +177,8 @@ def push(gh: FakeGh, payload: dict, tmp: Path, d: ppc.Diff | None = None,
          owned: set[int] | None = None) -> tuple[ppc.Plan, dict]:
     p = ppc.plan(payload, d or diff(), REPO, PR, gh.list("x/comments"), gh.list("x/reviews"),
                  owned)
-    rec = ppc.execute(p, gh, REPO, PR, tmp / "pr-comments.posted.json", {"pr": PR})
+    rec = ppc.execute(p, gh, REPO, PR, tmp / "pr-comments.posted.json", {"pr": PR},
+                      sleep=lambda _s: None)
     return p, rec
 
 
@@ -509,3 +510,126 @@ def test_a_round_without_its_own_summary_gathers_its_comments_into_one_review(tm
     assert kinds == [("POST", "reviews"), ("DELETE", "5")]
     assert [k["line"] for k in gh.sent[0].payload["comments"]] == [12]
     assert "discussion_r5" not in rec["comments"]["I:keep-the-vet"]["html_url"]
+
+
+# -------------------------------------------------------------------- PR #51: the 504
+
+def many(n: int) -> dict:
+    """`n` line comments, all on a line the diff shows — PR #51 had 41."""
+    return {"event": "COMMENT", "body": "Review record.", "commit_id": "c" * 40,
+            "comments": [c(title=f"Item {i}", line=12) for i in range(n)]}
+
+
+def replanner(gh: FakeGh, payload: dict):
+    return lambda: ppc.plan(payload, diff(), REPO, PR, gh.list("x/comments"),
+                            gh.list("x/reviews"))
+
+
+def run(gh: FakeGh, payload: dict, tmp: Path) -> dict:
+    p = ppc.plan(payload, diff(), REPO, PR, gh.list("x/comments"), gh.list("x/reviews"))
+    return ppc.execute(p, gh, REPO, PR, tmp / "pr-comments.posted.json", {"pr": PR},
+                       replan=replanner(gh, payload), sleep=lambda _s: None)
+
+
+def test_many_comments_go_out_in_reviews_of_batch_the_first_carrying_the_summary(tmp_path):
+    gh = FakeGh()
+    rec = run(gh, many(41), tmp_path)
+    posts = [x for x in gh.sent if x.method == "POST"]
+    assert [len(x.payload["comments"]) for x in posts] == [15, 15, 11]
+    assert ppc.review_marker("c" * 40) in posts[0].payload["body"]
+    assert all(ppc.more_marker("c" * 40) in x.payload["body"] for x in posts[1:])
+    assert all(ppc.review_marker("c" * 40) not in x.payload["body"] for x in posts[1:])
+    assert rec["status"] == "complete" and rec["present"] == rec["expected"] == 41
+    gh.sent.clear()
+    rec = run(gh, many(41), tmp_path)
+    assert gh.sent == [] and len(gh.comments) == 41
+    assert rec["message"] == "All 41 comments were already on GitHub PR #7."
+
+
+class SlowGh(FakeGh):
+    """GitHub as PR #51 met it: the review call answers 504 after creating the review, and
+    its comments appear a few at a time over the next polls."""
+
+    def __init__(self, creates: bool = True, per_poll: int = 4):
+        super().__init__()
+        self.creates, self.per_poll, self.hidden, self.failed = creates, per_poll, [], False
+
+    def list(self, path: str) -> list[dict]:
+        if path.endswith("/comments") and self.hidden:
+            self.comments += self.hidden[:self.per_poll]
+            self.hidden = self.hidden[self.per_poll:]
+        return super().list(path)
+
+    def send(self, call):
+        if call.method == "POST" and call.path.endswith("/reviews") and not self.failed:
+            self.failed = True
+            if self.creates:
+                before = len(self.comments)
+                super().send(call)
+                self.hidden, self.comments = self.comments[before:], self.comments[:before]
+            else:
+                self.sent.append(call)
+            raise ppc.GhError("gh api -X POST repos/o/r/pulls/7/reviews: gh: We couldn't "
+                              "respond to your request in time. (HTTP 504)")
+        return super().send(call)
+
+
+def test_a_504_on_a_review_that_was_created_anyway_posts_nothing_twice(tmp_path):
+    gh = SlowGh(creates=True)
+    rec = run(gh, many(41), tmp_path)
+    marks = [ppc.MARKER.search(x["body"]).group(1) for x in gh.comments]
+    assert len(marks) == len(set(marks)) == 41, "every comment exactly once"
+    assert sum(ppc.review_marker("c" * 40) in r["body"] for r in gh.reviews) == 1
+    # The first batch was not sent again: only the two remaining batches followed it.
+    assert [len(x.payload["comments"]) for x in gh.sent if x.method == "POST"] == [15, 15, 11]
+    assert rec["status"] == "complete" and rec["duplicates"] == []
+
+
+def test_a_504_on_a_review_that_was_never_created_is_sent_again(tmp_path):
+    gh = SlowGh(creates=False)
+    rec = run(gh, many(20), tmp_path)
+    posts = [len(x.payload["comments"]) for x in gh.sent if x.method == "POST"]
+    assert posts == [15, 15, 5]           # the lost first batch, then both for real
+    assert len(gh.comments) == 20 and rec["status"] == "complete"
+
+
+def test_a_refusal_stops_the_push_and_records_what_is_there_in_plain_words(tmp_path):
+    class Refuses(FakeGh):
+        def send(self, call):
+            if call.method == "POST" and len(self.reviews) == 1:
+                raise ppc.GhError("gh api -X POST repos/o/r/pulls/7/reviews: Validation "
+                                  "Failed (HTTP 422)")
+            return super().send(call)
+    gh = Refuses()
+    rec = run(gh, many(20), tmp_path)
+    assert rec["status"] == "partial" and rec["present"] == 15 and len(rec["missing"]) == 5
+    assert rec["message"].startswith("GitHub refused a comment")
+    assert "15 of 20 posted; click Retry to post the remaining 5." in rec["message"]
+    assert "gh api" not in rec["message"]
+    on_disk = json.loads((tmp_path / "pr-comments.posted.json").read_text())
+    assert on_disk["status"] == "partial"
+    # Retry: only the five missing go out, in a review that continues the summary.
+    good = FakeGh()
+    good.comments, good.reviews, good._id = gh.comments, gh.reviews, gh._id
+    rec = run(good, many(20), tmp_path)
+    assert [len(x.payload["comments"]) for x in good.sent] == [5]
+    assert ppc.more_marker("c" * 40) in good.sent[0].payload["body"]
+    assert rec["status"] == "complete" and len(good.comments) == 20
+
+
+def test_the_dry_run_preview_lists_readable_comments_not_calls():
+    payload = many(3)
+    pv = ppc.preview(ppc.plan(payload, diff(), REPO, PR, [], []), PR, REPO, "u", "victor")
+    assert (pv["total"], pv["already"], len(pv["items"]), pv["user"]) == (3, 0, 3, "victor")
+    item = pv["items"][0]
+    assert item["where"] == "src/A.java:12" and "<!--" not in item["text"]
+    assert "gh api" not in json.dumps(pv)
+
+
+def test_settle_waits_until_the_count_stops_moving():
+    gh = SlowGh(per_poll=1)
+    gh.hidden = [{"id": i, "body": f"x <!-- hr:I:item-{i} -->"} for i in range(3)]
+    call = ppc.Call("POST", "r/reviews", {}, "", expect=[f"I:item-{i}" for i in range(5)])
+    waits = []
+    assert ppc.settle(gh, REPO, PR, call, sleep=waits.append) == 3
+    assert len(waits) == 5        # 1, 2, 3, then 3 twice more: unmoved for two polls

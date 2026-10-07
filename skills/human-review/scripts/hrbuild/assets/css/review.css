@@ -224,8 +224,39 @@ details.fmtonly > summary[data-tip] { cursor:help; }
 .pr-push:disabled { opacity:.6; cursor:progress; }
 .pr-push-dlg { max-width:min(960px, 92vw); border:1px solid var(--line); border-radius:8px;
   background:var(--bg); color:var(--fg); }
-.pr-push-dlg pre { max-height:60vh; overflow:auto; font-size:11px; white-space:pre-wrap; }
-.pr-push-dlg menu { display:flex; gap:.5rem; justify-content:flex-end; padding:0; }
+.pr-push-dlg { width:min(720px, 92vw); padding:1rem 1.2rem; }
+.pr-push-dlg .pp-q { margin:0 0 .3rem; font-weight:600; font-size:1rem; }
+.pr-push-dlg .pp-sub { margin:0 0 .6rem; color:var(--muted); font-size:.85rem; }
+.pr-push-dlg .pp-sub[hidden] { display:none; }
+.pr-push-dlg details { margin:.4rem 0 .8rem; }
+.pr-push-dlg summary { cursor:pointer; color:var(--muted); font-size:.85rem; }
+.pr-push-dlg .pp-list { max-height:55vh; overflow:auto; margin:.5rem 0 0; padding-left:1.6rem;
+  font-size:.82rem; }
+.pr-push-dlg .pp-list li { margin:0 0 .7rem; }
+.pr-push-dlg .pp-where { font-size:.78rem; color:var(--muted); }
+.pr-push-dlg .pp-text { white-space:pre-wrap; overflow-wrap:anywhere; margin-top:.15rem; }
+.pr-push-dlg menu { display:flex; gap:.5rem; justify-content:flex-end; padding:0; margin:0; }
+/* Beside "Published on GitHub ↗" only when the comments changed since: small, a link. */
+.pr-repub { margin-left:.35rem; font:500 11px/1.4 inherit; padding:0 .2rem; border:0;
+  background:none; color:var(--muted); text-decoration:underline; cursor:pointer; }
+.pr-repub:hover, .pr-repub:focus-visible { color:var(--fg); }
+.pr-repub[hidden] { display:none; }
+.pr-repub:disabled { opacity:.6; cursor:progress; }
+/* The outcome of a push, in words, beside the button: green when everything is on the PR,
+   red when it stopped half-way (and the button says Retry). */
+.pr-push-msg { margin-left:.5rem; font-size:.8rem; font-weight:500; color:var(--muted); }
+.pr-push-msg[hidden] { display:none; }
+.pr-push-msg.pp-ok { color:#2e7d32; }
+.pr-push-msg.pp-err { color:#c62828; }
+@media (prefers-color-scheme:dark) {
+  .pr-push-msg.pp-ok { color:#6bd48a; }
+  .pr-push-msg.pp-err { color:#f0757f; } }
 a.f-gh { text-decoration:none; margin-left:.35rem; color:var(--muted); font-size:.8rem;
           font-weight:400; white-space:nowrap; }
 a.f-gh:hover, a.f-gh:focus-visible { color:var(--link); }
+/* "in VS Code" beside it: the same PR in the GitHub Pull Requests view. */
+a.f-vsc, a.pr-vsc { text-decoration:none; margin-left:.35rem; color:var(--muted); font-size:.8rem;
+          font-weight:400; white-space:nowrap; }
+a.f-vsc:hover, a.f-vsc:focus-visible, a.pr-vsc:hover, a.pr-vsc:focus-visible { color:var(--link); }
+a.pr-vsc[hidden] { display:none; }
+a.f-vsc .vsc-ico, a.pr-vsc .vsc-ico { vertical-align:-2px; }

@@ -68,13 +68,6 @@ button.adopt:focus-visible { outline:2px solid var(--adopt); outline-offset:1px;
   .reqmap .rm-body > .adopthead { grid-column:1; grid-row:auto; margin:46px 2px 10px; }
   .reqmap .rm-body > .adopthead > .rm-cats { margin:0; }
 }
-/* Cost: no title, its table's header row opens the tab. The pill hangs off the left of
-   the row's last label, `cost`, from a zero-size anchor in front of it: it widens no
-   column and, taller than the header's small caps, does not make the row taller. */
-.adopt-th { display:inline-block; position:relative; width:0; height:0; margin:0;
-            vertical-align:middle; }
-.adopt-th > button.adopt { position:absolute; right:.9rem; top:-.08rem;
-                            transform:translateY(-50%); }
 /* The prompt pill's hover, borrowed from the Register/Enroll buttons on agentic.how
    (`.btn-fancy`): a conic burst blooms from the centre and then turns slowly, a one-shot
    diagonal shimmer crosses it, a halo glows, the pill lifts 1px and its text goes white.

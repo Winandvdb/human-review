@@ -500,6 +500,18 @@ def cost_ledger_html(led: dict | None, tabs: list[dict]) -> str:
     """
     if not led:
         return ""
+    # Every tab opens on its title (Victor, 7 Oct 2026: this one had none), and the
+    # "Prompt to get this page" pill goes at its right end, as on the other tabs
+    # (`adopt.PLACES`), out of the table's header where it crowded the time column.
+    body = _cost_ledger_body(led, tabs)
+    return COST_TITLE + body if body else ""
+
+
+#: The tab's title row.
+COST_TITLE = '<h2 class="tabtitle">Token costs</h2>'
+
+
+def _cost_ledger_body(led: dict, tabs: list[dict]) -> str:
     four = components_html(led.get("components"))
     if four:
         # The four components lead, and the fold under them breaks down ONE of their rows
@@ -857,13 +869,28 @@ def _duration(secs) -> str:
     return f"{m} min" if m < 60 else f"{m // 60} h {m % 60:02d} min"
 
 
-def _time_cell(secs, model_secs=None) -> str:
-    """The time column: busy time, and how much of it the model was working on its hover."""
+def _split(secs, model_secs) -> str:
+    """`model 15 min · tools 21 min`: how a busy time splits between the model writing and
+    the tools it ran — the rest of the turn (commands, builds, tests, subagents, prompts)."""
+    model = min(float(model_secs or 0), float(secs))
+    return f"model {_duration(model)} · tools {_duration(secs - model)}"
+
+
+def _time_cell(secs, model_secs=None, cls: str = "costtime") -> str:
+    """The time column: busy time, its model/tools split on the hover (Victor, 7 Oct 2026:
+    as a line under every time it doubled the rows' height for a second-order number)."""
     if secs is None:
         return "<td>—</td>"
-    tip = (f' data-tip="model {html.escape(_minutes(model_secs))} of it"'
+    tip = (f' data-tip="{html.escape(_split(secs, model_secs), quote=True)}"'
            if model_secs else "")
-    return f'<td><span class="costtime"{tip}>{_duration(secs)}</span></td>'
+    return f'<td><span class="{cls}"{tip}>{_duration(secs)}</span></td>'
+
+
+#: What a recorded entry says it was, in the words a reviewer reads in a cost table. The
+#: record keeps the pipeline's own phrase; the row's name already says the rest
+#: ("Implementation"), and "fork → prepare" was the skill's vocabulary (Victor, 7 Oct 2026).
+_WHAT_SHORT = {"the implementing session, fork → prepare": "",
+               "requirements↔tests mapping (rerun-model.py)": "requirements↔tests mapping"}
 
 
 def _entry_line(e: dict, alone: bool = False) -> str:
@@ -875,21 +902,33 @@ def _entry_line(e: dict, alone: bool = False) -> str:
         model = ", ".join(e.get("models") or {})
         head = "claude -p" + (f" on {html.escape(model)}" if model else "")
     else:
-        head = html.escape(who) + (f' <code>{html.escape(sid[:8])}</code>' if sid else "")
-    win = e.get("window") or [None, None]
-    when = _span(win[0], win[1]) if len(win) == 2 else ""
-    bits = [head, html.escape(str(e.get("what") or "")), when]
+        # The id muted (Victor, 7 Oct 2026: "who cares… okay, maybe"): there to find the
+        # transcript by, not to be read. The window's dates are gone too — the time column
+        # says how long, and the dates only made the line long.
+        head = html.escape(who) + (f' <code class="costsid">{html.escape(sid[:8])}</code>'
+                                   if sid else "")
+    what = str(e.get("what") or "")
+    what = _WHAT_SHORT.get(what, what)
+    bits = [head, html.escape(what)]
     money = (_aic(e["aic"]) if e.get("aic") is not None
              else (_cost_money(e["usd"]) if e.get("usd") is not None else ""))
     if e.get("note"):
         bits.append(html.escape(str(e["note"])))
-    line = " &middot; ".join(b for b in bits if b)
-    # The row's only entry: its price is the row's, already in the cost column.
-    if money and e.get("what") and not alone:
-        # Glued to the word before it: eval run 6 wrapped `$0.16` onto a line of its own,
-        # a price with nothing beside it to say what it was the price of.
-        line += f'<span class="costnum">&nbsp;&middot;&nbsp;{money}</span>'
-    return line
+    return " &middot; ".join(b for b in bits if b)
+
+
+def _entry_row(e: dict) -> str:
+    """One session of a row that has several, as a muted line of its own under the row:
+    its words under the name, its time under the time, its price right-aligned under the
+    row's price — a breakdown that reads as one (Victor, 7 Oct 2026: the price glued to
+    the end of the line read as a second, odd total)."""
+    money = (_aic(e["aic"]) if e.get("aic") is not None
+             else (_cost_money(e["usd"]) if e.get("usd") is not None else ""))
+    busy = e.get("busySeconds")
+    when = (_time_cell(busy, e.get("modelSeconds"), "costsub costtime") if busy is not None
+            else "<td></td>")
+    return (f'<tr class="costpart"><td><span class="costsub">{_entry_line(e)}</span></td>'
+            f'{when}<td><span class="costsub">{money}</span></td></tr>')
 
 
 
@@ -941,7 +980,8 @@ def components_html(comp: dict | None, fold: str = "") -> str:
                        '<td>—</td><td>—</td></tr>')
             continue
         entries = r.get("entries") or []
-        lines = [_entry_line(e, alone=len(entries) == 1) for e in entries]
+        parts = len(entries) > 1
+        lines = [] if parts else [_entry_line(e, alone=True) for e in entries]
         if r.get("key") == "guide":
             wall = (comp or {}).get("wallclock") or {}
             took = _minutes(wall.get("seconds"))
@@ -960,6 +1000,13 @@ def components_html(comp: dict | None, fold: str = "") -> str:
         # Plain text, on the label's hover — eval run 11: as a visible line it was audit
         # trivia for a stressed reader, and the widest thing on the tab.
         ext = _extension_line(r, rate)
+        if r.get("dropped"):
+            gone = "; ".join(
+                f"session {str(d.get('session') or '?')[:8]}"
+                + (f" ({_cost_money(d['usd'])})" if d.get("usd") is not None else "")
+                + f", whose work {d.get('undoneBy') or 'a later commit'} reverted to the base"
+                for d in r["dropped"])
+            ext = (ext + " · " if ext else "") + "left out: " + gone
         if r.get("source") == "derived":
             # Copy pass (3 Oct 2026): which record file was missing is the pipeline's
             # business; the reader needs to know the number is an estimate.
@@ -973,9 +1020,13 @@ def components_html(comp: dict | None, fold: str = "") -> str:
             label = f'<span data-tip="{html.escape(ext, quote=True)}">{label}</span>'
         folds = r.get("key") == "guide" and fold
         if folds:
+            # Its own sessions' lines may stand between this row and its fold. The hint
+            # beside the name is CSS (`.costexp::after`): Victor (7 Oct 2026) had never
+            # noticed the bare caret.
             label = (f'<button type="button" class="costexp" aria-expanded="false" '
-                     'onclick="var t=this.closest(\'tr\').nextElementSibling;'
-                     't.hidden=!t.hidden;this.setAttribute(\'aria-expanded\',!t.hidden)">'
+                     'onclick="var t=this.closest(\'tr\');'
+                     'do{t=t.nextElementSibling}while(t&amp;&amp;!t.classList.contains(\'costfold\'));'
+                     'if(t){t.hidden=!t.hidden;this.setAttribute(\'aria-expanded\',!t.hidden)}">'
                      f'{label}</button>')
         # Time before the cost: the money stays the last column, where the page's
         # "Prompt to get this" button sits in the header, beside `cost`.
@@ -983,6 +1034,8 @@ def components_html(comp: dict | None, fold: str = "") -> str:
                    + _time_cell(r.get("busySeconds"), r.get("modelSeconds"))
                    + f'<td>{_cost_cell(_component_money(r, rate), r.get("tokens") or 0, models)}'
                    '</td></tr>')
+        if parts:
+            out.append("".join(_entry_row(e) for e in entries))
         if folds:
             out.append(f'<tr class="costfold" hidden><td colspan="3">{fold}</td></tr>')
     usd, aic = comp.get("usd") or 0.0, comp.get("aic") or 0.0
@@ -1015,8 +1068,9 @@ def components_html(comp: dict | None, fold: str = "") -> str:
             'below).</p>' if missing else "")
     return (warn + '<table class="costtab costledger costfour">'
             + (f'<caption>{caption}</caption>' if caption else '') +
-            '<thead><tr><th scope="col">component</th>'
-            f'<th scope="col" data-adopt><span data-tip="{html.escape(BUSY_TIP, quote=True)}">time</span>'
+            # "step" (Victor, 7 Oct 2026): the rows are the steps the change went through.
+            '<thead><tr><th scope="col">step</th>'
+            f'<th scope="col"><span data-tip="{html.escape(BUSY_TIP, quote=True)}">time</span>'
             '</th><th scope="col">cost</th></tr></thead>'
             f'<tbody>{"".join(out)}</tbody><tfoot>{foot}</tfoot></table>')
 

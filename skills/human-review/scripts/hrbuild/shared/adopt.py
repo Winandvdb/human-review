@@ -123,9 +123,7 @@ DIAGRAM_KINDS = (
 #: border; `title` — the anchor is the tab's first row (its `h2.tabtitle`, or whatever row
 #: opens a tab that has none: the API verdict band, the UX audit's count line, the Tests
 #: key over the card), and it becomes a flex row with that row on the left and the pill on
-#: the right (a row too long to share its line wraps its own text beside the pill); `th` —
-#: the Cost tab, which opens on its table's header row, gets the pill in that row's last
-#: cell, just left of its `cost` label and without widening the column; `col` — under it
+#: the right (a row too long to share its line wraps its own text beside the pill); `col` — under it
 #: in a column of its own (the Demo's transcript, beside the player); `upto` — a row
 #: closing the region that starts at the anchor and runs to the next Round kicker (the
 #: Review tab's three piles). Piece None is a diagram card, whose piece is read off its
@@ -147,7 +145,7 @@ PLACES: dict[str, tuple[tuple[str | None, str, str | None, str | None], ...]] = 
     "complexity": (("complexity", "title", r'<h2 class="tabtitle\b', "first"),),
     "logging": (("logging", "title", r'<h2 class="tabtitle\b', "first"),),
     "owners": (("owners", "title", r'<h2 class="tabtitle\b', "first"),),
-    "cost": (("cost", "th", r'<table class="costtab costledger\b', "first"),),
+    "cost": (("cost", "title", r'<h2 class="tabtitle\b', "first"),),
 }
 
 # One token of markup: a comment, a whole script/style element (whose text may say `<div`
@@ -233,17 +231,6 @@ def place_prompts(tid: str, body: str) -> str:
                 nxt = re.compile(r'<p class="pileround"').search(body, hit.end())
                 at = nxt.start() if nxt else len(body)
                 edits.append((at, at, adopt_html(piece, how="after")))
-                continue
-            if how == "th":
-                row_end = body.find("</tr>", hit.end())
-                cells = list(re.compile(r"<th\b[^>]*>").finditer(body, hit.end(),
-                                                                  max(row_end, 0)))
-                if cells:
-                    # The last cell, unless one asks for it: the cost tab's `time` column
-                    # stands left of `cost`, and a pill hung before `cost` covered it.
-                    at = next((c for c in cells if "data-adopt" in c.group(0)),
-                              cells[-1]).end()
-                    edits.append((at, at, adopt_html(piece, how="th")))
                 continue
             span = _close(body, hit.start())
             if not span:

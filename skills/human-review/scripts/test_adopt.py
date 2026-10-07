@@ -122,18 +122,6 @@ def test_the_tests_button_shares_the_filter_cell_on_the_title_row():
     assert out.count("Prompt to get this") == 1
 
 
-def test_the_cost_button_sits_in_the_header_row_beside_its_last_label():
-    """Cost opens on its table, not a title: the header row is its first row, and the
-    button goes in that row's last cell, before `cost`, on a zero-size anchor."""
-    body = ('<table class="costtab costledger costfour"><thead><tr><th scope="col">component'
-            '</th><th scope="col">cost</th></tr></thead><tbody><tr><th>x</th></tr></tbody>'
-            '</table>')
-    out = place_prompts("cost", body)
-    assert re.search(r'<th scope="col">component</th><th scope="col">'
-                     r'<div class="adoptline adopt-th">.*?</button></div>cost</th>', out)
-    assert out.count("Prompt to get this") == 1
-
-
 def test_a_script_inside_a_card_cannot_close_it_early():
     body = ('<div class="diagram"><script>var s = "</div><div>";</script>'
             '<div class="head"><b>Domain Model</b></div></div><p>after</p>')
@@ -154,6 +142,8 @@ WHOLE_TAB = {"sequence": '<h2 class="tabtitle" id="sequences">Sequence diagrams<
              "city": '<h2 class="tabtitle" id="codecity">Impact on code size</h2>',
              "complexity": '<h2 class="tabtitle cx-title"><a href="#">Cognitive</a> per</h2>',
              "logging": '<h2 class="tabtitle" id="logging-added">Uses of logging</h2>',
+             # Victor, 7 Oct 2026: the cost tab got a title, and its pill left the table.
+             "cost": '<h2 class="tabtitle">Token costs</h2>',
              "owners": '<h2 class="tabtitle cow-title">Needs approval as per</h2>',
              "api": '<div class="apiverdict red"><span class="dot"></span>Breaking</div>',
              "dsaudit": '<h2 class="tabtitle">UX design system</h2>'}
@@ -192,22 +182,11 @@ def test_a_whole_tab_without_its_title_row_still_closes_the_panel_with_its_butto
 
 def test_every_tab_is_either_per_card_or_whole_tab_or_one_of_the_agreed_exceptions():
     per_card = {"data", "packages", "review"}
-    # The Tests filter row, the Cost header row, the Demo's transcript column.
-    agreed = {"requirements": "title", "cost": "th", "behaviour": "col"}
+    # The Tests filter row, the Demo's transcript column.
+    agreed = {"requirements": "title", "behaviour": "col"}
     assert set(PLACES) == per_card | set(WHOLE_TAB) | set(agreed)
     for tid, how in agreed.items():
         assert [h for _, h, _, _ in PLACES[tid]] == [how]
-
-
-def test_a_header_cell_marked_data_adopt_takes_the_button_instead_of_the_last():
-    """The cost tab's `time` column stands left of `cost`: the pill, hung before `cost`,
-    covered `time` and its hover. The cell that asks for it gets it."""
-    body = ('<table class="costtab costledger costfour"><thead><tr><th scope="col">component'
-            '</th><th scope="col" data-adopt>time</th><th scope="col">cost</th></tr></thead>'
-            '<tbody><tr><th>x</th></tr></tbody></table>')
-    out = place_prompts("cost", body)
-    assert re.search(r'<th scope="col" data-adopt><div class="adoptline adopt-th">.*?</button>'
-                     r'</div>time</th><th scope="col">cost</th>', out)
 
 
 def test_tab_title_pills_say_page_and_smaller_areas_keep_the_short_label():

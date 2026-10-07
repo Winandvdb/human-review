@@ -147,10 +147,38 @@ def git(root: Path, *args: str) -> str:
     return p.stdout.strip() if p.returncode == 0 else ""
 
 
+def restart_point(root: Path, base: str) -> "tuple[str, dt.datetime] | None":
+    """The branch's last commit whose tree IS the fork's tree — a reset to base kept in
+    history (`git revert` of everything, or a commit that checks out `origin/main`) — and
+    when it was committed; None when the branch never went back to where it started.
+
+    Everything before it was undone. The reference PR (petclinic `test-pr`) implemented
+    #37 on 17–18 Sep in session d247348a, reverted the whole branch to origin/main on
+    5 Oct (0da5de63) and implemented it again from the ticket in 82329d0a. One
+    `Claude-Session:` trailer on a pre-revert commit was enough to bill the first attempt,
+    27 hours and $15.53 of it, as a second "implementing session" of a change it wrote
+    none of."""
+    fork = git(root, "merge-base", base, "HEAD") or base
+    tree = git(root, "rev-parse", f"{fork}^{{tree}}")
+    if not tree:
+        return None
+    for line in git(root, "log", "--format=%H %T %cI", f"{fork}..HEAD").splitlines():
+        sha, t, when = (line.split(" ") + ["", "", ""])[:3]
+        if t == tree and parse(when):
+            return sha, parse(when)
+    return None
+
+
 def fork_time(root: Path, base: str) -> "dt.datetime | None":
     """The earlier of the merge-base's commit time and the oldest author date on the
     branch — `authoring-sessions.py`'s rule, so a rebase does not cut off the first commit
-    and a file written for some older branch is not billed to this one."""
+    and a file written for some older branch is not billed to this one.
+
+    A branch that went back to its base (`restart_point`) forks again there: what was
+    written before it was undone, and is not this change's."""
+    restart = restart_point(root, base)
+    if restart:
+        return restart[1]
     fork = git(root, "merge-base", base, "HEAD") or base
     stamps = git(root, "log", "-1", "--format=%ct", fork).split()
     stamps += git(root, "log", "--format=%at", f"{fork}..HEAD").split()
@@ -475,8 +503,10 @@ def claude_turn_bounds(session: str | None, t) -> tuple:
 
 def claimed_sessions(root: Path, base: str) -> list[str]:
     """The `Claude-Session:` trailers of the branch's own commits: the record of which
-    conversation wrote it, which outlives `.human-review/` and a rebase."""
-    fork = git(root, "merge-base", base, "HEAD") or base
+    conversation wrote it, which outlives `.human-review/` and a rebase. Only those after
+    a `restart_point`: a trailer on work the branch since undid names nobody who wrote it."""
+    restart = restart_point(root, base)
+    fork = restart[0] if restart else (git(root, "merge-base", base, "HEAD") or base)
     out = git(root, "log", "--format=%(trailers:key=Claude-Session,valueonly)", f"{fork}..HEAD")
     return sorted({s.strip() for s in out.splitlines() if s.strip()})
 
@@ -1662,13 +1692,42 @@ def without_paid_turns(guide: dict, first3: list[dict]) -> dict:
                      + ", less the turns the rows above already billed")
 
 
+def drop_undone(root: Path, base: str, c: dict) -> dict:
+    """A recorded implementation row without the sessions whose work the branch undid.
+
+    `review-cost.json` is written once, by `finish`, with whatever `claimed_sessions` said
+    then — and before `restart_point` existed it said every trailer on the branch. A
+    session whose window ends before the branch's restart wrote only what the restart
+    threw away; it leaves the row, and the row says so on its hover (`dropped`)."""
+    if c.get("key") != "implementation" or not c.get("entries"):
+        return c
+    restart = restart_point(root, base)
+    if not restart:
+        return c
+    sha, at = restart
+    keep, gone = [], []
+    for e in c["entries"]:
+        end = parse((e.get("window") or [None, None])[-1])
+        (gone if end and end < at else keep).append(e)
+    if not gone or not keep:
+        return c
+    win = [parse((e.get("window") or [None])[0]) for e in keep]
+    win = [w for w in win if w]
+    out = component("implementation", keep, c.get("reason"),
+                    (min(win) if win else at, parse((c.get("window") or [None, None])[-1])),
+                    c.get("source") or "recorded")
+    out["dropped"] = [{"session": e.get("session"), "usd": e.get("usd"),
+                       "window": e.get("window"), "undoneBy": sha[:8]} for e in gone]
+    return out
+
+
 def components(root: Path, base: str, review: Path, phases: dict | None = None,
                commits: dict | None = None) -> dict:
     """The four rows the `$` tab leads with, and how each was obtained."""
     rec = read_record(root)
     if rec:
         rec = extend_to_last_round(root, base, rec)
-        first3 = rec["components"]
+        first3 = [drop_undone(root, base, c) for c in rec["components"]]
         # VS Code prices a turn only when it ends, which is after `finish` recorded it:
         # such a row is measured again now, over the same window, when it can be.
         for i, c in enumerate(first3):
@@ -1703,6 +1762,11 @@ def components(root: Path, base: str, review: Path, phases: dict | None = None,
         # Re-read at every build, never trusted from a record: `review-cost.json` predates
         # the field, and the store is what the window's turns are read from anyway.
         c["busySeconds"] = busy_seconds(c.get("entries"), root) if c.get("measured") else None
+        if c.get("measured") and len(c.get("entries") or []) > 1:
+            # Each session's own share, for its line under the row (the row's time is
+            # their union, so these may add up to more than it).
+            for e in c["entries"]:
+                e["busySeconds"] = busy_seconds([e], root)
     timed = [c for c in rows if c.get("measured")]
     busy = (sum(c["busySeconds"] for c in timed)
             if timed and all(c["busySeconds"] is not None for c in timed) else None)

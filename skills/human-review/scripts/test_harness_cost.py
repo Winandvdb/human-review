@@ -674,7 +674,7 @@ def test_the_four_rows_explain_only_the_prices_on_screen():
     out = cost.components_html(comp)
     assert "Copilot" not in out and "AI credit" not in out
     assert "Claude at API list price" in out
-    assert '<span class="costnum">&nbsp;&middot;&nbsp;$0.16</span>' in out
+    assert out.count("$0.16") == 1, "a row's only entry is priced once, in the cost column"
     assert "claude -p on Haiku 4.5" in out and ".model-runs.json" not in out
     assert "film script" not in out, "the hint names no step the run did not take"
 
@@ -816,15 +816,97 @@ def test_the_four_rows_carry_a_time_column_and_a_dash_when_untimed():
             "busySeconds": None, "wallclock": {"seconds": 720, "modelSeconds": 240},
             "refreshSeconds": 240}
     out = cost.components_html(comp)
-    assert '<th scope="col" data-adopt><span data-tip="Agent busy time' in out
+    assert '<th scope="col"><span data-tip="Agent busy time' in out
     cells = re.findall(r'<td>(?:<span class="costtime"[^>]*>)?([^<]*)(?:</span>)?</td>'
                        r'<td><span class="costmoney"', out)
     assert cells == ["2 h 05 min", "1 min", "—", "10 min", "—"], cells
-    assert 'data-tip="model 30 min of it"' in out
+    assert 'data-tip="model 30 min · tools 1 h 35 min">2 h 05 min<' in out, \
+        "the split is the time's hover"
+    assert "costsplit" not in out, "not a line of its own under every time"
     assert "took 12 min" not in out, "the run's time is in the column, not twice"
     assert "plus 4 min of later refreshes, no model" in out
     comp["busySeconds"] = 2 * 3600 + 5 * 60 + 67 + 600
     fixes["busySeconds"] = 0
-    assert "data-adopt><span" in out, "the prompt pill goes before time, not over it"
     assert re.search(r'costtotal.*>2 h 16 min</span></td><td><span class="costmoney"',
                      cost.components_html(comp))
+
+
+# --------------------------------------------------------------------------- 7 Oct 2026
+
+def _restarted_branch(tmp_path):
+    """The reference PR's history: an attempt with its trailer, a revert of the whole
+    branch to its base, then the implementation that stands."""
+    repo = tmp_path / "r"
+    repo.mkdir()
+    git(repo, "init", "-q", "-b", "main")
+    (repo / "a.txt").write_text("base\n")
+    base = commit(repo, "base", "2026-09-01T10:00:00+00:00")
+    git(repo, "checkout", "-qb", "feat")
+    (repo / "a.txt").write_text("first attempt\n")
+    commit(repo, "attempt\n\nClaude-Session: old-attempt", "2026-09-17T18:30:00+00:00")
+    (repo / "a.txt").write_text("base\n")
+    undo = commit(repo, "revert the branch to main", "2026-10-05T16:58:00+00:00")
+    (repo / "a.txt").write_text("second attempt\n")
+    commit(repo, "implement\n\nClaude-Session: the-one", "2026-10-05T17:10:00+00:00")
+    return repo, base, undo
+
+
+def test_a_branch_reset_to_its_base_forgets_who_wrote_what_it_undid(tmp_path):
+    """petclinic test-pr: d247348a implemented #37 on 17–18 Sep, the branch was reverted
+    to origin/main on 5 Oct and #37 implemented again in 82329d0a. One trailer on a
+    pre-revert commit billed the first attempt ($15.53, 27 h) as a second implementing
+    session of a change it wrote none of."""
+    repo, base, undo = _restarted_branch(tmp_path)
+    sha, at = hc.restart_point(repo, base)
+    assert sha == undo and at.isoformat().startswith("2026-10-05T16:58")
+    assert hc.claimed_sessions(repo, base) == ["the-one"]
+    assert hc.fork_time(repo, base) == at, "the change forks again at the reset"
+
+
+def test_a_recorded_implementation_drops_a_session_the_branch_undid(tmp_path):
+    """`review-cost.json` was written before the reset was understood: the build drops the
+    undone session from it and says so on the row's hover."""
+    sys.path.insert(0, str(HERE))
+    from hrbuild.tabs import cost
+    repo, base, undo = _restarted_branch(tmp_path)
+    old = hc.entry(hc.CLAUDE, "old-attempt-session", "the implementing session, fork → prepare",
+                   ("2026-09-17T18:29:54+00:00", "2026-09-18T21:49:56+00:00"), usd=15.53)
+    new = hc.entry(hc.CLAUDE, "the-one-session", "the implementing session, fork → prepare",
+                   ("2026-10-05T17:00:48+00:00", "2026-10-05T17:11:53+00:00"), usd=4.78)
+    row = hc.component("implementation", [new, old],
+                       window=("2026-09-17T18:29:54+00:00", "2026-10-05T17:11:53+00:00"))
+    kept = hc.drop_undone(repo, base, row)
+    assert [e["session"] for e in kept["entries"]] == ["the-one-session"]
+    assert kept["usd"] == 4.78 and kept["dropped"][0]["undoneBy"] == undo[:8]
+    out = cost.components_html({"rows": [kept], "usd": 4.78, "aic": 0.0})
+    assert "left out: session old-atte ($15.53), whose work" in out
+    assert "fork → prepare" not in out, "the pipeline's words are not the reader's"
+    review = hc.component("review", [new])
+    assert hc.drop_undone(repo, base, review) is review, "only the implementation row"
+
+
+def test_several_sessions_are_a_breakdown_under_the_row_not_a_line_of_prices(tmp_path):
+    """Victor, 7 Oct 2026: `· $2.16` at the end of a line read as an odd second total. Each
+    session is a muted line of its own under the row — its time split under the time, its
+    price under the price — the id muted, no dates; the fold says it opens."""
+    sys.path.insert(0, str(HERE))
+    from hrbuild.tabs import cost
+    run = hc.entry(hc.CLAUDE, "20f87074-aaaa", "the /human-review run",
+                   ("2026-10-05T16:26:00+00:00", "2026-10-05T16:39:00+00:00"), usd=2.16)
+    run["busySeconds"], run["modelSeconds"] = 840, 180
+    step = hc.entry(hc.CLAUDE, "claude -p (.model-runs.json)",
+                    "requirements↔tests mapping (rerun-model.py)", usd=0.27,
+                    models={"Sonnet 5.5": 54000})
+    step["busySeconds"], step["modelSeconds"] = 53, 53
+    guide = hc.component("guide", [run, step])
+    guide["busySeconds"], guide["modelSeconds"] = 840, 233
+    out = cost.components_html({"rows": [guide], "usd": 2.43, "aic": 0.0}, fold="<table></table>")
+    parts = re.findall(r'<tr class="costpart">(.*?)</tr>', out)
+    assert len(parts) == 2
+    assert '<code class="costsid">20f87074</code>' in parts[0]
+    assert 'data-tip="model 3 min · tools 11 min">14 min<' in parts[0] and "$2.16" in parts[0]
+    assert "requirements↔tests mapping<" in parts[1] and "rerun-model.py" not in parts[1]
+    assert "16:26" not in out and "&rarr;" not in out, "no dates on a session's line"
+    assert "costnum" not in out
+    assert "costfold" in out.split('<tr class="costpart">')[-1], "the fold follows the parts"
+    assert "nextElementSibling}while" in out, "the toggle finds its fold past the parts"

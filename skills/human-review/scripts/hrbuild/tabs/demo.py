@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 
 from ..shared.commands import _app_anchor, runtime_html
+from dataset_view import dataset_html
 
 def _link_captions(cues, links, drive=False):
     """Put the app links *inside* the narration, on the words that already name the page.
@@ -349,6 +350,10 @@ def video_html(s, out_dir: Path) -> str:
     # next to the picture instead of across the top of it. What it contradicts is the
     # picture, so it has to be the thing read first, full width.
     head = runtime_html(rt) if rt else ""
+    # The 👁 beside each DB Fixture button, and the rows it shows: computed from the
+    # project's own seed and fixture SQL (`dataset_view.py`), so it needs no app running.
+    if head:
+        head += dataset_html(_project_root(out_dir))
     # The film's title heads the transcript column, not a row of its own above the player:
     # a row across the page held two words and left the rest of it empty (Victor, 7 Oct
     # 2026), and the player now starts right under the Running app band. The tab's presses

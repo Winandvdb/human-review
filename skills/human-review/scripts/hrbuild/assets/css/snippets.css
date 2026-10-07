@@ -70,12 +70,8 @@ pre.code .ln-row * { text-indent:0; }
    family (▶/▼, muted, link-blue on hover), at 12px. The name stays left and a click on it
    opens VS Code without toggling the fold (interactive content inside <summary>). */
 details.ghfold { margin:.9rem 0; border:1px solid var(--line); border-radius:8px; background:var(--card); overflow:hidden; }
-details.ghfold > summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:.5rem;
+details.ghfold > summary { cursor:pointer; display:flex; align-items:center; gap:.5rem;
   padding:.45rem .7rem; background:var(--code-bg); }
-details.ghfold > summary::-webkit-details-marker { display:none; }
-details.ghfold > summary::before { content:"\25B6\FE0E"; font-size:12px; line-height:1; color:var(--muted); flex:0 0 auto; }
-details.ghfold[open] > summary::before { content:"\25BC\FE0E"; }
-details.ghfold > summary:hover::before { color:var(--link); }
 details.ghfold[open] > summary { border-bottom:1px solid var(--line); }
 details.ghfold > summary > .srcbar { flex:1 1 auto; justify-content:flex-start; gap:.6rem; margin:0; padding:0; border:0;
   background:none; font:600 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }

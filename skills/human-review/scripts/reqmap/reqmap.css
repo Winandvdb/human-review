@@ -289,7 +289,7 @@
 .reqmap .rm-t[data-shut=yes] .rm-thead{cursor:default}
 .reqmap .rm-t[data-shut=yes] .rm-thead:hover{background:none}
 .reqmap .rm-t[data-shut=yes] .rm-chev{visibility:hidden}
-.reqmap .rm-chev{flex:0 0 auto;font-size:12px;opacity:.8;transition:transform .15s ease}
+.reqmap .rm-chev{flex:0 0 auto;font-size:13px;opacity:.8;transition:transform .15s ease}
 .reqmap .rm-t[data-open=yes] .rm-chev{transform:rotate(90deg)}
 .reqmap .rm-t[data-open=yes] .rm-thead{color:var(--fg,#1c1c1c);font-weight:600}
 /* A selected sentence sorts the list into "these prove it" and the rest: the covering

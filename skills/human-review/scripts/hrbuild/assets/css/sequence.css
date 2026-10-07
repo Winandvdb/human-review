@@ -36,25 +36,6 @@ details.testpair[open] { padding-bottom:.8rem; }
 details.testpair > summary { cursor:pointer; list-style:none; display:flex; gap:.4rem;
   align-items:baseline; color:var(--fg); font-size:.95rem; font-weight:600;
   padding:.25rem 0; }
-details.testpair > summary::-webkit-details-marker { display:none; }
-/* The fold's caret, the glyph every other tab draws (`.cx-caret`, `.disclose`): the
-   full-size ▶/▼, centred on the row, at 19px — half again the other tabs' 13px, because
-   here it is the one control on a row that is all one control; the ▸/▾ at .75rem it
-   replaced read as a speck next to a 0.95rem title. Grey, and link-blue with the title
-   when the row is hovered: at this size a blue caret on every row outshouted the titles.
-   FE0E keeps the glyph text, not emoji.
-   Tight on both sides: in the 1.1rem box the other tabs use, plus the card's padding and
-   the row's gap, it stood ~19px off the card's edge and ~10px off the pill — an indent
-   that read as a gutter. Its own width, the row pulled .55rem towards the edge (the open
-   card's body keeps its padding) and the gap trimmed past the glyph's own side bearing:
-   ~9px and ~5px of air either side of the ink. The box is the ▶'s advance, fixed, so the
-   narrower ▼ does not pull the pill and the title left by a pixel when the row opens. */
-details.testpair > summary { margin-left:-.55rem; }
-details.testpair > summary::before { content:"\25BC\FE0E"; font-size:19px; line-height:1;
-  flex:0 0 auto; width:.82em; text-align:center; margin-right:calc(3px - .4rem);
-  align-self:center; color:var(--muted); }
-details.testpair > summary:hover::before { color:var(--link); }
-details.testpair:not([open]) > summary::before { content:"\25B6\FE0E"; }
 details.testpair > summary:hover { color:var(--link); }
 /* What kind of test drew the sequence, in the chip the Tests tab wears for the same three
    words and in the same three colours — `.evi.e2e` / `.api` / `.unit` a few hundred lines
@@ -129,9 +110,6 @@ details.testpair > summary:hover > .testcat { color:var(--tc); }
 details.seqhow { line-height:1.6; }
 details.seqhow > summary { cursor:pointer; list-style:none;
   display:inline-flex; gap:.35rem; align-items:baseline; color:var(--muted); }
-details.seqhow > summary::-webkit-details-marker { display:none; }
-details.seqhow > summary::before { content:"\25B8\FE0E"; font-size:.75rem; }
-details.seqhow[open] > summary::before { content:"\25BE\FE0E"; }
 details.seqhow > summary:hover { color:var(--link); }
 /* The sentence is the control itself, one flex item so its spaces survive: it lights up
    on hover with the ▸, and its one link is underlined in the subtitle's own ink, as the

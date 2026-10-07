@@ -986,7 +986,7 @@ a.cg-go:hover { background:var(--link); color:var(--card); }
     full-size ▶, not ▸: at the name's own size ▸ was a speck, and a speck does not say
     "this opens". */
 .cg-tog { display:inline-flex; margin-right:5px; }
-.cg-tog::before { content:"\\25B6\\FE0E"; font-size:9px; line-height:1; color:var(--muted);
+.cg-tog::before { content:"\\25B6\\FE0E"; font-size:13px; line-height:1; color:var(--muted);
                   transition:transform .12s; }
 .cg-n:hover .cg-tog::before { color:var(--link); }
 .cg-open .cg-tog::before { transform:rotate(90deg); color:var(--link); }

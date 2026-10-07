@@ -192,11 +192,78 @@ figcaption { color:var(--muted); font-size:.86rem; }
           --diff-del-bg:#2d1214; --diff-del-gutter:#5c2225; }
 }
 
-/* The expand/collapse triangle of a `<details>` row, one rule for every tab: the full-size
-   U+25B6 / U+25BC (forced to text with U+FE0E so macOS does not swap in the emoji), 13px,
-   in the link colour, in a 1.1rem centred box. Put `<span class="disclose">` in the
-   summary; `.cx-caret` (Complexity) is the same look and can adopt it. */
-.disclose { display:inline-block; flex:none; width:1.1rem; font-size:13px; line-height:1;
-            color:var(--link); text-align:center; }
+/* One disclosure caret for the whole report: the Complexity tab's look (`.cx-caret`) -- the
+   full-size U+25B6 (U+25BC open; FE0E keeps it text, not emoji), 13px, muted, centred on the
+   row's text line, link-blue when the row is hovered. Every `<details>` fold draws it from its
+   summary's `::before` (the native triangle is off); the tab-specific carets (`.cx-caret`,
+   `.rm-chev`, `.cg-tog`, `.disclose`) take the same size and colour. A new fold joins the
+   list below instead of styling its own caret. */
+details.ghfold > summary,
+details.testpair > summary,
+details.seqhow > summary,
+details.dsa-screen > summary,
+details.dsa-considered > summary,
+details.dsa-why > summary,
+details.fixother > summary,
+details.pp-what > summary,
+details.costdetail, details.snipmore, details.fmtonly > summary,
+details.rband > summary,
+.rband details.toolcommits > summary,
+.rband details.takeover > summary { list-style:none; }
+details.ghfold > summary::-webkit-details-marker,
+details.testpair > summary::-webkit-details-marker,
+details.seqhow > summary::-webkit-details-marker,
+details.dsa-screen > summary::-webkit-details-marker,
+details.dsa-considered > summary::-webkit-details-marker,
+details.dsa-why > summary::-webkit-details-marker,
+details.fixother > summary::-webkit-details-marker,
+details.pp-what > summary::-webkit-details-marker,
+details.costdetail, details.snipmore, details.fmtonly > summary::-webkit-details-marker,
+details.rband > summary::-webkit-details-marker,
+.rband details.toolcommits > summary::-webkit-details-marker,
+.rband details.takeover > summary::-webkit-details-marker { display:none; }
+details.ghfold > summary::before,
+details.testpair > summary::before,
+details.seqhow > summary::before,
+details.dsa-screen > summary::before,
+details.dsa-considered > summary::before,
+details.dsa-why > summary::before,
+details.fixother > summary::before,
+details.pp-what > summary::before,
+details.costdetail, details.snipmore, details.fmtonly > summary::before,
+details.rband > summary::before,
+.rband details.toolcommits > summary::before,
+.rband details.takeover > summary::before {
+  content:"\25B6\FE0E"; display:inline-block; flex:none; width:1.1rem; margin-right:.3rem;
+  font-size:13px; line-height:1; color:var(--muted); text-align:center; align-self:center; }
+details.ghfold[open] > summary::before,
+details.testpair[open] > summary::before,
+details.seqhow[open] > summary::before,
+details.dsa-screen[open] > summary::before,
+details.dsa-considered[open] > summary::before,
+details.dsa-why[open] > summary::before,
+details.fixother[open] > summary::before,
+details.pp-what[open] > summary::before,
+details.costdetail, details.snipmore, details.fmtonly[open] > summary::before,
+details.rband[open] > summary::before,
+.rband details.toolcommits[open] > summary::before,
+.rband details.takeover[open] > summary::before { content:"\25BC\FE0E"; }
+details.ghfold > summary:hover::before,
+details.testpair > summary:hover::before,
+details.seqhow > summary:hover::before,
+details.dsa-screen > summary:hover::before,
+details.dsa-considered > summary:hover::before,
+details.dsa-why > summary:hover::before,
+details.fixother > summary:hover::before,
+details.pp-what > summary:hover::before,
+details.costdetail, details.snipmore, details.fmtonly > summary:hover::before,
+details.rband > summary:hover::before,
+.rband details.toolcommits > summary:hover::before,
+.rband details.takeover > summary:hover::before,
+.cx-head:hover .cx-caret, .cg-n:hover .cg-tog::before { color:var(--link); }
+.cx-caret, .rm-chev, .cg-tog::before, .disclose { font-size:13px; line-height:1; }
+.cx-caret, .disclose { color:var(--muted); }
+details > summary:has(> .disclose)::before{display:none}
+.disclose { display:inline-block; flex:none; width:1.1rem; text-align:center; }
 details > summary .disclose::before { content:"\25B6\FE0E"; }
 details[open] > summary .disclose::before { content:"\25BC\FE0E"; }

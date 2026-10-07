@@ -21,21 +21,13 @@
    like the same control. Muted even when the band around it is red: this row is telling
    the reader what it is *not* about. */
 .rband details.toolcommits { margin:.45rem 0 0; color:var(--muted); }
-.rband details.toolcommits > summary { cursor:pointer; list-style:none; font-size:.85rem; }
-.rband details.toolcommits > summary::-webkit-details-marker { display:none; }
-.rband details.toolcommits > summary::before { content:"▸"; font-size:.75rem;
-            margin-right:.3rem; display:inline-block; }
-.rband details.toolcommits[open] > summary::before { content:"▾"; }
+.rband details.toolcommits > summary { cursor:pointer; font-size:.85rem; }
 .rband details.toolcommits > summary:hover { color:var(--fg); }
 .rband details.toolcommits > ul { margin:.4rem 0 0; }
 /* The takeover note, folded to its one sentence: the count and the commit it starts from.
    Same disclosure control as the tool-commit fold above, at the band's own size, since
    here the row *is* the band. */
-.rband details.takeover > summary { cursor:pointer; list-style:none; }
-.rband details.takeover > summary::-webkit-details-marker { display:none; }
-.rband details.takeover > summary::before { content:"▸"; font-size:.75rem;
-            margin-right:.35rem; display:inline-block; }
-.rband details.takeover[open] > summary::before { content:"▾"; }
+.rband details.takeover > summary { cursor:pointer; }
 .rband details.takeover > ul { margin:.45rem 0 0; color:var(--muted); font-size:.9rem; }
 .rband details.takeover a code { text-decoration:underline; text-underline-offset:2px; }
 /* The one thing to do about the commits the band reports: make the rest of the page catch
@@ -55,11 +47,7 @@
   .rband-alert > p:first-child b, .rband-alert > p:first-child { color:#f0757f; } }
 /* What landed after the review, folded to its one line: the count, in the band's colour,
    and how it was read, muted. The commits and the explanation are one click away. */
-details.rband > summary { cursor:pointer; list-style:none; font-size:.9rem; line-height:1.6; }
-details.rband > summary::-webkit-details-marker { display:none; }
-details.rband > summary::before { content:"▸"; font-size:.75rem; margin-right:.35rem;
-            display:inline-block; }
-details.rband[open] > summary::before { content:"▾"; }
+details.rband > summary { cursor:pointer; font-size:.9rem; line-height:1.6; }
 details.rband[open] > summary { margin-bottom:.4rem; }
 details.rband > summary .rb-how { color:var(--muted); font-size:.85rem; }
 details.rband-alert > summary, details.rband-alert > summary b { color:#c62828; }

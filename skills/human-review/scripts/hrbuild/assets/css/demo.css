@@ -41,20 +41,6 @@
                   padding:.4rem .5rem; border-radius:5px; cursor:pointer; font-size:.88rem; }
 .transcript li:hover { background:var(--accent-soft); }
 .transcript li.on { background:var(--accent-soft); font-weight:600; }
-/* The coverage row is not a cue: no frame to seek to, so no pointer and no hover
-   highlight, and a ruled edge above it to say the walkthrough has ended.
-   Stuck to the floor of the scroller rather than merely last in it. The cue list is a
-   fixed-height box that already overflows at six captions, so "last child" is another way
-   of saying "below the fold" — and a statement about what the film does NOT cover is
-   exactly the one a reader will never scroll to look for. Pinned, it is always the last
-   thing under the captions and still costs the page no height at all. */
-.transcript li.uncovered { position:sticky; bottom:-.3rem; z-index:1;
-                cursor:default; color:var(--muted); border-top:1px solid var(--line);
-                border-radius:0; margin-top:.3rem; padding:.55rem .5rem .4rem;
-                background:var(--card); }
-.transcript li.uncovered:hover { background:var(--card); }
-.transcript li.uncovered .ts { color:var(--muted); opacity:.6; }
-.transcript li.uncovered b { color:var(--fg); }
 .transcript .ts { font:600 11.5px/1.5 ui-monospace,Menlo,monospace; color:var(--link); }
 /* A link the running app can answer looks like the caption links around it; one that has
     nowhere to point yet must not look clickable, because it is not. */

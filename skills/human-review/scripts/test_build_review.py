@@ -131,17 +131,6 @@ def test_a_relative_app_link_carries_its_path_for_the_runtime_to_resolve():
     assert '<a data-app="/petclinic/owners/2" href="/petclinic/owners/2">visit list</a>' in items
 
 
-def test_a_relative_link_that_found_no_caption_is_still_resolvable():
-    """The "Touched but not filmed" row is a link like any other — it went dead once because
-    that row built its anchor by hand instead of going through the same helper."""
-    _, unplaced = build._link_captions(CUES, [{"href": "/petclinic/vets", "label": "vets"}])
-    assert unplaced
-    out = build.video_html({"video": "assets/none.webm",
-                            "appLinks": [{"href": "/petclinic/vets", "label": "vets"}]},
-                           Path("/nonexistent"))
-    assert 'data-app="/petclinic/vets"' in out
-
-
 def test_a_section_with_no_runtime_gets_no_bar(tmp_path):
     assert "appenv" not in build.video_html(_video_dir(tmp_path, filmed=True), tmp_path)
 
@@ -1493,13 +1482,10 @@ def test_the_masthead_does_not_reopen_its_vertical_gaps(tmp_path):
     assert float(decl(".tabstrip").split("margin:")[1].split()[0].rstrip("rem")) <= 0.7
 
 
-def test_a_page_link_the_film_never_showed_rides_in_the_transcript(tmp_path):
-    """An app link whose phrase appears in no caption is a statement about the coverage of
-    the film, so it belongs to the cue list rather than to a paragraph of page prose under
-    it. Two things have to hold or the fact is worse off than when it had its own block:
-    it must be inside the transcript, and it must be pinned to the floor of that scroller —
-    the cue list overflows at six captions, and a note about what was NOT filmed is the one
-    nobody scrolls down to look for."""
+def test_a_page_link_the_film_never_showed_is_not_printed(tmp_path):
+    """An app link whose phrase appears in no caption used to close the transcript as a
+    "Not filmed. Touched by this change: …" row. Victor had it removed (7 Oct 2026): the
+    area was not needed. The link must not resurface anywhere else either."""
     content = {
         "title": "t", "summary": "<p>{{tabcount}}</p>",
         "sections": [{"id": "vid", "title": "", "body": "",
@@ -1512,31 +1498,13 @@ def test_a_page_link_the_film_never_showed_rides_in_the_transcript(tmp_path):
     (tmp_path / "assets").mkdir(exist_ok=True)
     (tmp_path / "assets" / "f.cues.json").write_text(
         json.dumps([{"t": 1.0, "text": "something else entirely"}]), encoding="utf-8")
+    (tmp_path / "assets" / "f.webm").write_bytes(b"\x1aE\xdf\xa3")
     page, _ = _build(tmp_path, content)
 
-    ol = page[page.index('<ol class="transcript">'):]
-    ol = ol[:ol.index("</ol>")]
-    assert "all visits" in ol, "the unplaced link left the transcript"
-    assert 'class="uncovered"' in ol
-    # Never a paragraph of its own again.
-    assert "Touched but not filmed" not in page
-    assert "http://localhost:4200/visits" not in page.split("</ol>")[1]
-
-    css = page[page.index("<style>"):page.index("</style>")]
-    pinned = css[css.index(".transcript li.uncovered {"):]
-    pinned = pinned[:pinned.index("}")]
-    assert "position:sticky" in pinned and "bottom:" in pinned, pinned
-
-
-def test_the_coverage_row_is_not_a_seek_target(tmp_path):
-    """It carries no `data-t`, because there is no frame to seek to. The caption handler
-    must therefore select on `data-t` and not on `li`: `parseFloat(undefined)` is NaN,
-    assigning NaN to `video.currentTime` throws, and a throw in that click handler kills
-    every script emitted after it — the tab strip included, which would leave every panel
-    on screen at once with no way to hide them."""
-    page, _ = _build(tmp_path, BARE)
-    assert ".transcript li[data-t]" in page
-    assert "querySelectorAll('.transcript li')" not in page
+    assert 'class="uncovered"' not in page
+    assert "Touched by this change" not in page and "Not filmed" not in page
+    assert "http://localhost:4200/visits" not in page
+    assert "li.uncovered" not in page, "its stylesheet went with it"
 
 
 if __name__ == "__main__":
@@ -5367,7 +5335,7 @@ def _signals_dir(tmp_path, gate="green", seq="skipped", api=True):
     if api:
         (out / "assets" / "openapi-verdict.html").write_text(
             '<style>.x{}</style><div class="apiverdict red"><span class="v">Breaking '
-            'changes</span> <span class="n">· 2 changes, 1 breaking across 1 endpoint '
+            'change</span> <span class="n">· 1 endpoint broken '
             '(<a class="rep">report&nbsp;&#8599;</a>)</span></div>')
     return out
 
@@ -5384,10 +5352,10 @@ def test_the_grade_reasons_are_computed_from_what_the_page_measured(tmp_path):
     assert spec["verdict"] == {"score": 7, "modelScore": 8}
     reasons = dict(build.grade_reasons(spec))
     assert reasons["CI green on 0746abc5"] == "CI green on 0746abc5", "no hover: the face links the run"
-    assert "1 breaking API change (caps the grade at 7)" in reasons
+    assert "1 API endpoint broken (caps the grade at 7)" in reasons
     seq = next(full for short, full in reasons.items() if short.startswith("One tab carries"))
     assert "Sequence: not re-traced" in seq and "C2 view on Structure" in seq
-    assert "report" not in reasons["1 breaking API change (caps the grade at 7)"]
+    assert "report" not in reasons["1 API endpoint broken (caps the grade at 7)"]
     panel = build.grade_reasons_html(spec)
     assert '<b>7</b>/10' in panel and 'class="gradewhy-was"' in panel and ">was 8<" in panel
 

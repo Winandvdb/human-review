@@ -19,10 +19,9 @@ def _link_captions(cues, links, drive=False):
     the owner" is the natural handle for the owner page; the separate list was a handle
     nobody needed and a thing to keep in sync.
 
-    Returns (rendered <li> items, links that found no caption). A link is *never* dropped:
-    one whose phrase is not in the narration is reported back to be printed after the
-    transcript, because a page this change touches and the film did not show is a fact
-    about the coverage of the film."""
+    Returns (rendered <li> items, links that found no caption). The page does not print
+    the second list: it used to close the transcript as a "Not filmed. Touched by this
+    change: …" row, and Victor had it removed (7 Oct 2026) — the area was not needed."""
     texts = [c["text"] for c in cues]
     # Each caption is escaped once, then the anchors are spliced into the escaped text —
     # so the phrase has to be escaped the same way to be found in it.
@@ -271,8 +270,8 @@ def _screen_changed(screen: dict) -> bool:
 def derived_app_links(out_dir: Path, cues: list[dict]) -> list[dict]:
     """`appLinks` off the design-system audit: each screen it found changed, linked on the
     first caption that names it — `Owners` in "The Owners grid is now paginated…" becomes a
-    link into `/owners` on whatever instance is up. A changed screen no caption names is
-    still listed, after the transcript, as touched and not filmed."""
+    link into `/owners` on whatever instance is up. A changed screen no caption names has
+    no words to ride on, so it is not shown."""
     try:
         doc = json.loads((Path(out_dir) / "assets" / "ds-audit.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -315,7 +314,7 @@ def video_html(s, out_dir: Path) -> str:
         if value and (key in ("command", "stop", "urlCommand") or not rt.get(key)):
             rt[key] = value
     links = s["appLinks"] if "appLinks" in s else derived_app_links(out_dir, cues)
-    items, unplaced = _link_captions(cues, links, bool(rt.get("drive")))
+    items, _ = _link_captions(cues, links, bool(rt.get("drive")))
     voices = voice_films(rel, out_dir) if (out_dir / rel).is_file() else []
     # The same take, cue for cue, in every voice, so caption.js swaps the source and keeps
     # the second the reader was at; the transcript and its timestamps are shared by all.
@@ -327,19 +326,6 @@ def video_html(s, out_dir: Path) -> str:
               'was not produced by this run, so there is no player here — the narration '
               'below is what the recording would have shown, and it is the only part of '
               'this section that is not evidence.</p>')
-    # A screen the branch touched and the film never showed is a fact about the *coverage
-    # of the film*, so it belongs to the transcript, not to the page under it. It used to
-    # be a paragraph of its own below the player — a full block of vertical space, in the
-    # page's own prose voice, for a footnote. As the transcript's last row it costs no
-    # height at all (the cue list is a fixed-height scroller) and it is read where the
-    # question it answers is actually asked: "is that everything the film covered?".
-    # No `data-t`: there is no frame to seek to, which is the whole point of the row.
-    if unplaced:
-        items += ('<li class="uncovered"><span class="ts">--:--</span><span>'
-                  '<b>Not filmed.</b> Touched by this change: '
-                  + " · ".join(_app_anchor(l["href"])
-                               + f'{html.escape(l.get("label") or l["href"])}</a>'
-                               for l in unplaced) + ".</span></li>")
     # The verdict sits OUTSIDE the wrap, not inside it beside the player: `.vidwrap` is a
     # two-column grid, so a band emitted as one of its children takes a column and stands
     # next to the picture instead of across the top of it. What it contradicts is the

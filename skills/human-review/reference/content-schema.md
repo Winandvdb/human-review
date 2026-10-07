@@ -416,8 +416,7 @@ named under the strip.
 
 `anchor` is the phrase to wrap, matched in the first caption containing it and never nested
 inside a link already placed. A link whose phrase is nowhere in the narration — or that has
-no `anchor` — is **not dropped**: it prints after the transcript as *"Touched but not
-filmed"*, which is a fact about the film's coverage.
+no `anchor` — is not shown on the page.
 
 An `href` that starts with `/` is a **path into whichever instance is running**, not a URL.
 The port cannot be known when the page is built — the host picks one per instance so that

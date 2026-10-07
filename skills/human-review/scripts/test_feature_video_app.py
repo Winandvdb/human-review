@@ -398,8 +398,8 @@ def test_the_screens_this_branch_changed_are_linked_on_the_words_that_name_them(
         {"screen": "Vets", "route": "/vets", "delta": same, "summary": quiet}]}))
     page = build.video_html({"video": "assets/feature.webm"}, out)
     assert 'The <a data-app="/owners" href="/owners">Owners</a> grid' in page
-    # Changed and never named on film: a fact about the film's coverage, said once.
-    assert "Not filmed." in page and ">welcome</a>" in page
+    # Changed and never named on film: no caption to ride on, so not printed at all.
+    assert "Not filmed." not in page and "/welcome" not in page
     assert "/vets" not in page, "a screen the branch did not change is not linked"
 
 

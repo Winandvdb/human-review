@@ -178,3 +178,24 @@
 .diagram [data-folder][role=button] { cursor:pointer; }
 .diagram [data-folder]:is([role=button], :has(> a)):hover rect { stroke:var(--link) !important; stroke-width:1.5 !important; }
 .diagram [data-folder]:focus-visible { outline:2px solid var(--link); outline-offset:2px; }
+
+/* The radius morph (focus.js): newcomers fade and grow in, then glow once; edges wait.
+   The chooser pins under the masthead, because keeping the change still on screen means
+   scrolling the page, and the next radius must stay one click away while it does. */
+.diagram .focus { position:sticky; top:var(--strip-h, 2.6rem); z-index:19; background:var(--card);
+                  padding:.3rem 0; }
+.diagram .svgbox.dgm-morphing { position:relative; overflow:visible; }
+.diagram .svgbox svg g.dgm-m-new { opacity:0; transform-box:fill-box; transform-origin:center; transform:scale(.82); }
+.diagram .svgbox svg g.dgm-m-new.dgm-m-in { opacity:1; transform:none; transition:opacity 320ms ease-out 180ms, transform 420ms cubic-bezier(.2,.7,.2,1) 180ms; }
+.diagram .svgbox svg .dgm-m-fade { opacity:0; }
+.diagram .svgbox svg .dgm-m-fade.dgm-m-in { opacity:1; transition:opacity 260ms ease-out; }
+.diagram .svgbox svg g.dgm-m-glow > :is(rect, path, polygon):first-of-type { animation:dgm-m-glow 1300ms ease-out 1; }
+@keyframes dgm-m-glow {
+  0%, 40% { stroke:#f5b324; stroke-width:4px; }
+  100% { stroke:var(--dgm-line); stroke-width:.5px; }
+}
+.diagram .svgbox svg.dgm-m-ghost { position:absolute; pointer-events:none; opacity:1; z-index:1; }
+.diagram .svgbox svg.dgm-m-ghost.dgm-m-out { opacity:0; transition:opacity 260ms ease-in; }
+@media (prefers-reduced-motion: reduce) {
+  .diagram .svgbox svg g.dgm-m-glow > :is(rect, path, polygon):first-of-type { animation-duration:1600ms; }
+}

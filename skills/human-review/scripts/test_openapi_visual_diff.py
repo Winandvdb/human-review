@@ -464,6 +464,19 @@ def test_an_added_operation_counts_once_toward_expand_n_impacted():
     assert ovd.change_total(entries, global_changes) == 1
 
 
+def test_the_expand_toggle_counts_changes_by_that_name():
+    """Victor at Devoxx, 7 Oct 2026: "it should say expand 25 changes". The live page was
+    patched by hand; the producer has to print it, or the next rebuild says "impacted"."""
+    old = {"paths": {}}
+    new = {"paths": {"/api/vets": {"get": {"responses": {"200": {"description": "ok"}}}}}}
+    raw = [{"id": "endpoint-added", "operation": "GET", "path": "/api/vets", "level": 1,
+            "text": "endpoint added", "section": "paths"}]
+    model, entries, global_changes, tags = ovd.build_model(old, new, raw)
+    page = ovd.render(model, entries, global_changes, tags, "main", "branch")
+    assert 'id="dv-expand"> expand 1 change</label>' in page
+    assert "expand 1 impacted" not in page
+
+
 def test_a_breaking_badge_keeps_its_change_count():
     """Run 6: the breaking endpoint's badge said only BREAKING, where a modified one says
     "3 CHANGES" — the count was gone exactly where it matters most."""

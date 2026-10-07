@@ -798,9 +798,7 @@ def _main(argv=None) -> int:
         # The score belongs beside the title: it is the one thing a reader wants before
         # they have decided whether to read anything. The band below keeps the reasons.
         band = "v-good" if n >= 8 else ("v-mid" if n >= 5 else "v-bad")
-        # `grade` in front of the number: a bare `6/10` beside a PR title is a number with
-        # no noun, and the first question it raised was *six out of ten of what?*.
-        face = (f'<span class="ts-k">grade</span><b>{n}</b><small>/10</small>'
+        face = (f'<b>{n}</b><small>/10</small>'
                 f'<i>{html.escape(v.get("label", ""))}</i>')
         # `5/10 not yet mergeable` states a conclusion and shows none of the reasoning, so
         # the click every reader tries on it is the one that goes to the findings. It is

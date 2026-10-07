@@ -20,7 +20,7 @@
             margin-left:calc(50% - 50vw); width:100vw;
             /* .15rem on top, not .6rem: the h1's own line box already carries ~5px of
                leading above the text, so .6rem made a ~15px empty band over the title. */
-            padding:.15rem max(1.25rem, calc(50vw - 540px + 1.25rem)) .3rem;
+            padding:.075rem max(1.25rem, calc(50vw - 540px + 1.25rem)) .3rem;
             border-bottom:1px solid var(--line); }
 .masthead .titlerow { align-items:baseline; gap:.3rem .9rem; }
 /* One line, always: the PR and its name on the left, the score hard right. Nothing here
@@ -49,6 +49,10 @@
    than on a baseline — a glyph, a word and a fraction have no common baseline to sit on. */
 .titleside { display:inline-flex; align-items:center; gap:.5rem; margin-left:auto; }
 .masthead .scopebar { margin:.3rem 0 .05rem; }
+/* Header chips ~30% shorter than the body's (28px -> ~20px): tighter padding and a 1.1
+   line box. Scoped to the scopebar so chips elsewhere keep their size; 1.1 still clears
+   the emoji glyph height at .82rem. */
+.scopebar .chip { padding-top:.1rem; padding-bottom:.1rem; line-height:1.1; }
 /* Inside the masthead the strip is no longer its own sticky, full-bleed band: the block
    around it does the bleeding, the pinning and the edge. */
 .masthead .tabstrip { position:static; margin:.1rem 0 0; width:auto;
@@ -88,10 +92,6 @@ h1 .nopr { font-size:.55em; font-weight:600; vertical-align:middle; color:var(--
 .titlescore b { font-size:1em; line-height:inherit; letter-spacing:0; }
 .titlescore small { font-size:1em; opacity:.6; }
 .titlescore i { font-style:normal; font-size:.82rem; opacity:.85; margin-left:.25rem; }
-/* The noun in front of the number, so `6/10` says what it is out of ten. Lower-case and
-   quieter than the figure: it names the number, it does not compete with it. */
-.titlescore .ts-k { font-size:.82em; font-weight:600; opacity:.8; margin-right:.15rem;
-              letter-spacing:.01em; }
 /* The score is a link now — to the tab holding the findings that produced it, which is
    the next thing anyone reading `5/10 not yet mergeable` wants. It keeps every colour it
    had: an underline or a link colour on a pill that is already coloured by its verdict

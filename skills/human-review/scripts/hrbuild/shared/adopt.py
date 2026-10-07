@@ -114,187 +114,178 @@ PIECES: dict[str, tuple[str, str]] = {
 
 #: The (i) beside every pill: what the reader is looking at, before they copy a prompt for
 #: it (7 Oct 2026, Victor: "whoever goes to click Prompt to get this should first
-#: understand what they're looking at"). Static, the same on every PR, so no line may
-#: state what only one PR shows; an example is marked "e.g.". 2-4 short lines, plain
-#: English, a tiny petclinic example: an ADHD-friendly read, not documentation.
+#: understand what they're looking at"). Worded as Victor explained each tab at Devoxx
+#: Belgium the same day, and kept brief ("be brief in the details you give in the (i)
+#: modals"): 1-3 short lines, then at most one tiny example. Static, the same on every PR,
+#: so no line may state what only one PR shows; an example is marked "e.g.".
 #: Keyed by piece, or by "piece:Card title" when one piece covers unlike cards (the two
 #: draw.io diagrams). `move`: the tab's own "how this was made" line, a CSS selector,
 #: moved into the box so the visible page stays calm (its counts stay live).
-#: `li` lines, then `ex` (one muted example line) and/or `code` (a tiny snippet; HTML).
+#: `li` lines, then `ex` (one muted example line) or `code` (a tiny snippet; HTML).
 EXPLAIN: dict[str, dict[str, object]] = {
     'review.assumed': {
         "li": [
-            'Where the ticket was vague: the guess the coder made, and how sure it was.',
-            'Read these first: a wrong guess is a wrong feature, however clean the code.',
+            'Where the ticket was vague, the coder guessed. Each guess, and how sure it was.',
+            'Read these first: a wrong guess is a wrong feature. Next time, ask questions.',
         ],
-        "ex": 'e.g. the ticket says "link a vet to a visit" but not whether the vet is optional.',
+        "ex": 'e.g. "link a vet to a visit": can the vet be left empty?',
     },
     'review.open': {
         "li": [
-            'What AI reviewers flagged that nobody has fixed yet.',
-            '<b>must look</b> › <b>worth a look</b> › <b>nit</b>. Agree or disagree with each.',
+            'A quorum of adversarial reviewers criticised the code. These the coder refused or left.',
+            'Mostly nits. You decide: <b>must look</b> › <b>worth a look</b> › <b>nit</b>.',
         ],
     },
     'review.fixed': {
         "li": [
-            'Issues the reviewers raised that an agent already fixed, one diff each.',
-            'Skim them: a fix can be wrong too.',
+            'What the reviewers raised and the coder already fixed, one diff each.',
+            'Skim them: ask reviewers for issues and they find some. Not all deserved a fix.',
         ],
     },
     'behaviour': {
         "li": [
-            'A film of the feature: a script clicks through the real app; a voice explains.',
+            'A short film of the feature on the real app: start here on a PR you never saw.',
             'Click a transcript line to jump there.',
-            '<b>Running app</b> (top): start this exact build and try it yourself.',
+            '<b>Running app</b> (top): this build in Docker, its database reset to a known dataset.',
         ],
     },
     'api': {
         "li": [
-            'The REST contract (OpenAPI) on main vs this branch, diffed by oasdiff.',
-            '<b>Breaking</b>: a client written for main can now fail. <b>Info</b>: harmless, e.g. a new optional field.',
+            'The REST contract, main vs this branch, diffed by oasdiff. No AI.',
+            '<b>Breaking</b>: a client of main can fail. One DTO change can break many endpoints.',
         ],
         "code": (
             '<span class="c">e.g. GET /api/owners/1</span>\n'
             '<span class="c">main:  </span>{ "name": "Leo" }\n'
-            '<span class="c">branch:</span>{ "firstName": "Leo" }   <span class="p">breaking</span><span class="c">: clients reading "name" get nothing</span>'
+            '<span class="c">branch:</span>{ "firstName": "Leo" }   <span class="p">breaking</span>'
         ),
     },
     'diagram.domain': {
         "li": [
-            'The JPA entities and their links, generated from the Java classes.',
-            'The badge says whether this PR changed it.',
+            'The entities, generated from the Java classes by reflection. No AI, so no drift.',
+            'Main vs this branch: green = added by this PR.',
         ],
-        "ex": 'e.g. <code>Owner 1─* Pet 1─* Visit</code>: an owner has pets, a pet has visits.',
+        "ex": 'e.g. <code>Owner 1─* Pet 1─* Visit</code>',
     },
     'diagram.db': {
         "li": [
-            'The database tables, rebuilt from the migration scripts.',
-            '"Also changed, not drawn": indexes and constraints the picture can\'t show.',
+            'The tables: migrations run on an empty DB in a Testcontainer, then dumped. No AI.',
+            'Green = added by this PR. Indexes and constraints it can\'t draw are listed under it.',
         ],
-        "ex": 'e.g. <code>pets.owner_id «FK» → owners.id</code>: each pet row points at its owner.',
+        "ex": 'e.g. <code>pets.owner_id «FK» → owners.id</code>',
     },
     'diagram.drawio': {
         "li": [
-            'The business concepts and how they relate, hand-drawn in draw.io.',
-            'No code here: the words a vet or a pet owner would use.',
+            'The same concepts, laid out by hand in draw.io, so they stay where you remember them.',
+            'A unit test checks the boxes and lines against the code. Layout is yours.',
         ],
-        "ex": 'e.g. an Owner has Pets; a Vet has Specialties.',
+        "ex": 'e.g. a new red line: the test wants it. Place it in draw.io, then commit.',
     },
     'diagram.drawio:Deployment': {
         "li": [
-            'What runs where at runtime, and who calls whom. Hand-drawn in draw.io.',
-            "A test checks every traced arrow really appears in the tests' traces.",
+            'What runs where, hand-drawn in draw.io, unit-tested against the e2e test traces.',
+            'A call the drawing lacks fails a test.',
         ],
-        "ex": 'e.g. Backend → Notification Service: booking a visit sends an SMS.',
+        "ex": 'e.g. Notification Service → Database: not drawn, so the test fails.',
     },
     'diagram.packages': {
         "li": [
-            'How the backend code is split into Java packages. Arrow = "depends on".',
-            'ArchUnit tests fail the build if the code stops matching the drawing.',
+            'The Java packages and who depends on whom. ArchUnit checks the classes against it.',
+            'Zero drift: an import the drawing lacks fails the build.',
         ],
-        "ex": "e.g. a new import from <code>..domain</code> into <code>..rest</code> isn't drawn, so a test fails.",
+        "ex": 'e.g. <code>..domain</code> → <code>..rest</code>: not drawn, so a test fails.',
     },
     'diagram.modules': {
         "li": [
-            'The Maven modules and which one depends on which.',
-            "Generated from <code>mvn dependency:tree</code>, so it can't drift from the build.",
+            'The Maven modules and who depends on whom, from <code>mvn dependency:tree</code>.',
+            "Generated, so it can't drift from the build.",
         ],
-        "ex": 'e.g. <code>petclinic-backend → petclinic-commons</code>: shared code lives in commons.',
     },
     'diagram.c2': {
         "li": [
-            'The C4 "containers" view: the apps and databases, and the calls between them.',
-            "Drawn from the tests' traces, not by hand: every arrow was really called.",
+            'C4 level 2: the apps and databases, and who calls whom.',
+            'Drawn by a script from the e2e test traces, not by AI: every arrow really happened.',
         ],
         "ex": 'e.g. Browser → Backend: <code>GET /api/owners</code>.',
     },
     'diagram.c4': {
         "li": [
-            'A C4 view from the Structurizr DSL file, drawn by Structurizr itself.',
-            'The note under it says if a test checks it against the code, or if it is only hand-drawn.',
+            "A C4 view from the repo's Structurizr <code>.dsl</code>, drawn by Structurizr itself.",
+            'The note under it: checked against the code by a test, or only hand-maintained.',
         ],
-        "ex": 'e.g. C2: Frontend → Backend → Database, as written in the <code>.dsl</code>.',
     },
     'diagram': {
         "li": [
-            'A diagram kept in the repository as PlantUML.',
+            'A PlantUML diagram kept in the repo.',
             'The badge says whether this PR changed it.',
         ],
     },
     'requirements': {
         "li": [
-            "Left: the ticket's requirements. Right: the tests that check them.",
-            'Requirement colour: <b>green</b> = a test proves it, <b>orange</b> = partly, <b>red</b> = no test.',
-            '<b>E2E</b> = browser · <b>API</b> = HTTP call · <b>Unit</b> = direct call.',
+            'Left: the ticket. Right: every test that ran through a line this PR changed.',
+            'AI matched them by meaning, so it can be wrong. Click either side: what covers what.',
+            '<b>green</b> = proven · <b>orange</b> = partly · <b>red</b> = no test. E2E/API count most.',
         ],
     },
     'sequence': {
         "move": 'details.seqhow',
         "li": [
-            'One diagram per test: each HTTP call and SQL query, in order.',
-            'Watch for the same SELECT once per row: an N+1.',
+            'Each e2e test that ran a changed line: its OpenTelemetry trace, drawn by a script.',
+            'HTTP calls, SQL with parameters, calls across services and modules. Spot the N+1.',
         ],
         "code": (
-            '<span class="c">e.g. what a bad one looks like:</span>\n'
             'GET /api/owners?page=0\n'
-            '  → OwnerRestController.listOwners\n'
-            '    → SELECT … FROM owners LIMIT 10\n'
-            '    → SELECT … FROM pets WHERE owner_id=?   <span class="p">×10 ← N+1</span>'
+            '  → SELECT … FROM owners LIMIT 10\n'
+            '  → SELECT … FROM pets WHERE owner_id=?   <span class="p">×10 ← N+1</span>'
         ),
     },
     'city': {
         "li": [
-            'Code City: one building per class, grouped into districts by package.',
-            'By default: area = lines of code · height = cognitive complexity · colour = test coverage.',
-            'Tall and thin = small but tangled. Changed classes are highlighted.',
+            'One building per class. Area = lines of code, height = how many ifs.',
+            'Arrows up = grew in this PR. Use it on a huge PR: where is the code growing?',
         ],
     },
     'dsaudit': {
         "li": [
-            'Every screen, opened on main and on this branch with the same data, side by side.',
-            "<b>Changed</b>: an element added, removed or restyled. Moving alone doesn't count.",
-            '<b>+1 gap</b>: one more control built outside the design system.',
+            'Every screen, main vs this branch on the same data: a pixel-level visual diff.',
+            'A script, no LLM, flags controls outside the design system.',
         ],
-        "ex": 'e.g. a raw <code>&lt;select&gt;</code> where the design system has its own dropdown.',
+        "ex": 'e.g. a home-made combo box, or an inline <code>style=</code>.',
     },
     'complexity': {
         "move": 'p.cx-lede',
         "li": [
-            '<b>Cognitive complexity</b>: how hard code is to follow. Nesting is what costs.',
-            'One row per endpoint: its whole call chain, summed. Green = added by this PR.',
+            'Cognitive complexity per endpoint: its whole call graph, walked and summed.',
+            'Nesting is what costs. Green = added by this PR.',
         ],
         "code": (
-            'for (Owner o : owners) {            <span class="p">// +1</span>  <span class="c">loop</span>\n'
-            '  if (o.getPets().isEmpty()) {      <span class="p">// +2</span>  <span class="c">if, nested once</span>\n'
-            '    for (Visit v : visits) {        <span class="p">// +3</span>  <span class="c">loop, nested twice</span>\n'
-            '      if (v.getVet() == null) {}    <span class="p">// +4</span>  <span class="c">if, 3 deep → total 10</span>'
+            'for (Owner o : owners) {            <span class="p">// +1</span>\n'
+            '  if (o.getPets().isEmpty()) {      <span class="p">// +2  nested once</span>\n'
+            '    for (Visit v : visits) {}       <span class="p">// +3  nested twice</span>'
         ),
     },
     'logging': {
         "move": 'p.tabsub',
         "li": [
-            'Every log statement this PR adds or changes.',
-            'Check: right level? No secrets or personal data? Enough context to debug?',
+            'Every log line this PR adds or changes, found by parsing the Java, not by grep.',
+            'Check: right level? No personal data? Enough context to debug?',
         ],
         "code": (
-            '<span class="c">e.g. ✗</span> log.info("Saved {}", owner);  <span class="p">// prints the owner\'s phone and address</span>'
+            '<span class="c">e.g. ✗</span> log.info("Saved {}", owner);  <span class="p">// phone, address</span>'
         ),
     },
     'owners': {
         "li": [
-            'Files this PR touches that <code>.github/CODEOWNERS</code> assigns to a team.',
-            "That team's review is requested; branch protection can make it required.",
+            'Who must approve, per <code>.github/CODEOWNERS</code>, for the files this PR touches.',
+            'Change the contract, meet the tech leads. Touch the guardrails, meet the lord.',
         ],
-        "code": (
-            'openapi.yaml   @org/tech-leads   <span class="c">← API changes need a tech lead</span>'
-        ),
     },
     'cost': {
         "li": [
-            'AI spend on this PR: writing, reviewing, fixing, and building this page.',
-            '$ = Claude tokens at API list price, not what a subscription bills.',
-            'Time = model thinking + tools running (builds, tests, Docker).',
+            'What this PR cost in tokens, per stage: coding, the reviewer quorum, fixes, this page.',
+            '$ at API list price, not your subscription. Time = model + tools (builds, tests).',
         ],
+        "ex": 'e.g. coding $15 · review $5 · auto-fixes $9 · this guide $0.30.',
     },
 }
 

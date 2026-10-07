@@ -218,17 +218,20 @@ def test_every_piece_with_a_prompt_explains_itself(piece):
 
 
 @pytest.mark.parametrize("key", sorted(EXPLAIN))
-def test_each_explainer_is_two_to_four_short_lines_and_names_a_real_piece(key):
+def test_each_explainer_is_one_to_three_short_lines_and_names_a_real_piece(key):
+    """Victor, 7 Oct 2026: "be brief in the details you give in the (i) modals"."""
     t = EXPLAIN[key]
     assert key.split(":")[0] in PIECES
-    assert 2 <= len(t["li"]) <= 4, "ADHD-friendly: 2-4 lines"
+    assert 1 <= len(t["li"]) <= 3, "ADHD-friendly: 1-3 lines"
     for line in t["li"]:
-        assert len(re.sub(r"<[^>]+>", "", line)) <= 100, line
+        assert len(re.sub(r"<[^>]+>", "", line)) <= 90, line
     assert set(t) <= {"li", "ex", "code", "move"}
+    assert not ("ex" in t and "code" in t), "at most one tiny example"
     if "ex" in t:
         assert t["ex"].startswith("e.g."), "an example is marked as one: the texts are static"
+        assert len(re.sub(r"<[^>]+>", "", t["ex"])) <= 90, t["ex"]
     if "code" in t:
-        assert len(t["code"].split("\n")) <= 5, "a tiny snippet, not a listing"
+        assert len(t["code"].split("\n")) <= 3, "a tiny snippet, not a listing"
 
 
 def test_the_i_sits_right_after_the_pill_inside_its_row():

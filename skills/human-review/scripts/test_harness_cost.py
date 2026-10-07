@@ -306,7 +306,9 @@ def test_the_tab_leads_with_four_rows_and_says_it_adds_two_kinds_of_price():
     assert out.count("data-component=") == 4
     assert "404 AIC" in out and "≈ $4.04 billed" in out
     assert "unmeasured — the reviewers&#x27; end was not stamped" in out
-    assert "two kinds of price, added" in out
+    # The two kinds of price, under the total (984b8c1 dropped the "added" caption).
+    assert ("Copilot 829 AIC = $8.29 at GitHub&#x27;s $0.01 per AI credit + Claude $5.98 at "
+            "API list price") in out
     assert "took 24 min, of which model 15 min; plus 30 s of refreshes, no model" in out
     assert cost.cost_pill_label({"components": comp}) == "$14?"
     assert cost.components_html({"rows": [hc.component("guide", [], "x")]}) == ""
@@ -673,7 +675,9 @@ def test_the_four_rows_explain_only_the_prices_on_screen():
     ], "usd": 21.82, "aic": 0.0}
     out = cost.components_html(comp)
     assert "Copilot" not in out and "AI credit" not in out
-    assert "Claude at API list price" in out
+    # Claude alone: one kind of price, so no line explaining two (a8911a0, Victor: the
+    # total's own line already says it is the API list price).
+    assert "per AI credit" not in out
     assert out.count("$0.16") == 1, "a row's only entry is priced once, in the cost column"
     assert "claude -p on Haiku 4.5" in out and ".model-runs.json" not in out
     assert "film script" not in out, "the hint names no step the run did not take"
@@ -749,7 +753,8 @@ def test_an_extended_autofix_row_keeps_what_the_record_said(tmp_path, monkeypatc
     out = cost.components_html({"rows": [{**row, "label": "auto-fixes", "entries": []}],
                                 "usd": 2.2583, "aic": 0.0})
     # Eval run 11: on the label's hover, not as a visible line under it.
-    tip = re.search(r'<td><span data-tip="([^"]*)">auto-fixes</span>', out)
+    # 984b8c1 capitalises a row's name ("Auto-fixes").
+    tip = re.search(r'<td><span data-tip="([^"]*)">Auto-fixes</span>', out)
     assert tip, out
     said = html.unescape(tip.group(1))
     assert said.startswith("extended to the last CI round")

@@ -244,7 +244,8 @@ def ref_badges(spec: dict, state: dict | None = None) -> str:
                       f'data-tip-html="{html.escape(tip, quote=True)}">{n}\u2191</span>')
         cls_extra = " drifted"
     if branch:
-        parts.append(f"branch {ahead_mark}{ref_html(branch, 'head')}")
+        parts.append(f"branch {ahead_mark}{badge}{ref_html(branch, 'head')}")
+        badge = ""
     mark = ""
     if base and warning:
         # `5↓main`: five commits behind main, the number sitting on the ref it measures.
@@ -259,7 +260,7 @@ def ref_badges(spec: dict, state: dict | None = None) -> str:
     if base:
         parts.append(f"{'from' if branch else 'base'} {mark}{ref_html(base, 'base')}")
     inner = " ".join(parts)
-    return f'<span class="chip refchip{cls_extra}">{inner}{badge}</span>'
+    return f'<span class="chip refchip{cls_extra}">{badge}{inner}</span>'
 
 
 def masthead_html(spec: dict, title_score: str, chips: str, strip_html: str,

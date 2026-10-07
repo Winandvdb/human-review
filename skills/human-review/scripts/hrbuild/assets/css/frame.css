@@ -13,7 +13,7 @@ footer { margin-top:1rem; color:var(--muted); font-size:.85rem; }
    is a fixed height: `--strip-h` is still measured off the rendered box. */
 .tabstrip { position:sticky; top:0; z-index:30; margin:.5rem 0 .85rem;
             margin-left:calc(50% - 50vw); width:100vw;
-            padding:.3rem max(1.25rem, calc(50vw - 540px + 1.25rem)) 0;
+            padding:.3rem max(1.25rem, calc(50vw - 600px + 1.25rem)) 0;
             background:var(--bg); border-bottom:1px solid var(--line);
             display:flex; gap:.2rem .5rem; flex-wrap:wrap; align-items:flex-end; }
 /* The right padding is relaxed by ~80px into the full-bleed the strip already has, so
@@ -46,7 +46,8 @@ button.tab.quiet[aria-selected="true"] { opacity:1; }
    it opens, which is the one fact about these controls a pill could not say. */
 button.tab { border:1px solid var(--line); border-bottom:0; background:var(--card); color:var(--muted);
              border-radius:.55rem .55rem 0 0; position:relative;
-             cursor:pointer; font:600 .87rem/1.8 inherit; padding:0 .85rem; white-space:nowrap;
+             cursor:pointer; font:600 .87rem/18.6px inherit; padding:0 .85rem; white-space:nowrap;
+             height:19.75px; box-sizing:border-box; /* as tall as the masthead badges */
              display:inline-flex; align-items:center; gap:.42rem;
              transition:background .18s, border-color .18s, color .18s,
                         padding .22s ease; }

@@ -454,16 +454,6 @@ UNCHANGED = "unchanged"
 #: New-Old frame — two looks for one fact on the same tab.
 UNCHANGED_BADGE = f'<span class="badge sev-info">{UNCHANGED}</span>'
 
-#: An unchanged PICTURE over a source that did change where the picture cannot show it —
-#: `_unseen`, the line `schema_unseen_note` writes under an ERD whose dump gained indexes.
-#: It used to wear UNCHANGED, and the line under it said `DB.sql changed: indexes added`:
-#: two judges of eval run 5 read the pair as the page contradicting itself. Its own word,
-#: in the amber a finding-to-look-at wears, and the hover says what the two halves mean.
-SCHEMA_ONLY = "schema only"
-SCHEMA_ONLY_BADGE = (f'<span class="badge sev-med" data-tip="Schema changed outside the '
-                     f'diagram, see below">{SCHEMA_ONLY}</span>')
-
-
 def _unchanged_body(row, assets: Path, root: Path, out_dir: Path) -> str:
     """An unchanged diagram is the whole current picture and nothing else.
 
@@ -627,8 +617,7 @@ def render_diagrams(spec, root: Path, out_dir: Path, rows=None, bare: str = "") 
             # A badge earns its place by saying something surprising. "modified" is what
             # a diagram in a delta gallery always is, and "structural" is legible from the
             # picture — so only the states that carry information get one.
-            + (SCHEMA_ONLY_BADGE if r["status"] == UNCHANGED and r.get("_unseen") else
-               UNCHANGED_BADGE if r["status"] == UNCHANGED else
+            + (UNCHANGED_BADGE if r["status"] == UNCHANGED else
                # A new diagram says "new", once: inside a test pair the card's own
                # `new test` chip already says it, so nothing here (Victor, 4 Oct 2026).
                "" if r["status"] == "added" and bare else

@@ -68,7 +68,7 @@ def test_11_the_branch_badge_does_not_make_the_masthead_taller():
     css = _read(CSS / "masthead.css")
     assert "align-items:center" in _rule(css, ".masthead .scopebar")
     badge = _rule(css, ".chip.refchip .sn-badge")
-    assert "line-height:inherit" in badge and "padding:0 0 0 .3rem" in badge and "border:0" in badge
+    assert "line-height:inherit" in badge and "margin:0 .1rem 0 .3rem" in badge and "border:0" in badge
 
 
 def test_12_tests_fan_and_caret_are_readable_on_dark():

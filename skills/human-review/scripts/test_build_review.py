@@ -6193,8 +6193,8 @@ def test_the_data_tab_shows_every_named_diagram_and_says_what_the_erd_cannot(tmp
     # The Domain Model is UNCHANGED; the DB picture is too, over a schema that did change —
     # eval run 5's judges read UNCHANGED beside "DB.sql changed" as a contradiction, so
     # that card wears its own word.
-    assert panel.count('<span class="badge sev-info">unchanged</span>') == 1
-    assert panel.count(">schema only</span>") == 1
+    assert panel.count('<span class="badge sev-info">unchanged</span>') == 2
+    assert ">schema only</span>" not in panel
     assert "domain picture" in panel and "erd picture" in panel
     assert "domain delta" not in panel and "dgmviews" not in panel
     assert "indexes added on owners (id)" in panel

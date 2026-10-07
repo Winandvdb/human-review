@@ -20,7 +20,7 @@
             margin-left:calc(50% - 50vw); width:100vw;
             /* .15rem on top, not .6rem: the h1's own line box already carries ~5px of
                leading above the text, so .6rem made a ~15px empty band over the title. */
-            padding:0 max(1.25rem, calc(50vw - 540px + 1.25rem)) .3rem;
+            padding:0 max(1.25rem, calc(50vw - 600px + 1.25rem)) .3rem;
             border-bottom:1px solid var(--line); }
 .masthead .titlerow { align-items:baseline; gap:.3rem .9rem; }
 /* One line, always: the PR and its name on the left, the score hard right. Nothing here
@@ -82,7 +82,6 @@
 .chip.refchip .drift-ahead { font-weight:700; margin-right:.1rem; }
 .chip.refchip a.refl { text-decoration:none; }
 .chip.refchip a.refl:hover b { text-decoration:underline; }
-.chip.refchip.drifted { border-color:var(--drift); }
 h1 .prref { text-decoration:none; }
 h1 .prref:hover { text-decoration:underline; }
 h1 .nopr { font-size:.55em; font-weight:600; vertical-align:middle; color:var(--muted);
@@ -129,7 +128,7 @@ a.titlescore:hover { filter:brightness(1.06); box-shadow:0 0 0 1px currentColor 
 /* A marker like `5↓main`: bold, the drift colour, the chip's own size and line -- no pill, no
    border, no caret. It is still a button (click lists the commits, the tooltip says so). With
    the line inherited it no longer makes the chip taller (the old pill pushed it to 22px). */
-.chip.refchip .sn-badge { background:none; border:0; padding:0 0 0 .3rem; margin:0;
+.chip.refchip .sn-badge { background:none; border:0; padding:0; margin:0 .1rem 0 .3rem;
               font:inherit; font-weight:700; color:var(--drift); font-size:inherit;
               line-height:inherit; box-shadow:none; cursor:pointer; vertical-align:baseline; }
 .chip.refchip .sn-badge:hover, .chip.refchip .sn-badge[aria-expanded="true"] {

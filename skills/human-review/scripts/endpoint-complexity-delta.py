@@ -667,7 +667,7 @@ def render(rows, base="main", engines=("regex", "regex")) -> str:
         out.append(
             f'<div class="cx-kind cx-kind-cols"><span>{html.escape(title)} '
             f'<span class="cx-count">{len(of_kind)}</span></span>'
-            '<span class="cx-colh">added</span><span class="cx-colh">total</span></div>'
+            '<span class="cx-colh cx-colh-added">added</span><span class="cx-colh cx-colh-total">total</span></div>'
         )
         out.append('<div class="cx-list">')
         out.extend(render_row(r, peak, base) for r in of_kind)
@@ -760,6 +760,9 @@ CSS = """
 .cx-kind-cols { display:grid; grid-template-columns:1fr var(--cx-col-added) var(--cx-col-total);
     gap:.4rem; align-items:baseline; padding-right:calc(.8rem + 1px); }
 .cx-kind-cols .cx-colh { text-align:right; }
+/* "Added" is the colour of the `+2` under it; "Total" and the totals are plain, bold. */
+.cx-colh-added { color:#2e7d32; }
+.cx-colh-total { color:var(--fg); font-weight:700; }
 .cx-key { font-weight:700; }
 .cx-list { border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--card); }
 /* The grid moved off the row and onto `.cx-head`, because the row now has a second thing
@@ -856,6 +859,7 @@ details.cx-row .cx-bar { padding:7px 0; margin:-7px 0; box-sizing:content-box; }
 .cx-up .cx-badge, .cx-up.cx-key { color:var(--cx-added); }
 .cx-down .cx-badge, .cx-down.cx-key { color:var(--cx-removed); }
 .cx-n { font:600 12px/1 ui-monospace,Menlo,monospace; text-align:right; }
+.cx-head .cx-n { color:var(--fg); font-weight:700; }
 /* ── the breakdown ──────────────────────────────────────────────────────────────────
     What the bar is made of, one counted construct per line: the source line it was read
     off, and what it cost, hard right. The number on a row is an assertion about somebody
@@ -1010,6 +1014,7 @@ a.cx-why-new code { color:var(--cx-added); }
 a.cx-why-new .cx-why-inc { color:var(--cx-added); }
 @media (prefers-color-scheme: dark) {
   .cx-lede, .cx-group { --cx-added:#4ec27f; --cx-removed:#9fb0d0; }
+  .cx-colh-added { color:#4ec27f; }
   .cg-h0 { --cg-hue:#fbbf24; } .cg-h1 { --cg-hue:#f472b6; } .cg-h2 { --cg-hue:#a78bfa; }
   .cg-h3 { --cg-hue:#22d3ee; } .cg-h4 { --cg-hue:#fb923c; } .cg-h5 { --cg-hue:#e879f9; }
   .cx-bar i { background:#3d3d4a; }

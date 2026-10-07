@@ -118,7 +118,7 @@ body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.6 -apple-sys
    read as a single masthead rather than four independent bands. */
 /* 1.25rem under the footer, not 5rem: the page ends shortly after its last line instead of
    on an 80px empty band (Victor, 5 Oct 2026). Nothing is fixed to the bottom edge to clear. */
-.wrap { max-width:1080px; margin:0 auto; padding:.7rem 1.25rem 1.25rem; }
+.wrap { max-width:1200px; margin:0 auto; padding:.7rem 1.25rem 1.25rem; }
 h1 { font-size:1.5rem; margin:0 0 .15rem; letter-spacing:-.02em; }
 h2 { font-size:1.3rem; margin:2.8rem 0 .8rem; padding-bottom:.4rem; border-bottom:1px solid var(--line); }
 h3 { font-size:1.02rem; margin:1.8rem 0 .5rem; }

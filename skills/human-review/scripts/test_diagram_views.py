@@ -1509,8 +1509,8 @@ def test_a_picture_unchanged_over_a_schema_that_changed_wears_its_own_badge(tmp_
                _unseen="Also changed, not drawn: indexes added on owners.")
     (tmp_path / "M.tsv").write_text("")
     out = build.render_diagrams({"manifest": "M.tsv"}, tmp_path, tmp_path, [row])
-    assert ">schema only</span>" in out and 'class="badge sev-med"' in out
-    assert '<span class="badge sev-info">unchanged</span>' not in out
+    assert '<span class="badge sev-info">unchanged</span>' in out
+    assert ">schema only</span>" not in out and "Also changed, not drawn" in out
     assert "indexes added on owners" in out
     assert 'class="dgmviews"' not in out, "still the plain card: there is no delta to switch"
     # Without the line, it is the ordinary UNCHANGED card.

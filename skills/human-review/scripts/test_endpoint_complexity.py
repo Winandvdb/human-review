@@ -741,7 +741,7 @@ def test_the_group_header_names_the_two_numbers_over_their_own_columns():
     last two — the same variables, not a copy that drifts the day one is widened."""
     page = delta.render([_row(why=[])], "main")
     assert ('<div class="cx-kind cx-kind-cols"><span>REST APIs <span class="cx-count">1</span>'
-            '</span><span class="cx-colh">added</span><span class="cx-colh">total</span></div>'
+            '</span><span class="cx-colh cx-colh-added">added</span><span class="cx-colh cx-colh-total">total</span></div>'
             in page)
     head, kind = _columns(".cx-head"), _columns(".cx-kind-cols")
     assert kind[-2:] == head[-2:] and len(kind) == 3

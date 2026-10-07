@@ -61,6 +61,7 @@ button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
 .tabre > button.chip-rerun[hidden] { display:none; }
 span.tabre > button.chip-rerun span.rr-ico { display:flex; width:18px; height:18px;
          color:inherit; font:inherit; }
+.tabre .rr-ico { translate:0 1.5px; }
 span.tabre > button.chip-rerun span.rr-mark { font-size:9px; line-height:1; color:inherit;
          font-family:inherit; }
 .diagram .head span.tabre { font-family:inherit; font-size:1rem; color:inherit; }
@@ -365,7 +366,7 @@ span.tabre > button.chip-rerun span.rr-mark { font-size:9px; line-height:1; colo
 .chip-vsc.vsc-on { color:#2e7d32; border-color:#2e7d32; }
 .chip-vsc.vsc-near { color:#b26a00; border-color:#b26a00; }
 /* Why it is green, at a glance: a link glyph in front of the word while connected. */
-.chip-vsc.vsc-on::before { content:"🔗"; margin-right:.3rem; }
+.chip-vsc.vsc-on::before { content:"🔌"; margin-right:.3rem; }
 .chip-vsc.vsc-off { color:#c62828; border-color:#c62828; }
 @media (prefers-color-scheme:dark) {
   .chip-vsc.vsc-on { color:#6bd48a; border-color:#3f7f52; }

@@ -75,8 +75,14 @@ DECL = re.compile(
 # Every construct that reads as `name (…) {` without being a method. `for` and the
 # `try (…)` of a resource block carry a `;` inside the parens and never reach this set.
 NOT_A_METHOD = {"if", "else", "for", "while", "do", "switch", "case", "catch", "try", "return",
-                "new", "synchronized", "assert", "yield", "instanceof", "record", "class",
+                "new", "synchronized", "assert", "yield", "instanceof", "class",
                 "enum", "interface", "throw", "super", "this"}
+# `record` is a contextual keyword, not a reserved one: `void record(ChatResponse r)` is an
+# ordinary method, and `meter.record(r)` an ordinary call. It only ever declares a type in
+# the *return-type* slot — `record Leg(String model) {` reads as `<record> Leg(…) {` — so
+# that is the only place it is refused. Refusing it as a name too dropped
+# `TokenCostMeter.record` and both methods it calls from `GET /assistant`.
+NOT_A_RETURN_TYPE = NOT_A_METHOD | {"record"}
 
 TYPE_DECL = re.compile(r"\b(?:class|interface|enum|record|@interface)\s+(\w+)")
 PACKAGE = re.compile(r"^\s*package\s+([\w.]+)\s*;", re.M)
@@ -297,7 +303,7 @@ class Index:
         class_path = self._paths(text, code, decl.start()).get("path", "")
         for m in DECL.finditer(code, decl.end()):
             ret, name, params = m.group(1), m.group(2), m.group(3)
-            if name in NOT_A_METHOD or (ret and ret.split("<")[0].strip() in NOT_A_METHOD):
+            if name in NOT_A_METHOD or (ret and ret.split("<")[0].strip() in NOT_A_RETURN_TYPE):
                 continue
             at = m.end() - 1
             body = code[at:block(code, at)]

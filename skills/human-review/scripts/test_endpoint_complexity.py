@@ -190,6 +190,61 @@ def test_an_openapi_parameter_two_levels_deep_with_an_array_does_not_hide_a_hand
     assert found["GET /api/owners"]["flowCc"] == 1
 
 
+METER = """
+package app.chat;
+
+@RestController
+public class Assistant {
+    private final TokenCostMeter tokenCostMeter;
+
+    @GetMapping("/assistant")
+    public String assistant(String message) {
+        tokenCostMeter.record(message);
+        return message;
+    }
+}
+"""
+
+TOKEN_METER = """
+package app.chat;
+
+public class TokenCostMeter {
+    private record Leg(String model, long tokens) {
+        Leg {
+            if (tokens < 0) throw new IllegalArgumentException();
+        }
+    }
+
+    public void record(String response) {
+        if (response == null) { return; }
+        recordLeg(priceFor(response));
+    }
+
+    private double priceFor(String model) {
+        return model.isEmpty() ? 0 : 1;
+    }
+
+    private void recordLeg(double price) { }
+}
+"""
+
+
+def test_a_method_named_record_is_filed_and_called_and_a_record_type_is_not_a_method():
+    """`record` is a contextual keyword. Refused as a name, it dropped `TokenCostMeter.record`
+    — and `priceFor` behind it — from `GET /assistant` on petclinic; the `record Leg(…) {`
+    declaration must still not be read as a method called `Leg`."""
+    found = {f'{e["httpMethod"]} {e["path"]}': e for e in ec.extract(
+        {"a/src/main/java/app/chat/Assistant.java": METER,
+         "a/src/main/java/app/chat/TokenCostMeter.java": TOKEN_METER})}
+    flow = [m["method"] for m in found["GET /assistant"]["flow"]]
+    assert flow == ["app.chat.Assistant#assistant", "app.chat.TokenCostMeter#record",
+                    "app.chat.TokenCostMeter#priceFor", "app.chat.TokenCostMeter#recordLeg"]
+    # record(): the guard is 1; priceFor(): the ternary is 1.
+    assert found["GET /assistant"]["flowCc"] == 2
+    index = ec.Index({"a/src/main/java/app/chat/TokenCostMeter.java": TOKEN_METER})
+    assert "app.chat.TokenCostMeter#Leg" not in index.methods
+
+
 def test_the_flow_is_summed_over_distinct_methods_once():
     found = entries()
     # search() is 1 (the guard) + 1 (the loop) + 2 (the if inside it) = 4, and it calls

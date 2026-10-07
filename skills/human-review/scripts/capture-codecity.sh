@@ -96,9 +96,15 @@ const [city, out, mode] = process.argv.slice(1);
       sel.dispatchEvent(new Event("change", {bubbles: true}));
       interacted = true;
     }
-    return { changed: document.getElementById("changeCount")?.textContent?.trim() || "", interacted };
+    // The colour is the pages own choice, not ours: since code-city bc6279e a city whose
+    // change set moved any coupling opens on "Δ outgoing coupling", and otherwise on what
+    // it always opened on. Read back, so the note under the shot names the colour it was
+    // taken in rather than one this script assumes.
+    const color = document.getElementById("colorMetric")?.selectedOptions?.[0]?.textContent?.trim() || "";
+    return { changed: document.getElementById("changeCount")?.textContent?.trim() || "", color, interacted };
   }, mode);
   const changed = result.changed;
+  const lit = result.color ? `${changed} · coloured by ${result.color}` : changed;
 
   // Two rAF-worth of settle time for the layout animation plus the label pass.
   await page.waitForTimeout(2500);
@@ -127,8 +133,8 @@ const [city, out, mode] = process.argv.slice(1);
         + "for this branch before capturing");
   }
   // stdout, so the caller can put a MEASURED number under the image instead of typing one.
-  console.log(changed);
-  console.error(`[codecity] ${changed || "?"} — wrote ${out}`);
+  console.log(lit);
+  console.error(`[codecity] ${lit || "?"} — wrote ${out}`);
 })().catch(e => { console.error("[codecity] " + e.message); process.exit(1); });
 ' "$CITY" "$OUT" "$MODE"
 

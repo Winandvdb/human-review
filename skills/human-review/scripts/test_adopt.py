@@ -154,7 +154,7 @@ WHOLE_TAB = {"sequence": '<h2 class="tabtitle" id="sequences">Sequence diagrams<
              "city": '<h2 class="tabtitle" id="codecity">Impact on code size</h2>',
              "complexity": '<h2 class="tabtitle cx-title"><a href="#">Cognitive</a> per</h2>',
              "logging": '<h2 class="tabtitle" id="logging-added">Uses of logging</h2>',
-             "owners": '<h2 class="tabtitle cow-title">Needs approval by</h2>',
+             "owners": '<h2 class="tabtitle cow-title">Needs approval as per</h2>',
              "api": '<div class="apiverdict red"><span class="dot"></span>Breaking</div>',
              "dsaudit": '<h2 class="tabtitle">UX design system</h2>'}
 

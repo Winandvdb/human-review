@@ -163,7 +163,7 @@ def test_the_tab_opens_on_the_codeowners_file_it_was_read_from(tmp_path):
     assert f'href="vscode://file/{(tmp_path / ".github/CODEOWNERS").resolve()}:1:1"' in title
     assert ">.github/CODEOWNERS</a></h2>" in title
     required = co.render(tmp_path, dict(data, state="approval_required"))
-    assert '<h2 class="tabtitle cow-title">Needs approval by <a ' in required
+    assert '<h2 class="tabtitle cow-title">Needs approval as per <a ' in required
     none = dict(data, state="no_codeowners", codeowners=None)
     assert "cow-title" not in co.render(tmp_path, none)
 

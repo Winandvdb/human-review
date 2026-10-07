@@ -368,7 +368,7 @@ def render(root: Path, data: dict) -> str:
                     f' href="vscode://file/{(root / data["codeowners"]).resolve()}:1:1">{rel}</a>')
         # One title, the file inside it (Victor, 5 Oct 2026): a title plus an "as required
         # by" subtitle said the same thing in two lines.
-        title = ("Needs approval by" if state == APPROVAL_REQUIRED else "No approval needed by")
+        title = ("Needs approval as per" if state == APPROVAL_REQUIRED else "No approval needed by")
         parts.append(f'<h2 class="tabtitle cow-title">{title} {link}</h2>')
     parts.append(f'<div class="cow cow-{state}{sev_class}">')
     # The "APPROVAL REQUIRED" verdict used to be a banner of its own, above every row,

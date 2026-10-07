@@ -1634,3 +1634,14 @@ def test_a_diagram_this_branch_added_is_its_picture_with_no_control(tmp_path):
            "svg": _svg(tmp_path / "d.svg", "delta"), "new_svg": _svg(tmp_path / "n.svg", "now")}
     out, toggles = build._diagram_views(row, tmp_path, tmp_path / "d.svg", tmp_path)
     assert not toggles and "dgmviews" not in out and "now" in out
+
+
+def test_genseq_panel_head_is_a_drag_handle():
+    """The SQL panel covers the diagram, so its head drags it aside (pointer capture,
+    page coordinates like place()); the CSS makes the head a move handle."""
+    js = build.GENSEQ_JS
+    assert "enableDrag(panel.querySelector('.genseq-head'))" in js
+    assert "setPointerCapture" in js and "pointermove" in js
+    assert "closest('button, a')" in js, "buttons in the head must keep working"
+    css = (Path(build.__file__).parent / "hrbuild/assets/css/genseq.css").read_text()
+    assert "cursor:move" in css and "user-select:none" in css

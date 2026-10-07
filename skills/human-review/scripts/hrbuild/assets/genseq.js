@@ -78,6 +78,30 @@
     // a plain click, and at the right line rather than at line 1.
     els.toggle.addEventListener('click', function () { showValues = !showValues; render(); });
     panel.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    enableDrag(panel.querySelector('.genseq-head'));
+  }
+
+  // The head is the handle: drag it to push the panel aside and see the diagram under it.
+  // Same page coordinates as place() (left/top on an absolutely positioned element), so a
+  // scroll mid-drag cannot desync them. Buttons in the head keep their clicks.
+  function enableDrag(head) {
+    var drag = null;
+    head.addEventListener('pointerdown', function (ev) {
+      if (ev.button !== 0 || ev.target.closest('button, a')) return;
+      drag = { x: ev.clientX, y: ev.clientY,
+               left: parseFloat(panel.style.left) || panel.offsetLeft,
+               top: parseFloat(panel.style.top) || panel.offsetTop };
+      head.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+    head.addEventListener('pointermove', function (ev) {
+      if (!drag) return;
+      panel.style.left = (drag.left + ev.clientX - drag.x) + 'px';
+      panel.style.top = (drag.top + ev.clientY - drag.y) + 'px';
+    });
+    function end() { drag = null; }
+    head.addEventListener('pointerup', end);
+    head.addEventListener('pointercancel', end);
   }
 
   function close() {

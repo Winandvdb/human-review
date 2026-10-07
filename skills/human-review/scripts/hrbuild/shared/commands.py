@@ -457,7 +457,7 @@ COPY_TIP = "Copy command to paste in terminal"
 
 def command_html(cmd: str, action_id: str | None = None, *, tip: str = "",
                  running: str = "", label: str = "", run_face: str = "",
-                 icon: str = "") -> str:
+                 icon: str = "", play: bool = True) -> str:
     """The affordances of one shell command, beside the control that describes it.
 
     **The command itself is not printed.** It used to be, in a parenthesis, and it was the
@@ -497,6 +497,11 @@ def command_html(cmd: str, action_id: str | None = None, *, tip: str = "",
     and a play triangle on both would say the same thing about two different things. Everywhere else the mark is the play, because everywhere else
     the offer is *do this here*.
 
+    `play=False` drops the run half's mark altogether, for a labelled button whose lead
+    glyph already says what it does — the draw.io card's *Revert changes*: "buttons do run
+    stuff, so a play icon is irrelevant" (Victor, 7 Oct 2026). Mid-run the lead spins
+    instead (`.cmd-run.has-word.running .cmd-lead`).
+
     Not `↻`. The circular arrow is the masthead's badge, where it means "this page can
     rebuild itself", and it is green because that is what `served` is coloured. On a row of
     actions it said *rerun* over verbs that are not reruns, and its green read as a passing
@@ -532,6 +537,8 @@ def command_html(cmd: str, action_id: str | None = None, *, tip: str = "",
     wordy = " has-word" if label else ""
 
     def face(glyph: str) -> str:
+        if label and not glyph:
+            return word
         return f'{word}<span class="cmd-ico">{glyph}</span>' if label else glyph
 
     # With a word on the button the word is the name; `aria-label` would replace it and
@@ -566,7 +573,7 @@ def command_html(cmd: str, action_id: str | None = None, *, tip: str = "",
                    f'data-tip="{play_tip}"'
                    + (f' data-run-say="{html.escape(running, quote=True)}"' if running else "")
                    + f' aria-label="{html.escape(run_aria, quote=True)}">'
-                   + f'{face(run_face or CMD_PLAY)}</button>')
+                   + f'{face(run_face or (CMD_PLAY if play or not label else ""))}</button>')
     out.append('</span>')
     return "".join(out)
 
@@ -626,30 +633,34 @@ def regenerate_html(redraw: dict | None, rerun: dict, rebuild: str,
     # script draws — is what the *command* says, and the command is one hover away on the
     # clipboard face of the same control.
     served = "Your layout is saved in git stash"
-    return (command_html(line, aid, label="Revert changes", icon="\u21e4", tip=served,
-                         running="Putting automation's drawing back…"), aid)
+    # ↺, not ⇤: it is the one way back on the card now that *Load changes* is gone, and the
+    # card's own green ring already carries the forward half (Victor, 7 Oct 2026).
+    return (command_html(line, aid, label="Revert changes", icon="\u21ba", tip=served,
+                         running="Putting automation's drawing back…", play=False), aid)
 
 
 def rerun_html(rerun: dict | None, rebuild: str, name: str = "",
                app_url: str = "", web_url: str = "", redraw: dict | None = None,
                revert: dict | None = None, reveal: dict | None = None,
-               tested_against: str = "", tested_against_path: str = "") -> str:
-    """Under the drawing: where to edit it, and the two things to do about it afterwards.
+               tested_against: str = "", tested_against_path: str = "") -> tuple[str, str]:
+    """The draw.io card's actions, and the line under its header: `(actions, under)`.
 
-    The command is not a convenience. The picture above is inlined into the HTML, and it
-    has to be: the boxes are links into the classes they name and the to-do note is a link
-    into draw.io, and an SVG loaded through `<img src>` renders those as decoration — the
-    reader can see them and cannot click them. So the file on disk and the picture in the
-    page are two artefacts, and reloading the browser only ever refreshes the second one.
-    That is a thing the page owes the reader an answer to, at the moment they need it, in
-    the form of something they can press.
+    The picture is inlined into the HTML, and it has to be: the boxes are links into the
+    classes they name and the to-do note is a link into draw.io, and an SVG loaded through
+    `<img src>` renders those as decoration. So the file on disk and the picture in the page
+    are two artefacts, and reloading the browser only ever refreshes the second one.
 
-    **A sentence, then two buttons.** It was one sentence with everything inside it, and
-    by the time the offers had grown their glyphs it carried seven underlined runs of text
-    — `this diagram`, `App`, `Web`, `click here`, `undo your edits`, `start over` — which
-    read as a wall of links with no rank. Underlining is for the actions now and the
-    actions are pills; the places to go (the file, the two editors) are plain links that
-    underline on hover. One kind of emphasis, one meaning.
+    **`actions` go in the card's header**, right-aligned before the file name — Edit on
+    desktop, Edit on web, Revert changes. They are action buttons, and the header is where
+    the card's other press already sits (Victor, 7 Oct 2026). **`under`** is what stays
+    under the header: the guardrail sentence, and the status line a running Revert writes.
+
+    **No *Load changes*.** It ran `drawio-diff.py` and rebuilt the page, which is exactly
+    what the green ring at the top of the card does — the Data tab's rerun is
+    `refresh-report.py --steps diagrams`, the step that runs the same `drawio-diff.py` from
+    the same config, and it is fingerprinted on the dirty `*.drawio.png` so an edit is never
+    a cache hit. Two presses for one thing on one card asked the reader which to trust
+    ("why does it exist when I can press the green rerun?", Victor, 7 Oct 2026).
 
     **`revert` is accepted and ignored**, so a verdict written by an older `drawio-diff.py`
     still builds. See `regenerate_html` for why there is one way back rather than two.
@@ -670,44 +681,18 @@ def rerun_html(rerun: dict | None, rebuild: str, name: str = "",
                      f'{label}</a>')
         sentence = f"Unit-tested against the {label}."
     where = f'<p class="dgm-open">{sentence}</p>' if sentence else ""
-    if not rerun or not rerun.get("command"):
-        return (f'<div class="rerun">{where}<div class="rerun-acts">{edit}</div></div>'
-                if edit else where)
-    line = f'cd {shlex.quote(rerun["cwd"])} \\\n  && {rerun["command"]} \\\n  && {rebuild}'
-    # Per diagram, because a page can carry several and each one reruns its own. The id
-    # is the diagram's name for the same reason every other handle on this page is: so a
-    # button that has been on screen since the last build cannot end up running the
-    # command belonging to a different picture.
-    #
-    # `reload`, because the last stage of this line rewrites the very file the browser is
-    # displaying. Leaving the reader on the old bytes with a green tick beside them would
-    # be the worst possible outcome: the page would look like it had picked the edit up.
-    aid = None
-    if name:
-        aid = declare_action(f"drawio:{name}", line, reload=True,
-                             label=f"Re-render {name} and rebuild this page")
-    served = ""
-    again, _ = regenerate_html(redraw, rerun, rebuild, name)
-    # The status line, under the buttons and empty until something is running. This is the
-    # whole of the answer to the complaint that produced it: the command behind *Update the
-    # report* re-renders a diagram and rebuilds the page, which is seconds of nothing
-    # whatever, in front of a control that gave no sign it had been pressed. A reader with
-    # no feedback does not wait patiently — they press it again, and then they stop
-    # believing the page. What goes in it is the command's own last line, polled from
-    # `/__run_status__`, so it says what is actually happening rather than a guess.
-    #
-    # In the markup of both copies of the report. Off disk nothing fills it, which costs
-    # a hidden empty paragraph.
-    return ('<div class="rerun">' + where
-            + '<div class="rerun-acts">'
-            + edit
-            + command_html(line, aid, label="Load changes", icon="\u21ba", tip=served,
-                           running="Re-rendering the diagram…")
-            + again
-            + '</div>'
-            + '<p class="runstatus" hidden role="status" aria-live="polite">'
-              '<b class="rs-phase"></b><span class="rs-tail"></span></p>'
-            + '</div>')
+    again = ""
+    if rerun and rerun.get("command"):
+        again, _ = regenerate_html(redraw, rerun, rebuild, name)
+    acts = f'<div class="rerun-acts">{edit}{again}</div>' if (edit or again) else ""
+    # The status line, empty until Revert is running: that command re-renders a diagram
+    # and rebuilds the page, which is seconds of nothing in front of a control that gave
+    # no sign it had been pressed. What goes in it is the command's own last line, polled
+    # from `/__run_status__`. Only where there is something to run.
+    status = ('<p class="runstatus" hidden role="status" aria-live="polite">'
+              '<b class="rs-phase"></b><span class="rs-tail"></span></p>') if again else ""
+    under = f'<div class="rerun">{where}{status}</div>' if (where or status) else ""
+    return acts, under
 
 
 def _app_anchor(href: str) -> str:

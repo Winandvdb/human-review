@@ -250,15 +250,18 @@ def drawio_widget_html(name: str, assets: Path, root: Path, rebuild: str = "") -
     # 5 Oct 2026).
     rel = verdict.get("diagram") or ""
     title = _pretty(Path(rel).name.split(".")[0]) if rel else _pretty(name)
+    # The action buttons in the header, right-aligned before the file name: they are the
+    # card's presses, beside the green ring `place_tab_reruns` puts after the title.
+    acts, under = rerun_html(verdict.get("rerun"), rebuild, name,
+                             verdict.get("drawio_url") or "",
+                             verdict.get("drawio_web_url") or "",
+                             verdict.get("redraw"), verdict.get("revert"),
+                             verdict.get("reveal"), verdict.get("tested_against") or "",
+                             verdict.get("tested_against_path") or "")
     return ('<div class="diagram dgm-toggles"><div class="head">'
-            f'<b>{html.escape(title)}</b>'
+            f'<b>{html.escape(title)}</b>' + acts
             + (_source_link(rel, root) if rel else "") + '</div>'
-            + rerun_html(verdict.get("rerun"), rebuild, name,
-                         verdict.get("drawio_url") or "",
-                         verdict.get("drawio_web_url") or "",
-                         verdict.get("redraw"), verdict.get("revert"),
-                         verdict.get("reveal"), verdict.get("tested_against") or "",
-                         verdict.get("tested_against_path") or "")
+            + under
             + dgm_views_html(panes, initial="new" if red else "diff")
             + '</div>')
 

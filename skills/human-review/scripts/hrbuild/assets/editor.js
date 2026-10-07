@@ -212,8 +212,10 @@
   //
   // The line is the command's own last line, polled from `/__run_status__` — what is
   // actually happening, not a script's guess at what stage it has reached.
+  // `.diagram` last: the draw.io card's buttons sit in its header, outside `.rerun`, and
+  // the card is the box that holds both them and the status line under the header.
   function statusline(button) {
-    var box = button.closest && button.closest('.rerun, .rband, .appenv');
+    var box = button.closest && button.closest('.rerun, .rband, .appenv, .diagram');
     return box ? box.querySelector('.runstatus') : null;
   }
 
@@ -260,7 +262,7 @@
     // tell it had started. Both faces of each offer, because the probe decides which one is
     // up and a disabled run glyph beside a live clipboard for the same command is the pair
     // this page spent two commits getting rid of.
-    var box = button.closest && button.closest('.rerun, .rband, .appenv');
+    var box = button.closest && button.closest('.rerun, .rband, .appenv, .diagram');
     var kin = box ? [].slice.call(box.querySelectorAll('.cmd-run, .cmd-copy')) : [];
     kin.forEach(function (b) { b.disabled = true; });
     say(status, opening, '');

@@ -154,17 +154,12 @@
 .diagram .rerun { display:flex; flex-wrap:wrap; align-items:baseline;
                   column-gap:.7rem; row-gap:.3rem; }
 .diagram .rerun .runstatus { flex-basis:100%; }
-/* Update the report / Revert the diagram: the same green and red the legend just above
+/* Revert the diagram (Load changes, its green twin, is gone — 7 Oct 2026): the same red the legend just above
    this picture already spends on "added by this PR" / "still waiting for a manual
    re-layout" (`--dgm-diff-add` / `--dgm-diff-del`, both theme-aware in `core.css`) — not a
    new pair of colours, the one the reader has already been reading on this exact diagram.
    Both faces of each offer are tinted, copy and run, because only one is ever on screen
    and the colour is what tells the two buttons apart, not which glyph they wear. */
-.diagram .rerun-acts .cmd:has(.cmd-run[data-action^="drawio:"]) .cmd-copy,
-.diagram .rerun-acts .cmd:has(.cmd-run[data-action^="drawio:"]) .cmd-run,
-.diagram .rerun-acts .cmd:has(.cmd-run[data-action^="drawio:"]) .cmd-copy:hover,
-.diagram .rerun-acts .cmd:has(.cmd-run[data-action^="drawio:"]) .cmd-run:hover {
-  color:var(--dgm-diff-add); border-color:var(--dgm-diff-add); }
 .diagram .rerun-acts .cmd:has(.cmd-run[data-action^="drawio-redraw:"]) .cmd-copy,
 .diagram .rerun-acts .cmd:has(.cmd-run[data-action^="drawio-redraw:"]) .cmd-run,
 .diagram .rerun-acts .cmd:has(.cmd-run[data-action^="drawio-redraw:"]) .cmd-copy:hover,

@@ -242,29 +242,40 @@ span.tabre > button.chip-rerun span.rr-mark { font-size:9px; line-height:1; colo
 /* Edit on desktop / Edit on web: links that look like the labelled commands beside them
    (`.cmd .cmd-copy.has-word`) without being one — no `.cmd`, no `.cmd-copy`, so the run
    script neither disables them mid-run nor pairs them. */
-.rerun a.dgm-edit { display:inline-flex; align-items:center; font:inherit; font-size:.92em;
+.rerun-acts a.dgm-edit { display:inline-flex; align-items:center; font:inherit; font-size:.92em;
             line-height:1.15; font-weight:500; color:var(--muted); background:var(--card);
             border:1px solid var(--line); border-radius:999px; padding:.1rem .45rem;
             text-decoration:none; cursor:pointer; }
-.rerun a.dgm-edit:hover { color:var(--fg); border-color:var(--muted);
+.rerun-acts a.dgm-edit:hover { color:var(--fg); border-color:var(--muted);
             background:var(--accent-soft); text-decoration:none; }
-.rerun a.dgm-edit { border:1.5px solid #b26a00; color:#b26a00; }
-.rerun a.dgm-edit:hover { color:#b26a00; border-color:#b26a00; }
+.rerun-acts a.dgm-edit { border:1.5px solid #b26a00; color:#b26a00; }
+.rerun-acts a.dgm-edit:hover { color:#b26a00; border-color:#b26a00; }
 @media (prefers-color-scheme: dark) {
-  .rerun a.dgm-edit, .rerun a.dgm-edit:hover { border-color:#e0a458; color:#e0a458; } }
+  .rerun-acts a.dgm-edit, .rerun-acts a.dgm-edit:hover { border-color:#e0a458; color:#e0a458; } }
 .cmd-lead { margin-right:.3rem; }
-.rerun a.dgm-edit .cmd-ico { font-size:1.1em; line-height:1; margin-left:.35rem; }
-/* The actions, on their own row under the sentence. Up to four: two editors and the
-   two commands, each with its mark. */
-.rerun .rerun-acts { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .9rem;
-              margin:.45rem 0 0; }
-/* They are buttons, links or not: no underline under the pointer, anywhere in the row
-   (the sentence's quiet-link rule above reaches the two editor links), and a slight lift
-   instead — the tinted Update / Revert pills keep their colour on hover by design, so
-   without it they gave no sign of being under the pointer at all. */
-.rerun .rerun-acts a, .rerun .rerun-acts a:hover, .rerun .rerun-acts button:hover,
-.rerun .rerun-acts :hover > .cmd-word { text-decoration:none; }
-.rerun .rerun-acts a:hover, .rerun .rerun-acts button:hover { filter:brightness(1.18); }
+.rerun-acts a.dgm-edit .cmd-ico { font-size:1.1em; line-height:1; margin-left:.35rem; }
+/* The actions, in the draw.io card's header: right-aligned before the file name, centred
+   on the title (Victor, 7 Oct 2026 — "they are action buttons"). Two editors and Revert. */
+.rerun-acts { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; }
+.diagram .head > .rerun-acts { margin:0 0 0 auto; font-size:.9rem; font-family:inherit;
+              color:var(--fg); }
+.diagram .head:has(> .rerun-acts) { align-items:center; }
+/* UNCHANGED keeps its `margin-left:auto`, so the row reads badge, buttons, file. */
+.diagram .head > .badge + .rerun-acts { margin-left:0; }
+/* `.diagram .head span` is the header's monospace grey for file names; a button's words
+   are not a file name. */
+.diagram .head > .rerun-acts span:not(.cmd-ico) { color:inherit; font-family:inherit;
+              font-size:inherit; }
+.diagram .head > .rerun-acts .cmd-ico { color:inherit; font-family:inherit; }
+/* They are buttons, links or not: no underline under the pointer, and a slight lift
+   instead — the tinted pills keep their colour on hover by design. */
+.rerun-acts a, .rerun-acts a:hover, .rerun-acts button:hover,
+.rerun-acts :hover > .cmd-word { text-decoration:none; }
+.rerun-acts a:hover, .rerun-acts button:hover { filter:brightness(1.18); }
+/* A run face with no mark (`command_html(play=False)`): the lead glyph spins instead. */
+.rerun-acts .cmd-lead { display:inline-block; }
+.cmd .cmd-run.has-word.running .cmd-lead { animation:hrspin .9s linear infinite; }
+@media (prefers-reduced-motion:reduce) { .cmd .cmd-run.has-word.running .cmd-lead { animation:none; } }
 /* Was `margin-left:-.55rem`, pulling the mark back against the pill it belonged to. There
    is nothing to pull it against now: the label and the mark are one button. */
 /* What the command is doing, while it is doing it — and nothing at all otherwise.

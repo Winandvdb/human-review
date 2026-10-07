@@ -210,7 +210,9 @@ def test_one_renderer_and_not_a_copy_per_caller():
             line = src[src.rindex("\n", 0, at) + 1:src.index("\n", at)]
             assert "<button" not in line or "CMD_" in line, \
                 f"a glyph is being drawn on a button outside command_html: {line.strip()}"
-    for caller in ("_regenerate_offer", "runtime_html", "rerun_html", "regenerate_html"):
+    # `rerun_html` is not on the list since *Load changes* went (7 Oct 2026): its one
+    # command is Revert, which it takes from `regenerate_html`.
+    for caller in ("_regenerate_offer", "runtime_html", "regenerate_html"):
         b = src[src.index(f"def {caller}("):]
         b = b[:b.index("\ndef ", 1)]
         assert "command_html(" in b, f"{caller} is drawing its own command"

@@ -877,7 +877,8 @@ REBUILD = "python3 /tools/build-review-html.py content.json --out review.html"
 def test_the_command_names_every_step_the_reader_has_to_take(tmp_path):
     assets = _drawio_set(tmp_path / "assets")
     (assets / "conceptual-diff.json").write_text(json.dumps({
-        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN}))
+        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN,
+        "redraw": REDRAW}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
     assert "cd /repo" in out and RERUN["command"] in out and REBUILD in out
 
@@ -887,7 +888,8 @@ def test_the_button_copies_exactly_what_the_page_shows(tmp_path):
     one — and the copied one is the only one that gets run."""
     assets = _drawio_set(tmp_path / "assets")
     (assets / "conceptual-diff.json").write_text(json.dumps({
-        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN}))
+        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN,
+        "redraw": REDRAW}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
     # The command is on the page exactly twice, on two attributes of two controls — the
     # offer, whose click copies it off disk, and the copy glyph beside it — plus once more
@@ -896,13 +898,13 @@ def test_the_button_copies_exactly_what_the_page_shows(tmp_path):
     copied = set(re.findall(r'data-copy="(.*?)"', out, re.S))
     assert len(copied) == 1
     line = copied.pop()
-    assert build.ACTIONS["drawio:conceptual"]["command"] == html.unescape(line)
+    assert build.ACTIONS["drawio-redraw:conceptual"]["command"] == html.unescape(line)
     tip = re.search(r'class="copycmd cmd-copy[^"]*"[^>]*data-tip="([^"]*)"', out, re.S).group(1)
     assert tip.endswith(line)
     # And the same line again on `data-cmd`, on both faces: it is the handle the one-string
     # guardrail reads, and it has to say what the register says.
     assert {html.unescape(c) for c in re.findall(r'data-cmd="(.*?)"', out, re.S)} == \
-        {build.ACTIONS["drawio:conceptual"]["command"]}
+        {build.ACTIONS["drawio-redraw:conceptual"]["command"]}
 
 
 def test_a_run_that_recorded_nothing_offers_no_half_command(tmp_path):
@@ -913,27 +915,37 @@ def test_a_run_that_recorded_nothing_offers_no_half_command(tmp_path):
     assert "cmd-copy" not in out and "cmd-run" not in out
 
 
-def test_the_command_says_what_it_is_for(tmp_path):
-    """Where to edit, and how to pick the edit up, are one sentence — not a paragraph, a
-    sentence and a code block stacked under the picture they explain."""
-    assets = _drawio_set(tmp_path / "assets")
-    (assets / "conceptual-diff.json").write_text(json.dumps({
-        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN}))
-    (assets / "conceptual-diff.json").write_text(json.dumps({
-        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN,
-        "drawio_url": "drawio:///repo/C.drawio.png"}))
-    out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
-    # No sentence: the editors and the two commands are four buttons in one row.
-    assert 'class="dgm-open"' not in out
-    acts = re.search(r'<div class="rerun-acts">(.*?)</div>', out, re.S).group(1)
-    # One control, not a pill and a mark beside it: the words and the glyph are the same
-    # button, which is the rule every command on this page follows.
-    assert '<span class="cmd-word">Load changes</span>' in acts
-    assert '<span class="cmd-lead">\u21ba</span>' in acts
-    assert "offer-pill" not in acts
-    assert acts.index("Edit on desktop") < acts.index("Load changes")
-    assert "cmd-copy" in acts and "cmd-run" in acts
+def test_the_action_buttons_sit_in_the_card_header(tmp_path):
+    """Edit on desktop, Edit on web, Revert changes: action buttons, so they are in the
+    header line, right-aligned before the file name — and *Load changes* is gone, because
+    the green ring at the top of the card runs the same `drawio-diff.py` and rebuild
+    (Victor, 7 Oct 2026)."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "C.drawio.png").write_bytes(b"png")
+    out = _widget_with(tmp_path, rerun=RERUN, redraw=REDRAW,
+                       drawio_url="drawio:///repo/C.drawio.png", diagram="docs/C.drawio.png",
+                       tested_against="Java Domain Model")
+    head = out[out.index('<div class="head">'):out.index('<div class="rerun">')]
+    acts = re.search(r'<div class="rerun-acts">(.*?)</div>', head, re.S).group(1)
+    assert "Load changes" not in out and 'data-action="drawio:conceptual"' not in out
+    assert acts.index("Edit on desktop") < acts.index("Revert changes")
+    assert head.index('class="rerun-acts"') < head.index('class="dgm-src"'), \
+        "right-aligned before the file name"
+    # ↺ on Revert, and no play: the button runs things, a play triangle says nothing more.
+    assert '<span class="cmd-lead">\u21ba</span><span class="cmd-word">Revert changes</span>' in acts
+    assert build.CMD_PLAY not in acts
+    # The sentence stays under the header, with the status line a running Revert writes.
+    under = out[out.index('<div class="rerun">'):out.index('class="dgmviews"')]
+    assert "Unit-tested against the Java Domain Model." in under
+    assert 'class="runstatus"' in under and "rerun-acts" not in under
     assert "<code>" not in out, "the command is in a hover, not on the page"
+
+
+def test_a_button_in_the_header_does_not_flip_the_picture():
+    """The header is the card's Diff/New toggle; its buttons must not also flip it, and
+    a running Revert finds its status line through the card, not through `.rerun`."""
+    assert "!ev.target.closest('a, button')" in build.DGM_VIEWS_JS
+    assert build.EDITOR_JS.count("button.closest('.rerun, .rband, .appenv, .diagram')") == 2
 
 
 def test_the_command_is_in_a_hover_and_not_in_a_block(tmp_path):
@@ -944,7 +956,8 @@ def test_the_command_is_in_a_hover_and_not_in_a_block(tmp_path):
     its hover, which is the only place a reader who wants to paste it looks."""
     assets = _drawio_set(tmp_path / "assets")
     (assets / "conceptual-diff.json").write_text(json.dumps({
-        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN}))
+        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN,
+        "redraw": REDRAW}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
     assert "cmdline" not in out and "cmdpeek" not in out
     assert "<code>" not in out
@@ -959,12 +972,13 @@ def test_each_copy_of_the_report_shows_the_route_it_can_actually_take(tmp_path):
     cannot keep; served, the shell line is noise beside a control that already runs it."""
     assets = _drawio_set(tmp_path / "assets")
     (assets / "conceptual-diff.json").write_text(json.dumps({
-        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN}))
+        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN,
+        "redraw": REDRAW}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
     # One control in both copies, and it always sends the same id: the difference is what
     # the page does with it, which the probe decides. The last offer with two renderings is
     # `reveal_html`, whose subject is the sentence's own noun.
-    assert 'data-action="drawio:conceptual"' in out
+    assert 'data-action="drawio-redraw:conceptual"' in out
     assert ".rerun .offer .runhere { display:none; }" in build.CSS, "reveal, static"
     assert ".rerun .offer.served .runhere { display:inline; }" in build.CSS
     assert ".rerun .offer.served .plainword { display:none; }" in build.CSS
@@ -1001,10 +1015,12 @@ def test_the_edit_offer_sits_where_the_caption_sentence_used_to(tmp_path):
     to do about the drawing, then the drawing."""
     assets = _drawio_set(tmp_path / "assets")
     (assets / "conceptual-diff.json").write_text(json.dumps({
-        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN}))
+        "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN,
+        "redraw": REDRAW, "tested_against": "Java Domain Model"}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
-    assert out.index('class="rerun"') < out.index('class="dgmviews"'), \
-        "the edit offer and its buttons come before the diagram, not after it"
+    assert out.index('class="rerun-acts"') < out.index('class="rerun"') \
+        < out.index('class="dgmviews"'), \
+        "the buttons in the header, the sentence under it, then the diagram"
 
 
 REVEAL = {"command": "open -R /repo/docs/C.drawio.png", "in": "the Finder"}
@@ -1174,9 +1190,10 @@ def test_each_offer_carries_its_own_command_and_not_the_neighbours(tmp_path):
     clipboard — so the thing to pin is that the two clipboards differ."""
     out = _widget_with(tmp_path, rerun=RERUN, redraw=REDRAW)
     copied = {html.unescape(c) for c in re.findall(r'data-copy="(.*?)"', out, re.S)}
-    assert len(copied) == 2, "one command per offer, and they are not the same command"
+    # One offer since *Load changes* went (7 Oct 2026): the way back, ending in the re-render.
+    assert len(copied) == 1, "one command, the way back"
     assert any("git checkout" in c for c in copied)
-    assert sum("drawio-diff.py" in c for c in copied) == 2, "both end in the re-render"
+    assert sum("drawio-diff.py" in c for c in copied) == 1, "it ends in the re-render"
 
 
 def test_a_repository_that_declared_no_redraw_is_offered_none(tmp_path):
@@ -1201,7 +1218,7 @@ def test_a_repository_that_declared_no_redraw_is_offered_none(tmp_path):
 
 def test_there_is_one_way_back_and_it_is_the_generated_drawing(tmp_path):
     out = _widget_with(tmp_path, rerun=RERUN, revert=REVERT, redraw=REDRAW)
-    assert '<span class="cmd-lead">\u21e4</span><span class="cmd-word">Revert changes</span>' in out
+    assert '<span class="cmd-lead">\u21ba</span><span class="cmd-word">Revert changes</span>' in out
     # Named after what it produces, not after the gesture that gets you there: "start over"
     # is a direction and not a destination, and "undo your edits" is gone entirely.
     assert "start over" not in out and "undo your edits" not in out
@@ -1214,7 +1231,7 @@ def test_a_verdict_that_still_records_a_revert_builds_and_ignores_it(tmp_path):
     offers. A page that refused to build on one would make a tool upgrade a migration."""
     out = _widget_with(tmp_path, rerun=RERUN, revert=REVERT)
     assert "drawio-undo" not in out
-    assert "Load changes" in out
+    assert "Load changes" not in out
 
 
 def test_the_one_way_back_runs_every_stage_and_banks_the_layout(tmp_path):
@@ -1292,7 +1309,7 @@ def test_no_way_back_is_offered_for_a_repository_that_declared_no_script(tmp_pat
     diagram with no `redraw` gets the sentence and one offer."""
     out = _widget_with(tmp_path, rerun=RERUN)
     assert "Revert changes" not in out and "drawio-redraw" not in out
-    assert '<span class="cmd-word">Load changes</span>' in out
+    assert "Load changes" not in out and "cmd-run" not in out
 
 
 def test_the_play_glyph_is_hidden_by_the_attribute_and_not_by_a_class(tmp_path):
@@ -1312,7 +1329,7 @@ def test_the_play_glyph_is_hidden_by_the_attribute_and_not_by_a_class(tmp_path):
     assert glyph_rules, "the glyph has to be styled somewhere"
     for rule in glyph_rules:
         assert "display:" not in rule, f"a display on the glyph defeats [hidden]: {rule}"
-    out = _widget_with(tmp_path, rerun=RERUN)
+    out = _widget_with(tmp_path, rerun=RERUN, redraw=REDRAW)
     assert 'class="runhere cmd-run has-word" hidden' in out
 
 
@@ -1649,6 +1666,7 @@ def test_a_traced_diagram_with_undrawn_calls_is_not_the_unchanged_card(tmp_path)
     out = _widget_with(tmp_path, **base, traces={"undrawn": ["A → B"]},
                        drawio_url="drawio:///repo/d.png")
     assert "Unit-tested against the traced sequence diagrams." in out
-    for word in ("Edit on desktop", "Load changes", "Revert changes"):
+    for word in ("Edit on desktop", "Revert changes"):
         assert word in out
+    assert "Load changes" not in out
     assert "drawio-redraw:conceptual" in build.ACTIONS

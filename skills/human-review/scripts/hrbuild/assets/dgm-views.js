@@ -40,9 +40,10 @@
       else flip(views);
       return;
     }
-    // The header, but never a link inside it: the source path opens an editor.
+    // The header, but never a link or a button inside it: the source path opens an
+    // editor, and the card's action buttons (Edit, Revert) live in the header too.
     var head = ev.target.closest('.diagram.dgm-toggles > .head');
-    if (head && !ev.target.closest('a')) flip(head.parentElement.querySelector('.dgmviews'));
+    if (head && !ev.target.closest('a, button')) flip(head.parentElement.querySelector('.dgmviews'));
     // Same bargain for the merged row: its empty middle is the large hit area the header
     // used to be, and a click on the path still opens the editor rather than swapping the
     // picture out from under it.

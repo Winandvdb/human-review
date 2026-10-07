@@ -438,11 +438,15 @@ def test_a_section_with_no_runtime_declares_nothing(tmp_path):
 
 
 def test_each_diagram_declares_its_own_rerun():
+    """Its own way back, since *Load changes* went (7 Oct 2026): the green ring on the card
+    re-renders, and the one command the card still declares is Revert, per diagram."""
     build.ACTIONS.clear()
-    out = build.rerun_html({"cwd": "/repo", "command": "drawio-diff.py --name conceptual"},
-                           "build-review-html.py content.json --out review.html", "conceptual")
-    assert 'data-action="drawio:conceptual"' in out
-    entry = build.ACTIONS["drawio:conceptual"]
+    out, _ = build.rerun_html({"cwd": "/repo", "command": "drawio-diff.py --name conceptual"},
+                              "build-review-html.py content.json --out review.html", "conceptual",
+                              redraw={"cwd": "/repo", "command": "docs/patch.py"})
+    assert 'data-action="drawio-redraw:conceptual"' in out
+    assert "drawio:conceptual" not in build.ACTIONS, "Load changes is not declared any more"
+    entry = build.ACTIONS["drawio-redraw:conceptual"]
     assert entry["reload"] is True
     # The copied line and the run line are the same line — two renderings of one command
     # is how the one that gets run quietly stops matching the one that gets read.

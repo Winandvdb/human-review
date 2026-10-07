@@ -959,6 +959,53 @@ def all_tests_inventory(frag: str, doc: dict | None, root: Path) -> str:
     return f'<script type="application/json" id="{ALL_TESTS_ID}">{body}</script>'
 
 
+#: The id of the JSON block `test_cover_files` writes and testchapters.js reads.
+TEST_COVER_ID = "rm-test-cover"
+#: How many files the shield's popover names before it says "+N more".
+TEST_COVER_MAX = 12
+
+
+def test_cover_files(frag: str, doc: dict | None, root: Path) -> str:
+    """For each test on the card, the production files its own run executed: what the row's
+    🛡 answers on hover (Victor, 7 Oct 2026: "what part of the code is this test really
+    covering?").
+
+    Read off the same per-test probe the card was drawn from (`hits`: file -> lines run).
+    The files the branch changed come first, each with how many of its changed lines the
+    test ran; then the rest by how much of them it ran. Capped at `TEST_COVER_MAX` names
+    with the remainder counted, because an end-to-end run touches half the backend. Each
+    name carries its `vscode://` link at the first line worth opening: the first changed
+    line it ran, or the first line it ran at all. Empty when there was no measurement."""
+    if not doc:
+        return ""
+    m = re.search(r'<script type="application/json" class="rm-data">(.*?)</script>', frag, re.S)
+    try:
+        on_card = set(json.loads(m.group(1)).get("tests") or {}) if m else set()
+    except ValueError:
+        on_card = set()
+    changed = {f: set(v) for f, v in (doc.get("changed") or {}).items()}
+    out: dict[str, dict] = {}
+    for r in doc.get("tests") or []:
+        key = f'{r.get("file")}:{r.get("line")}'
+        if key not in on_card or key in out or not r.get("hits"):
+            continue
+        rows = []
+        for f, lines in r["hits"].items():
+            ran = sorted(set(lines))
+            if not ran:
+                continue
+            hit = sorted(set(ran) & changed.get(f, set()))
+            at = hit[0] if hit else ran[0]
+            rows.append((0 if hit else 1, -len(hit), -len(ran), f, at, len(hit)))
+        rows.sort()
+        files = [[f, at, n] for _, _, _, f, at, n in rows[:TEST_COVER_MAX]]
+        for item in files:
+            item.append(f"vscode://file/{(root / item[0]).resolve()}:{item[1]}:1")
+        out[key] = {"files": files, "more": max(0, len(rows) - TEST_COVER_MAX)}
+    body = json.dumps(out, ensure_ascii=False).replace("</", "<\\/")
+    return f'<script type="application/json" id="{TEST_COVER_ID}">{body}</script>'
+
+
 def coverage_tests(frag: str, doc: dict, test_doc: dict | None, root: Path) -> str:
     """The matrix's own test list, grown to every test coverage says runs changed code.
 
@@ -1318,23 +1365,48 @@ REQMAP_CSS = """
 /* The Unit/API/E2E key sits on the title row, over the card, in the stretch the title left
    empty; its margins are the title's, so the two read as one line. */
 .reqmap .rm-cats{grid-column:2;grid-row:1;align-self:center;min-height:0;margin:.2rem 2px .15rem}
-/* The card in three chapters by kind of test (testchapters.js): headed like the sentence
-   headings they replace - 12px, the page's ink, a rule under - with the row's own badge and
-   arrow in the row's own columns, so a chapter reads as the first line of its rows. */
+/* The card in three chapters by kind of test (testchapters.js), closed by default: a band
+   in its own tint, the caret first in the column the rows keep for their wire button, the
+   row's own badge over the rows' badges, the subtitle where the test names start, and the
+   chapter's +added / -deleted / edited counts where the card title keeps its own. */
 .reqmap .rm-list > .rm-tgroup,.reqmap .rm-list > .rm-fold{display:none}
-.reqmap .rm-chh{display:flex;align-items:center;gap:8px;padding:8px 10px 7px 22px;
+.reqmap .rm-chh{display:flex;align-items:center;gap:8px;padding:7px 16px 7px 6px;
   font-size:12px;font-weight:600;line-height:1.35;color:var(--fg,#1c1c1c);cursor:pointer;
-  user-select:none;border-bottom:1px solid var(--line,#e2e2e2)}
-.reqmap .rm-chh:hover{background:rgba(127,127,127,.07)}
+  user-select:none;border-bottom:1px solid var(--line,#e2e2e2);background:rgba(127,127,127,.12)}
+.reqmap .rm-chh:hover{background:rgba(127,127,127,.19)}
 .reqmap .rm-chh .rm-cat{display:inline-flex;justify-content:center;min-width:4.5em}
-.reqmap .rm-chh .rm-chev{flex:0 0 auto;font-size:13px!important;line-height:1;color:var(--muted);opacity:.8;transition:transform .15s ease}
-.reqmap .rm-ch[data-open=yes] > .rm-chh .rm-chev{transform:rotate(90deg)}
+.reqmap .rm-chh .rm-chev{flex:0 0 auto;font-size:12px!important;line-height:1;opacity:.8;
+  transition:transform .15s ease}
+.reqmap .rm-chh .rm-chcaret{width:12px;text-align:center;margin-right:-4px}
+.reqmap .rm-chh .rm-chpad{visibility:hidden}
+.reqmap .rm-ch[data-open=yes] > .rm-chh .rm-chcaret{transform:rotate(90deg)}
 .reqmap .rm-chsub{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.reqmap .rm-chn{flex:0 0 auto;font-weight:400;color:var(--muted,#6b6b6b);font-variant-numeric:tabular-nums}
+.reqmap .rm-chn{font-weight:400;color:var(--muted,#6b6b6b);font-variant-numeric:tabular-nums}
+.reqmap .rm-chled{flex:0 0 auto;display:inline-flex;gap:.6rem;font-size:13px;font-weight:400;
+  font-variant-numeric:tabular-nums}
+.reqmap .rm-chled [data-tip]{cursor:help}
 .reqmap .rm-ch[data-open=no] > .rm-chb{display:none}
 .reqmap .rm-ch:last-child .rm-chb > .rm-t:last-child,
 .reqmap .rm-ch:last-child .rm-cho > .rm-t:last-child{border-bottom:0}
 .reqmap .rm-chb > .rm-t:last-of-type{border-bottom:1px solid var(--line,#e2e2e2)}
+/* The card's title strip, and the ticket's beside it so the two stay level, a fifth
+   shorter (Victor, 7 Oct 2026): 41px to 34px. */
+.reqmap .rm-ticket > .rm-tkhead,.reqmap .rm-code > .rm-tkhead{padding-top:4.5px;padding-bottom:4.5px}
+/* The shield's popover (testchapters.js): the page tip's dark bubble, but it takes the
+   pointer, so the files in it can be clicked. Outside `.reqmap`: it hangs off <body>. */
+.rm-covpop{position:fixed;z-index:9999;background:#141416;color:#fff;max-width:26rem;
+  padding:.5rem .8rem .6rem;border-radius:.6rem;box-shadow:0 10px 30px rgba(0,0,0,.35);
+  font:400 13px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;display:none}
+.rm-covpop.on{display:block}
+.rm-covpop .rm-cph{margin:.35rem 0 .1rem;font-size:12px;opacity:.72}
+.rm-covpop .rm-cph:first-child{margin-top:0}
+.rm-covpop ul.tiplist{margin:0;padding-left:1.1rem;list-style:disc;
+  font:400 13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+.rm-covpop a{color:#8ab4f8;text-decoration:none;cursor:pointer}
+.rm-covpop a:hover{text-decoration:underline}
+.rm-covpop .rm-cpn{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;
+  font-size:12px;opacity:.72}
+.rm-covpop .rm-cpm{margin:.3rem 0 0;font-size:12px;opacity:.72}
 /* "All tests": off, the card lists what it always did; on, the rest of the run too. On
    the card's title row, right-aligned, just before the changed-tests counts. */
 .reqmap .rm-list:not([data-all=yes]) .rm-cho{display:none}
@@ -1610,7 +1682,8 @@ def reqmap_layout(frag: str, spec: dict, out_dir: Path, root: Path | None = None
         out = coverage_tests(out, doc, _load_test_changes(spec, out_dir),
                              root if root is not None else out_dir.resolve().parent)
     out = relabel_cats(out)
-    inventory = all_tests_inventory(out, doc, root if root is not None else out_dir.resolve().parent)
+    at = root if root is not None else out_dir.resolve().parent
+    inventory = all_tests_inventory(out, doc, at) + test_cover_files(out, doc, at)
     return (out + REQMAP_CSS + inventory + REQMAP_FIT_JS + REQMAP_TIP_JS + REQMAP_SEMCOV_JS
             + REQMAP_CHAPTERS_JS + REQMAP_LEDGER_JS)
 

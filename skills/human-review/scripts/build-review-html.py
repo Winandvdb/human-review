@@ -245,6 +245,7 @@ from hrbuild.tabs.tests import (
     REQMAP_CSS, REQMAP_CUT, REQMAP_SEMCOV_JS, REQMAP_TIP_JS, reqmap_layout, resolve_tests,
     REQMAP_CHAPTERS_JS, REQMAP_LEDGER_JS, all_tests_toggle, all_tests_inventory, ALL_TESTS_ID,
     SEMCOV_LABEL, _SEMCOV_TIP, semcov_switch, SILENCED_LABEL, VIA_HELPER_LABEL, via_helper_tip,
+    test_cover_files, TEST_COVER_ID, TEST_COVER_MAX,
     test_index, TEST_STATES,
     TICKET_CACHE, ticket_head, ticket_ref, tests_chip, _append_inside, _element, _find,
     drawn_ticket,

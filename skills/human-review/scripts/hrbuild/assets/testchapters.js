@@ -29,9 +29,9 @@
   var CH = [['e2e', 'end-to-end, from the browser'],
             ['api', 'calling the API directly'],
             ['unit', 'one component, isolated']];
-  // Which chapters start open. All three: closed, the card is three lines and a lot of
-  // empty frame at 1152x625 - the reader opens the tab to see tests, so they are shown.
-  var OPEN = {e2e: 1, api: 1, unit: 1};
+  // Which chapters start open: none (Victor, 7 Oct 2026). Each heading carries its own
+  // +added / -deleted / edited counts, so the closed card reads as a summary by kind.
+  var OPEN = {};
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -69,12 +69,17 @@
     sec.className = 'rm-ch';
     sec.dataset.cat = c[0];
     sec.dataset.open = OPEN[c[0]] ? 'yes' : 'no';
+    // The caret first, in the column the rows keep for their wire button, so the badge
+    // stands over the rows' badges; a blank arrow's width after it, so the subtitle starts
+    // where the test names do. The counts close the row, in the column the card title's
+    // own `+42 -12 ✍5` stands in.
     sec.innerHTML = '<div class="rm-chh" role="button" tabindex="0" aria-expanded="'
       + (OPEN[c[0]] ? 'true' : 'false') + '">'
+      + '<span class="rm-chev rm-chcaret" aria-hidden="true">&#9654;</span>'
       + '<span class="rm-cat" data-cat="' + c[0] + '">' + esc(LABEL[c[0]] || c[0]) + '</span>'
-      + '<span class="rm-chev" aria-hidden="true">&#9654;</span>'
-      + '<span class="rm-chsub">' + esc(c[1]) + '</span>'
-      + '<span class="rm-chn"></span></div>'
+      + '<span class="rm-chev rm-chpad" aria-hidden="true">&#9654;</span>'
+      + '<span class="rm-chsub">' + esc(c[1]) + ' <span class="rm-chn"></span></span>'
+      + '<span class="rm-chled"></span></div>'
       + '<div class="rm-chb"><div class="rm-cho"></div></div>';
     chapters[c[0]] = sec;
   });
@@ -170,8 +175,21 @@
       Array.prototype.forEach.call(sec.querySelectorAll('.rm-t'), function (r) {
         if (r.classList.contains('rm-other') ? all : (all || !folded(r))) n++;
       });
-      sec.querySelector('.rm-chn').textContent = n;
+      sec.querySelector('.rm-chn').textContent = '\u00B7 ' + n;
       sec.hidden = !n;
+      // What the branch did to this kind's tests: the card title's three counts, for one
+      // chapter, off the stamps its rows already wear. Every row is counted, folded or not.
+      var st = {new: 0, deleted: 0, edited: 0};
+      Array.prototype.forEach.call(sec.querySelectorAll('.rm-t .rm-st[data-st]'), function (s) {
+        if (s.dataset.st in st) st[s.dataset.st]++;
+      });
+      sec.querySelector('.rm-chled').innerHTML =
+        (st.new ? '<span class="added" data-tip="' + st.new + ' new ' + c[0].toUpperCase()
+          + ' test' + (st.new === 1 ? '' : 's') + '">+' + st.new + '</span>' : '')
+        + (st.deleted ? '<span class="removed" data-tip="' + st.deleted + ' ' + c[0].toUpperCase()
+          + ' test' + (st.deleted === 1 ? '' : 's') + ' gone">\u2212' + st.deleted + '</span>' : '')
+        + (st.edited ? '<span class="changed" data-tip="' + st.edited + ' ' + c[0].toUpperCase()
+          + ' test' + (st.edited === 1 ? '' : 's') + ' edited">\u270D\uFE0F' + st.edited + '</span>' : '');
     });
   }
   function setAll(on) {
@@ -226,6 +244,81 @@
     window.dispatchEvent(new Event('resize'));
   }
   map.addEventListener('click', function (e) { if (e.target.closest('.rm-f')) reveal(); });
+
+  // ---- the shield: which code this test really runs ---------------------------------------
+  // The row's 🛡 used to say "Runs changed code: a.ts:13-15... +6 files", one line, gone
+  // the moment the pointer left it. Its question is "what part of the code is this test
+  // really covering?", and the answer is a list of files a reader wants to open. So it is
+  // a popover that stays while the pointer travels into it: the changed files first, with
+  // how many changed lines the test ran in each, then the rest; each name is the page's
+  // ordinary `vscode://` link (`#rm-test-cover`, written by tests.py `test_cover_files`).
+  var COVER = {};
+  try { COVER = JSON.parse(document.getElementById('rm-test-cover').textContent) || {}; }
+  catch (e) { COVER = {}; }
+  var pop = null, popFor = null, showT = 0, hideT = 0;
+  function coverHtml(c) {
+    var ch = c.files.filter(function (f) { return f[2] > 0; }),
+        rest = c.files.filter(function (f) { return !f[2]; });
+    function li(f) {
+      var name = f[0].split('/').pop();
+      return '<li><a href="' + esc(f[3]) + '" data-path="' + esc(f[0]) + '">' + esc(name) + '</a>'
+        + (f[2] ? ' <span class="rm-cpn">' + f[2] + ' changed line' + (f[2] === 1 ? '' : 's')
+          + '</span>' : '') + '</li>';
+    }
+    return (ch.length ? '<p class="rm-cph">Changed code it runs</p><ul class="tiplist">'
+        + ch.map(li).join('') + '</ul>' : '')
+      + (rest.length ? '<p class="rm-cph">Also runs</p><ul class="tiplist">'
+        + rest.map(li).join('') + '</ul>' : '')
+      + (c.more ? '<p class="rm-cpm">+' + c.more + ' more file' + (c.more === 1 ? '' : 's')
+        + '</p>' : '');
+  }
+  function placePop(el) {
+    var r = el.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    var left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+    var top = r.bottom + 4;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 4);
+    pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  }
+  function showPop(el) {
+    var row = el.closest('.rm-t'), c = row && COVER[(row.dataset.id || '').replace(/@base$/, '')];
+    if (!c) return;
+    if (!pop) {
+      pop = document.createElement('div');
+      pop.className = 'rm-covpop';
+      pop.setAttribute('role', 'tooltip');
+      pop.addEventListener('pointerenter', function () { clearTimeout(hideT); });
+      pop.addEventListener('pointerleave', function () { hideSoon(); });
+      document.body.appendChild(pop);
+    }
+    pop.innerHTML = coverHtml(c);
+    popFor = el;
+    pop.classList.add('on');
+    placePop(el);
+  }
+  function hidePop() { if (pop) pop.classList.remove('on'); popFor = null; }
+  function hideSoon() { clearTimeout(showT); clearTimeout(hideT); hideT = setTimeout(hidePop, 250); }
+  function arm(row) {
+    var run = row.querySelector('.rm-run');
+    if (!run || !COVER[(row.dataset.id || '').replace(/@base$/, '')]) return;
+    // The page's one-line tip would open on top of the popover: the popover says more.
+    run.removeAttribute('data-tip');
+    run.dataset.cover = 'yes';
+  }
+  Array.prototype.forEach.call(list.querySelectorAll('.rm-t[data-id]'), arm);
+  list.addEventListener('pointerover', function (e) {
+    var run = e.target.closest && e.target.closest('.rm-run[data-cover]');
+    if (!run) return;
+    clearTimeout(hideT);
+    if (popFor === run) return;
+    clearTimeout(showT);
+    showT = setTimeout(function () { showPop(run); }, 150);
+  });
+  list.addEventListener('pointerout', function (e) {
+    var run = e.target.closest && e.target.closest('.rm-run[data-cover]');
+    if (run && !run.contains(e.relatedTarget)) hideSoon();
+  });
+  list.addEventListener('scroll', hidePop, {passive: true});
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hidePop(); });
   map.addEventListener('keydown', function (e) {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('.rm-f')) reveal();
   });

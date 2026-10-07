@@ -113,13 +113,13 @@ def test_the_title_row_keeps_its_paragraph_and_drops_the_chips():
 
 def test_the_card_is_read_in_chapters_by_kind_not_by_sentence():
     """The pairing to ticket sentences moved between runs and the card's shape with it
-    (Victor, 7 Oct 2026). The chapters are the badge's three kinds, open by default (closed,
-    the card is three lines in an empty frame), and a sentence click opens the chapters
-    holding the tests it lights."""
+    (Victor, 7 Oct 2026). The chapters are the badge's three kinds, closed by default with
+    their own counts on the heading (a summary by kind), and a sentence click opens the
+    chapters holding the tests it lights."""
     js = T.REQMAP_CHAPTERS_JS
     for words in ("'end-to-end, from the browser'", "'calling the API directly'"):
         assert words in js
-    assert "var OPEN = {e2e: 1, api: 1, unit: 1};" in js
+    assert "var OPEN = {};" in js
     assert "el.classList.contains('rm-tgroup')" in js             # sentence headings go
     assert "list.querySelectorAll('.rm-t[data-hit=yes]')" in js   # the selection follows
     # The hooks other decorators (the fixture dot) find rows by.
@@ -130,6 +130,56 @@ def test_the_card_is_read_in_chapters_by_kind_not_by_sentence():
     assert ".reqmap .rm-list > .rm-tgroup,.reqmap .rm-list > .rm-fold{display:none}" in css
     assert ".reqmap .rm-ch[data-open=no] > .rm-chb{display:none}" in css
     assert ".reqmap .rm-list:not([data-all=yes]) .rm-cho{display:none}" in css
+
+
+def test_a_chapter_heading_is_caret_badge_subtitle_then_its_own_counts():
+    """Victor, 7 Oct 2026: the caret leads, in the rows' wire column; the heading has a
+    tint of its own; the card title's +added / -deleted / edited counts, per chapter, in
+    the same right-hand column, counted off the stamps the rows wear."""
+    js, css = T.REQMAP_CHAPTERS_JS, T.REQMAP_CSS
+    order = [js.index(x) for x in ('rm-chev rm-chcaret', '<span class="rm-cat" data-cat="',
+                                   'rm-chev rm-chpad', 'rm-chsub', 'rm-chled')]
+    assert order == sorted(order)
+    assert "sec.querySelectorAll('.rm-t .rm-st[data-st]')" in js
+    for cls in ('class="added"', 'class="removed"', 'class="changed"'):
+        assert cls in js
+    assert "background:rgba(127,127,127,.12)" in css
+    assert ".reqmap .rm-chh{display:flex;align-items:center;gap:8px;padding:7px 16px 7px 6px;" in css
+    # The card's title strip (and the ticket's, to stay level) a fifth shorter.
+    assert (".reqmap .rm-ticket > .rm-tkhead,.reqmap .rm-code > .rm-tkhead"
+            "{padding-top:4.5px;padding-bottom:4.5px}") in css
+
+
+def test_the_shield_opens_a_popover_of_the_code_the_test_runs():
+    """Victor, 7 Oct 2026: "what part of the code is this test really covering?" - a list
+    of files to open, so a popover the pointer can travel into, not the one-line tip."""
+    js, css = T.REQMAP_CHAPTERS_JS, T.REQMAP_CSS
+    assert "document.getElementById('rm-test-cover')" in js
+    assert "run.removeAttribute('data-tip');" in js
+    assert "pop.addEventListener('pointerenter', function () { clearTimeout(hideT); });" in js
+    assert "Changed code it runs" in js and "Also runs" in js
+    assert ".rm-covpop{position:fixed;" in css and ".rm-covpop.on{display:block}" in css
+
+
+def test_the_cover_list_puts_changed_files_first_and_caps_the_rest(tmp_path):
+    frag = ('<script type="application/json" class="rm-data">'
+            '{"tests":{"t/ATest.java:5":{}}}</script>')
+    hits = {f"src/F{i}.java": [1, 2] for i in range(15)}
+    hits["src/Changed.java"] = [7, 8, 9]
+    hits["src/Big.java"] = list(range(1, 50))
+    doc = {"changed": {"src/Changed.java": [8, 9, 30]},
+           "tests": [{"file": "t/ATest.java", "line": 5, "hits": hits},
+                     {"file": "t/Other.java", "line": 1, "hits": {"src/X.java": [1]}}]}
+    out = T.test_cover_files(frag, doc, tmp_path)
+    assert out.startswith('<script type="application/json" id="rm-test-cover">')
+    data = json.loads(out[out.index(">") + 1:-len("</script>")])
+    assert list(data) == ["t/ATest.java:5"]                   # only tests on the card
+    c = data["t/ATest.java:5"]
+    assert c["files"][0][:3] == ["src/Changed.java", 8, 2]    # changed first, at its first changed line
+    assert c["files"][0][3] == f"vscode://file/{(tmp_path / 'src/Changed.java').resolve()}:8:1"
+    assert c["files"][1][:3] == ["src/Big.java", 1, 0]        # then by how much it ran
+    assert len(c["files"]) == T.TEST_COVER_MAX and c["more"] == 17 - T.TEST_COVER_MAX
+    assert T.test_cover_files(frag, None, tmp_path) == ""
 
 
 def test_a_row_of_the_rest_of_the_run_keeps_every_column_and_opens_nothing():

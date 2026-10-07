@@ -197,7 +197,7 @@ def ref_badges(spec: dict, state: dict | None = None) -> str:
     `files +1 / ✍️40` reads as an unlabelled number. The label is what makes the pair
     legible in one pass, and it costs four characters.
 
-    The chip ends in a ⚠️ when the two refs have drifted apart — the base has moved
+    The chip carries `N↓` before the base ref when the two refs have drifted apart — the base has moved
     ahead of the fork point, or the local branch named here is behind the remote actually
     measured. It is on *this* chip and not in a banner because the question it answers is
     "compared against what, exactly?", which is the question the chip already exists to
@@ -227,17 +227,21 @@ def ref_badges(spec: dict, state: dict | None = None) -> str:
     parts = []
     if branch:
         parts.append(f"branch {ref_html(branch, 'head')}")
-    if base:
-        parts.append(f"{'from' if branch else 'base'} {ref_html(base, 'base')}")
-    inner = " ".join(parts)
     cls_extra = ""
+    mark = ""
     if base and warning:
+        # `5↓main`: five commits behind main, the number sitting on the ref it measures.
         # The mark carries its own tooltip: the chip says what the refs are, the mark
-        # says what is wrong with the pair, and a reader who hovers the ⚠️ is asking the
-        # second question, not the first.
-        inner += (f'<span class="drift" role="img" aria-label="stale base" '
-                  f'data-tip="{html.escape(warning)}">\u26a0\ufe0f</span>')
+        # says what is wrong with the pair, and a reader who hovers it is asking the
+        # second question, not the first. A plain arrow, not the ⬇️ emoji.
+        n = ((state.get("ahead") or 0) + (state.get("aheadPicked") or 0)
+             or state.get("localBehind") or "")
+        mark = (f'<span class="drift" role="img" aria-label="stale base" '
+                f'data-tip="{html.escape(warning)}">{n}\u2193</span>')
         cls_extra = " drifted"
+    if base:
+        parts.append(f"{'from' if branch else 'base'} {mark}{ref_html(base, 'base')}")
+    inner = " ".join(parts)
     return f'<span class="chip refchip{cls_extra}">{inner}{badge}</span>'
 
 

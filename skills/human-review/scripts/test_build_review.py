@@ -1351,7 +1351,7 @@ def test_the_footer_says_where_the_page_came_from_and_where_to_see_it(tmp_path):
     foot = page[page.index("<footer>"):page.index("</footer>")]
     text = re.sub(r"<[^>]+>", "", foot)
     assert ("Built by https://github.com/victorrentea/human-review. Browse it online. "
-            "Adopt what you like in your project. Bug or idea → Open an issue.") in text
+            "Adopt what you like. Bug or idea → Open an issue.") in text
     assert 'href="https://github.com/victorrentea/human-review"' in foot
     assert "Browse it <a" in foot and ">online</a>." in foot
     assert "https://victorrentea.github.io/human-review/" in foot

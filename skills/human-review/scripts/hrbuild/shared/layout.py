@@ -59,6 +59,11 @@ LAYOUT_MODEL_KEYS = {"video": ("video", "appLinks", "runtime")}
 LAYOUT_PRODUCER = {"swaggerdiff": "api", "requirements-map": "rerun-model.py (the Tests matrix)",
             "ds-audit": "dsaudit", "complexity-delta": "complexity"}
 
+#: What the strip prints for a few tabs, whatever label the content file declared: the row
+#: fits on one line only with the short forms. Only the button's text — the tab's id, its
+#: panel heading, the aria-label and the lede check keep the declared label.
+SHORT_TAB_LABELS = {"city": "City", "logging": "Logs", "owners": "Codeowners"}
+
 #: Script-owned tabs, in the default strip order. `label` is used only for a tab the build
 #: adds itself — a declared tab keeps its own, since a label is free and an id is not.
 #: `blocks` are the non-section block types
@@ -79,15 +84,15 @@ LAYOUT_TABS: dict[str, dict] = {
                      "sections": (), "required": ()},
     "packages":     {"label": "Structure", "blocks": ("diagrams", "puml"),
                      "sections": ("deployment",), "required": ()},
-    "city":         {"label": "Code City", "blocks": ("codecity",), "sections": (),
+    "city":         {"label": "City", "blocks": ("codecity",), "sections": (),
                      "required": ()},
     "dsaudit":      {"label": "UX", "blocks": (), "sections": ("ds-audit",),
                      "required": ("ds-audit",)},
     "complexity":   {"label": "Complexity", "blocks": (), "sections": ("complexity-delta",),
                      "required": ("complexity-delta",)},
-    "logging":      {"label": "Logging", "blocks": ("logging",), "sections": (),
+    "logging":      {"label": "Logs", "blocks": ("logging",), "sections": (),
                      "required": ()},
-    "owners":       {"label": "CODEOWNERS", "blocks": ("codeowners",), "sections": (),
+    "owners":       {"label": "Codeowners", "blocks": ("codeowners",), "sections": (),
                      "required": ()},
 }
 

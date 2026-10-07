@@ -10,7 +10,7 @@
 .scopebar { display:flex; flex-wrap:wrap; gap:.45rem; margin:0 0 .55rem; }
 .titlerow { display:flex; align-items:baseline; justify-content:space-between; gap:1.5rem;
              flex-wrap:wrap; }
-.titlerow h1 { margin-bottom:0; }
+.titlerow h1 { margin-bottom:0; line-height:1.2; }
 /* One block that never scrolls away: which change this is, what it is against, how big
    it is, and where in it you are. Those four answers are the ones a reader needs *while*
    reading a tab -- "which branch is this, again?" is asked halfway down a diff, not at
@@ -20,7 +20,7 @@
             margin-left:calc(50% - 50vw); width:100vw;
             /* .15rem on top, not .6rem: the h1's own line box already carries ~5px of
                leading above the text, so .6rem made a ~15px empty band over the title. */
-            padding:.075rem max(1.25rem, calc(50vw - 540px + 1.25rem)) .3rem;
+            padding:0 max(1.25rem, calc(50vw - 540px + 1.25rem)) .3rem;
             border-bottom:1px solid var(--line); }
 .masthead .titlerow { align-items:baseline; gap:.3rem .9rem; }
 /* One line, always: the PR and its name on the left, the score hard right. Nothing here
@@ -72,7 +72,8 @@
    have it read as the thirteenth thing /code-review raised. It is a filled disc rather
    than a bare glyph so it survives being skimmed past at the end of a row of chips, and
    the chip it sits on keeps its border so the ref itself stays the thing being read. */
-.chip.refchip .drift { margin-left:.3rem; font-style:normal; cursor:help; }
+.chip.refchip .drift { font-style:normal; cursor:help; font-weight:600; color:var(--drift);
+            white-space:nowrap; }
 .chip.refchip a.refl { text-decoration:none; }
 .chip.refchip a.refl:hover b { text-decoration:underline; }
 .chip.refchip.drifted { border-color:var(--drift); }
@@ -89,6 +90,11 @@ h1 .nopr { font-size:.55em; font-weight:600; vertical-align:middle; color:var(--
    rather than absent so the width it takes is the chips' width. */
 .titlescore { display:inline-flex; align-items:baseline; gap:.2rem;
               border-color:transparent; white-space:nowrap; }
+/* Even padding round the figure: an empty verdict label still cost its gap and margin
+   (~7px) after `/10`, and the row's .7rem on top of that left the right edge far airier
+   than the left. Row-level rule is `.titlerow .titlescore`, hence the doubled selector. */
+.titlerow .titlescore { padding-right:.5rem; }
+.titlescore i:empty { display:none; }
 .titlescore b { font-size:1em; line-height:inherit; letter-spacing:0; }
 .titlescore small { font-size:1em; opacity:.6; }
 .titlescore i { font-style:normal; font-size:.82rem; opacity:.85; margin-left:.25rem; }

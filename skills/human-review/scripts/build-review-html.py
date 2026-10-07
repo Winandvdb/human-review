@@ -147,7 +147,7 @@ from hrbuild.shared.validate import (
 )
 from hrbuild.shared.layout import (
     _layout_overridden, _layout_section, _video_step_ran, LAYOUT_ALWAYS, LAYOUT_MODEL_KEYS, LAYOUT_PRODUCER,
-    LAYOUT_SECTIONS, LAYOUT_TABS, own_layout, LAYOUT_TESTPAIRS, _squash, _own_testpairs,
+    LAYOUT_SECTIONS, LAYOUT_TABS, SHORT_TAB_LABELS, own_layout, LAYOUT_TESTPAIRS, _squash, _own_testpairs,
     _own_diagram_title, LAYOUT_WHEN_WRITTEN
 )
 from hrbuild.tabs.review import (

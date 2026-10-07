@@ -1913,11 +1913,12 @@ def _marks_for(findings, side):
         if f["verdict"] in ("internal", "uncovered"):
             continue
         st = f.get("delta", {})
-        note = ""
         status = st.get("status") if st.get("status") in ("added", "restyled", "changed") \
             else None
-        if status:
-            note = f' · {st["status"]}'
+        # What the branch did to it, in the badge's own first word: "new" for a control it
+        # added, "changed" for one it touched, "existing" for one the base already had.
+        age = {"added": "new", "restyled": "changed", "changed": "changed"}.get(status, "existing")
+        note = f' · {st["status"]}' if status else ""
         if f["verdict"] == "ds":
             marks.append({"id": f["id"], "cls": "ok", "box": f["box"],
                           "badge": f'✓ {f["ds"]}{note}', "short": f'✓ {f["ds"]}',
@@ -1928,19 +1929,18 @@ def _marks_for(findings, side):
             # in the table row, where there is room for both.
             kit = f["element"].get("kit") or f["element"]["tag"]
             name = "matSort" if kit == "mat-sort" else kit
+            what = KIT_CONTROLS.get(kit, (name,))[0]
             marks.append({"id": f["id"], "cls": "bad", "box": f["box"],
-                          "badge": f'✗ {name}, not from the design system{note}',
+                          "badge": f'✗ {age} {what} — the design system has none',
                           "short": f'✗ {name}', "tip": _plain(f["message"]), "status": status})
         else:
-            # "select → combo" was an arrow between two words the reader had to
-            # already know to decode. The badge now says the verdict itself, and names
-            # the component that is missing rather than the role it fills.
-            expect = "/".join(f["expected_ds"])
-            expect = f"not the {expect} component" if expect else \
-                "not a design-system component"
+            # Says what the control is and what it should have been: the component the
+            # design system has for that role, named, not the role itself.
+            expect = " or ".join(f["expected_ds"])
+            expect = f"the {expect} component" if expect else "a design-system component"
             plain = "" if f["element"].get("kit") else "plain "
             marks.append({"id": f["id"], "cls": "bad", "box": f["box"],
-                          "badge": f'✗ {plain}<{f["element"]["tag"]}>, {expect}{note}',
+                          "badge": f'✗ {age} {plain}<{f["element"]["tag"]}> — should be {expect}',
                           "short": f'✗ <{f["element"]["tag"]}>',
                           "tip": _plain(f["message"]), "status": status})
     return marks
@@ -2028,20 +2028,8 @@ def delta_parts(counts: dict, *, long: bool = False, gap_tip: str = "") -> list[
     reg, fixed = len(counts["regressions"]), len(counts["improvements"])
     pre = len(counts.get("pre_existing") or [])
     d = counts["new"]["ds"] - counts["old"]["ds"]
-    # A `foreign` gap is a kit control from outside the design system, not a native one;
-    # the long form names whichever kinds the gaps are, rather than calling a Material
-    # paginator a "native control".
-    foreign = counts["new"].get("foreign", 0) - counts["old"].get("foreign", 0)
-    plural = "" if reg == 1 else "s"
-    if foreign > 0 and foreign >= reg:
-        kind = f"control{plural} from outside the design system"
-    elif foreign > 0:
-        kind = ("native controls where a design-system component belongs, or from outside "
-                "the design system")
-    else:
-        kind = f"native control{plural} where a design-system component belongs"
     if reg:
-        word = f'{_n(reg, "gap")} — {kind}' if long else _n(reg, "gap")
+        word = _n(reg, "gap")
         tip = gap_tip or "Control outside the design system"
         parts.append(f'<span class="dsa-gap" data-tip-html="{html.escape(tip, quote=True)}">'
                      f'{"\u26a0 " if long else ""}+{word}</span>')
@@ -2304,6 +2292,7 @@ def render(result: dict, assets_prefix: str, *, root: Path | None = None,
         for u in unlisted)
     return (
         '<div class="dsa-run">'
+        '<h2 class="tabtitle">UX design system</h2>'
         f'{unlisted_line}'
         f'<p class="dsa-hdr">{verdict_line}</p>'
         # Screens with a verdict first — a gap, a regression, a component — so the tab

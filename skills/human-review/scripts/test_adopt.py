@@ -156,7 +156,7 @@ WHOLE_TAB = {"sequence": '<h2 class="tabtitle" id="sequences">Sequence diagrams<
              "logging": '<h2 class="tabtitle" id="logging-added">Uses of logging</h2>',
              "owners": '<h2 class="tabtitle cow-title">Needs approval by</h2>',
              "api": '<div class="apiverdict red"><span class="dot"></span>Breaking</div>',
-             "dsaudit": '<p class="dsa-hdr">5 of 19 screens changed</p>'}
+             "dsaudit": '<h2 class="tabtitle">UX design system</h2>'}
 
 
 @pytest.mark.parametrize("tid", sorted(WHOLE_TAB))

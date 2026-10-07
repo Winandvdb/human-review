@@ -671,7 +671,7 @@ def test_the_header_says_what_the_branch_is_charged_with_and_names_it_on_hover()
     # Said once, as the signed delta it is — not "1 gap · 1 introduced by this branch".
     assert "introduced by this branch" not in hdr
     assert '<span class="dsa-gap" data-tip-html=' in hdr
-    assert "\u26a0 +1 gap \u2014 native control where a design-system component belongs" in hdr
+    assert "\u26a0 +1 gap" in hdr
     tip = ds.regression_tip(ds.build_result([screen], reg))
     assert "Edit visit: &lt;select" in tip and "a DS component on the base" in tip
 
@@ -755,7 +755,7 @@ def test_only_what_the_branch_changed_is_said_as_signed_deltas():
     assert txt(_counts(2, 1, fixed=1)) == "+1 component \u00b7 \u22121 gap"
     assert txt(_counts(1, 1, pre=1)) == "1 gap already on the base"
     assert txt(_counts(4, 3, reg=1), long=True) == (
-        "\u26a0 +1 gap \u2014 native control where a design-system component belongs"
+        "\u26a0 +1 gap"
         " \u00b7 +1 design-system component")
     gap, = ds.delta_parts(_counts(1, 1, reg=1))
     assert gap.startswith('<span class="dsa-gap"'), "the one warning, in the warning's yellow"
@@ -976,7 +976,7 @@ def test_the_badge_names_the_verdict_and_not_an_arrow_between_two_words():
              control("loose", id="vetId")]
     findings = ds.audit_side(snap(*nodes), registry_of(nodes), "new")
     bad, = [m for m in ds._marks_for(findings, "new") if m["cls"] == "bad"]
-    assert bad["badge"] == "✗ plain <select>, not the combo component"
+    assert bad["badge"] == "✗ existing plain <select> — should be the combo component"
     assert "→" not in bad["badge"]
 
 
@@ -1224,7 +1224,7 @@ def test_a_lone_material_select_is_the_gap_where_combo_belongs():
     f, = ds.audit_side(snap(sel), _combo_registry(), "new")
     assert f["verdict"] == "bare" and f["expected_ds"] == ["combo"]
     mark, = ds._marks_for([dict(f, delta={"status": "added"})], "new")
-    assert mark["badge"] == "✗ <mat-select>, not the combo component · added"
+    assert mark["badge"] == "✗ new <mat-select> — should be the combo component"
 
 
 def test_a_kit_multi_select_the_base_already_had_is_context_not_a_gap():
@@ -1278,8 +1278,7 @@ def test_the_header_says_the_gaps_and_components_and_never_just_a_screen_count()
     reg, screen = _owners_screen()
     frag = ds.render(ds.build_result([screen], reg), "")
     hdr = re.sub(r"<[^>]+>", "", frag[frag.index('<p class="dsa-hdr">'):].split("</p>")[0])
-    assert hdr == ("1 of 1 screens changed · ⚠ +2 gaps — controls from "
-                   "outside the design system")
+    assert hdr == ("1 of 1 screens changed · ⚠ +2 gaps")
     txt = lambda c, **kw: re.sub(r"<[^>]+>", "", " · ".join(ds.delta_parts(c, **kw)))
     moved = {"new": {"ds": 3, "uncovered": 42}, "old": {"ds": 3, "uncovered": 41},
              "regressions": [], "improvements": [], "pre_existing": []}

@@ -497,6 +497,7 @@ def test_the_row_pills_are_one_width_and_the_filters_have_room():
     assert ".reqmap .rm-thead .rm-cat{display:inline-flex;justify-content:center;min-width:4.5em}" in css
     assert "input{margin:0 -20px 0 8px;" in T.REQMAP_CSS
     assert ".rm-catf > .rm-cat{padding-left:27px;padding-right:13px}" in T.REQMAP_CSS
+    assert ".reqmap .rm-cats .rm-catf,.reqmap .rm-cats .rm-catf *{cursor:pointer}" in T.REQMAP_CSS
 
 
 def test_a_models_ui_label_is_renamed_e2e_at_build_time():

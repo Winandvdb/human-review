@@ -1286,6 +1286,10 @@ REQMAP_CSS = """
    the word 7px after it, 13px after the word. */
 .reqmap .rm-cats .rm-catf > .rm-cat{padding-left:27px;padding-right:13px}
 .reqmap .rm-cats .rm-catf+.rm-catf{margin-left:9px}
+/* The whole badge is a toggle, so the whole badge is a hand - the pill's tooltip span
+   included, which otherwise shows `[data-tip]`'s help cursor. Hand = clickable, `?` =
+   tooltip-only (Victor, 7 Oct 2026). */
+.reqmap .rm-cats .rm-catf,.reqmap .rm-cats .rm-catf *{cursor:pointer}
 .reqmap .rm-cats .rm-catf:has(input:not(:checked)){opacity:.5}
 .reqmap .rm-t[data-catoff=yes]{display:none}
 /* Two columns, two scrollbars (Victor, 4 Oct 2026): the ticket and the test list each

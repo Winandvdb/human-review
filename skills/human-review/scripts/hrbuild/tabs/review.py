@@ -1788,17 +1788,19 @@ def _confidence_chip(f) -> str:
     `review-points.json`'s `confidence` — how sure the agent that wrote the code is that
     this reading of the ticket is the right one, not a severity: absent when the item
     declares none, because a scale a model was never asked to fill in is not the same fact
-    as a model that filled it in at the middle. `.sev-med`'s amber marks anything under
-    0.5, the same hue the rest of the page already spends on "worth a second look" — a
-    confidence low enough to flag is exactly that, not a new colour to learn. Shown as a
-    percentage (`0.45` → `45%`), the stored value stays a rate."""
+    as a model that filled it in at the middle. Coloured by band, in the page's own
+    severity hues (Victor, 7 Oct 2026: "super important"): red under 50%, amber up to the
+    lede's own "under 70% sure" line, green from 70% — so the chips and the lede count
+    the same unsure items. Shown as a percentage (`0.45` → `45%`), the stored value stays
+    a rate."""
     c = f.get("confidence")
     if c is None:
         return ""
     # A percentage, not a rate: `45%` is read at a glance, `0.45` is read as arithmetic.
     # The lede already says "3 under 70% sure"; the chips now speak the same unit.
     shown = f"{round(c * 100)}% confident"
-    cls = "f-confidence sev-med" if c < 0.5 else "f-confidence"
+    band = "sev-high" if c < 0.5 else "sev-med" if c < 0.7 else "sev-info"
+    cls = f"f-confidence {band}"
     # No tooltip (Victor, 7 Oct 2026): the number says it; the old range hint only added noise.
     return f'<span class="{cls}">{shown}</span>'
 

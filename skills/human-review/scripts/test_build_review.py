@@ -2988,21 +2988,50 @@ def test_an_assumptions_confidence_reads_verbatim_with_its_tooltip(tmp_path):
     # The tooltip is `CONFIDENCE_TIP`, fixed — not a sentence composed around this item's
     # own number — and the face is a percentage, not a rate, said as what it measures:
     # `85% confident`, so the number beside `assumption` cannot be read as a score.
-    assert ('<span class="f-confidence">'
+    assert ('<span class="f-confidence sev-info">'
             '85% confident</span>') in item
     assert "sev-med" not in item, "0.85 is not a low confidence"
 
 
-def test_a_low_confidence_assumption_wears_the_page_own_worth_a_look_amber(tmp_path):
-    """Below 0.5 reuses `.sev-med` rather than a colour of its own — the same "worth a
-    second look" the rest of the page already spends amber on."""
+@pytest.mark.parametrize("confidence, band", [
+    (0.3, "sev-high"), (0.49, "sev-high"), (0.5, "sev-med"), (0.65, "sev-med"),
+    (0.69, "sev-med"), (0.7, "sev-info"), (0.95, "sev-info")])
+def test_a_confidence_chip_is_coloured_red_amber_green_by_band(tmp_path, confidence, band):
+    """Red under 50%, amber under the lede's own "under 70% sure" line, green from 70% —
+    so the chips and the lede count the same items as unsure (Victor, 7 Oct 2026)."""
     page, _ = _build(tmp_path, dict(
-        BARE, assumptions=[_assumption(confidence=0.3)],
+        BARE, assumptions=[_assumption(confidence=confidence)],
         tabs=[{"id": "review", "label": "Review",
                "blocks": [{"type": "assumptions", "mode": "A"}]}]))
     item = re.search(r'<li class="n-assumed">.*?</li>', page, re.S).group(0)
-    assert 'class="f-confidence sev-med"' in item
-    assert ">30% confident</span>" in item
+    assert f'class="f-confidence {band}"' in item
+    assert f">{round(confidence * 100)}% confident</span>" in item
+
+
+def test_the_confidence_chip_is_as_big_as_the_title_and_on_its_baseline(tmp_path):
+    """The one number the reviewer must not miss reads at the title's own size, coloured
+    in dark and light alike."""
+    page, _ = _build(tmp_path, dict(
+        BARE, assumptions=[_assumption(confidence=0.6)],
+        tabs=[{"id": "review", "label": "Review",
+               "blocks": [{"type": "assumptions", "mode": "A"}]}]))
+    rule = re.search(r'\.f-confidence \{([^}]*)\}', page).group(1)
+    assert "1em/" in rule and "vertical-align:baseline" in rule
+    dark = page[page.index("@media (prefers-color-scheme: dark) {\n  .f-confidence.sev-high"):]
+    for band in ("sev-high", "sev-med", "sev-info"):
+        assert re.search(rf"\.f-confidence\.{band}\s*\{{", page)
+        assert re.search(rf"\.f-confidence\.{band}\s*\{{", dark)
+
+
+def test_an_inline_snippet_names_its_file_on_the_left_like_a_folded_one(tmp_path):
+    """A one-line excerpt stays unfolded, its bar inside the figure; on the Review tab
+    that bar starts left, where a folded card's summary puts the same file name."""
+    page, _ = _build(tmp_path, dict(
+        BARE, assumptions=[_assumption(confidence=0.6)],
+        tabs=[{"id": "review", "label": "Review",
+               "blocks": [{"type": "assumptions", "mode": "A"}]}]))
+    assert re.search(r'#review figure\.snippet > \.srcbar \{ justify-content:flex-start;', page)
+    assert "#review figure.snippet > .srcbar .srcbar-path { text-align:left; }" in page
 
 
 def test_assumptions_are_ordered_least_sure_first(tmp_path):

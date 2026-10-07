@@ -79,6 +79,13 @@ details.ghfold > summary > .srcbar .srcbar-path { text-align:left; }
 details.ghfold > summary > .srcbar .stat { font-weight:700; white-space:nowrap; }
 details.ghfold > summary > .srcbar .stat { margin-left:auto; }
 details.snipfold > figure.snippet { margin:0; border-top:0; }
+/* A one-line excerpt is not folded (`snippet_card`), so its bar stays inside the figure —
+   where the shared `.srcbar` puts the file on the right. On the Review tab that read as two
+   places for one fact: left in a folded card's summary, right over an inline line (Victor,
+   7 Oct 2026: "always on the left"). Here it sits left too, indented to start where a
+   folded summary's name starts, after its caret. */
+#review figure.snippet > .srcbar { justify-content:flex-start; padding-left:26px; }
+#review figure.snippet > .srcbar .srcbar-path { text-align:left; }
 details.ghfold > .ghdiff { border:0; border-radius:0; margin:0; }
 .ghdiff-scroll { overflow-x:auto; }
 table.ghdiff-body { border-collapse:collapse; width:100%;

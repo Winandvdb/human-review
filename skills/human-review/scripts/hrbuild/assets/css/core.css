@@ -157,13 +157,20 @@ figcaption { color:var(--muted); font-size:.86rem; }
 .badge { border-radius:4px; padding:.1rem .45rem; font-size:.74rem; font-weight:600; text-transform:uppercase;
           letter-spacing:.04em; background:var(--accent-soft); color:var(--accent); }
 /* The number beside the purple `assumption` chip, when the branch declared a confidence.
-   Same shape as `.f-src` — monospace stamp, not prose — so the two read as the same kind
-   of fact beside a title. Below 0.5 it wears `.sev-med`'s amber, already this page's own
-   colour for "worth a second look", rather than a new one nobody has met yet. */
-.f-confidence { font:600 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted);
-        border:1px solid var(--line); border-radius:4px; padding:.05rem .35rem; margin-left:.35rem;
-        vertical-align:.05em; }
-.f-confidence.sev-med { border-color:transparent; }
+   The one fact on the card the reviewer must not miss (Victor, 7 Oct 2026), so it is as
+   big as the title it sits before, on the title's baseline, and coloured by band —
+   red < 50%, amber < 70% (the lede's "under 70% sure"), green from there — in stronger
+   tints than the severity chips' own, so it reads at a glance in dark and light. */
+.f-confidence { font:700 1em/1.25 ui-monospace,SFMono-Regular,Menlo,monospace; border-radius:5px;
+        padding:.05rem .4rem; margin-left:.35rem; vertical-align:baseline; }
+.f-confidence.sev-high { background:#fde2e1; color:#a3161f; }
+.f-confidence.sev-med  { background:#fdf0d5; color:#7a4a00; }
+.f-confidence.sev-info { background:#e3f4e6; color:#1c6b33; }
+@media (prefers-color-scheme: dark) {
+  .f-confidence.sev-high { background:#4a1f22; color:#ff8a80; }
+  .f-confidence.sev-med  { background:#3d3115; color:#f0c060; }
+  .f-confidence.sev-info { background:#183a22; color:#6fdc8c; }
+}
 .sev-high { background:#fdeaea; color:#8a1c1c; }
 .sev-med  { background:#fdf3e2; color:#8a5a12; }
 .sev-low  { background:#eef3fb; color:#26518f; }

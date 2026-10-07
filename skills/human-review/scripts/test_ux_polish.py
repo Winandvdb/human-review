@@ -108,11 +108,14 @@ def test_17b_change_count_pills_are_one_width():
     assert "min-width: 80px; text-align: center;" in badge
 
 
-def test_17c_an_emoji_only_voice_gets_a_word_and_the_text_size():
+def test_17c_voices_are_emoji_faces_each_with_a_spoken_name():
+    """Superseded by Victor (7 Oct 2026): no word beside the 🐘 — every voice is an emoji
+    (👩 standard, 🐘, 🌍 Discovery), each still named for a screen reader."""
     demo = _load("hr_demo_for_ux", "build-review-html.py")
     html = demo.voice_switch("assets/feature.webm",
                              [("trump", "assets/f.voice-trump.webm", "\U0001F418", [], "")])
-    assert ('aria-label="cloned voice"> <span class="vs-emoji">\U0001F418</span> '
-            f'{demo.MYSTERY_VOICE_WORD}</label>') in html
-    assert demo.voice_face("Discovery") == "Discovery"
+    assert ('aria-label="cloned voice"> <span class="vs-emoji">\U0001F418</span></label>') in html
+    assert demo.voice_face("discovery", "Discovery") == (
+        '<span class="vs-emoji">\U0001F30D</span>', "Discovery")
+    assert demo.voice_face("", "standard")[1] == "Standard voice"
     assert "font-size:1.3em" in _rule(_read(CSS / "demo.css"), ".voice-switch .vs-emoji")

@@ -34,7 +34,19 @@
    height again. */
 .vidwrap > .vidside { display:flex; flex-direction:column; min-width:0; min-height:0;
                       contain:size; align-self:stretch; }
-.vidside > h2.tabtitle { flex:none; margin:0 0 .5rem; }
+/* Its head row: the title, the tab's presses after it, then the narration voices — emoji
+   faces, radios and faces centred on the title's letters, .9rem after the presses and
+   .55rem apart. The title never breaks; on a column too narrow for the row the voices
+   wrap under it, still in the head. */
+.vidside > .vidhead { flex:none; display:flex; align-items:center; flex-wrap:wrap;
+                      column-gap:.9rem; row-gap:.2rem; margin:0 0 .5rem; }
+.vidhead > h2.tabtitle { margin:0; white-space:nowrap; }
+.vidhead > .voice-switch { margin:0; gap:.55rem; flex-wrap:nowrap; font-size:1rem;
+                           position:relative; top:-2px; }
+.vidhead > .voice-switch label { gap:.25rem; }
+/* A little under the 1.3em the faces get elsewhere: at 1.3em the row filled the 19rem
+   column to its last pixel at 1152px, one font's worth of width away from wrapping. */
+.vidhead > .voice-switch .vs-emoji { font-size:1.15em; }
 .vidside > .adoptcol { flex:1 1 auto; min-height:0; overflow:hidden; }
 .vidside > .adoptcol > .transcript { flex:1 1 auto; min-height:0; max-height:none; }
 .vidside > .transcript { flex:1 1 auto; min-height:0; max-height:none; }

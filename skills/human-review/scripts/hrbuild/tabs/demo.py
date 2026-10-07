@@ -159,18 +159,24 @@ def voice_films(rel: str, out_dir: Path) -> list[tuple[str, str, str, list, str]
     return out
 
 
-#: The word beside a voice whose label is a bare emoji (the 🐘). It names the game, not the
-#: speaker: who it is stays the surprise (`VOICE_TIPS`), but a lone glyph at ~60% of the
-#: text's size read as a missing label rather than as an option (UX review, 7 Oct 2026).
-MYSTERY_VOICE_WORD = "guess who"
+#: The face each known voice wears in the title row: emoji only, so three voices fit after
+#: the film's title in the transcript column (Victor, 7 Oct 2026). A voice whose label is
+#: already a bare emoji (the 🐘) keeps it; an unknown worded voice keeps its word.
+VOICE_EMOJI = {"": "\U0001F469", "discovery": "\U0001F30D"}
+#: The standard voice's hover, which is also its spoken name: its face is a glyph now.
+STANDARD_VOICE_TIP = "Standard voice"
 
 
-def voice_face(label: str) -> str:
-    """A radio's visible label: the label itself, or — when it is a bare emoji — the emoji
-    at the text's size with `MYSTERY_VOICE_WORD` after it."""
-    if re.search(r"\w", label):
-        return html.escape(label)
-    return f'<span class="vs-emoji">{html.escape(label)}</span> {MYSTERY_VOICE_WORD}'
+def voice_face(key: str, label: str) -> tuple[str, str]:
+    """(visible face, spoken name) of one radio. A glyph face is spoken by the voice's own
+    word when it has one (Discovery), as "Standard voice" for the offline one, and as a
+    cloned voice for the 🐘 — never as whose: guessing who it is is the joke."""
+    face = VOICE_EMOJI.get(key) or label
+    if re.search(r"\w", face):
+        return html.escape(face), ""
+    spoken = (label if re.search(r"\w", label) and key else
+              STANDARD_VOICE_TIP if not key else "cloned voice")
+    return f'<span class="vs-emoji">{html.escape(face)}</span>', spoken
 
 
 def voice_switch(rel: str, voices: list[tuple[str, str, str, list, str]],
@@ -180,28 +186,26 @@ def voice_switch(rel: str, voices: list[tuple[str, str, str, list, str]],
     if not voices:
         return ""
     name = "voice-" + re.sub(r"[^A-Za-z0-9]+", "-", rel)
-    opts = [("", rel, "standard", times or [], "")] + list(voices)
+    opts = [("", rel, "standard", times or [], STANDARD_VOICE_TIP)] + list(voices)
 
     def ts(t) -> str:
         return (f' data-ts="{",".join(f"{float(x):.2f}" for x in t)}"' if t else "")
 
-    def named(key: str, label: str, tip: str) -> tuple[str, str]:
-        # A label that is a bare emoji (`🐘`) gives a screen reader nothing to say, so the
-        # radio is named — as a cloned voice, never as whose: who it is stays the surprise.
-        # A hover names the speaker only where the voice declares one (Discovery → David
-        # Attenborough), because that is the one a reviewer would otherwise wonder about.
-        spoken = (' aria-label="cloned voice"'
-                  if key and not re.search(r"\w", label) else "")
-        return spoken, (f' data-tip="{html.escape(tip, quote=True)}"' if tip else "")
+    def radio(key: str, src: str, label: str, t, tip: str) -> str:
+        # A glyph gives a screen reader nothing to say, so the radio is named
+        # (`voice_face`). A hover names the speaker only where the voice declares one
+        # (Discovery → David Attenborough) and on the standard voice, whose face no longer
+        # says "standard"; the 🐘 has none.
+        face, spoken = voice_face(key, label)
+        hover = f' data-tip="{html.escape(tip, quote=True)}"' if tip else ""
+        return (f'<label{hover}>'
+                f'<input type="radio" name="{html.escape(name)}" '
+                f'value="{html.escape(key)}" data-src="{html.escape(src)}"{ts(t)}'
+                + (f' aria-label="{html.escape(spoken, quote=True)}"' if spoken else "")
+                + f'{" checked" if not key else ""}> {face}</label>')
 
     return ('<div class="voice-switch" role="radiogroup" aria-label="Narration voice">'
-            + "".join(f'<label{named(key, label, tip)[1]}><input type="radio" '
-                      f'name="{html.escape(name)}" '
-                      f'value="{html.escape(key)}" data-src="{html.escape(src)}"{ts(t)}'
-                      f'{named(key, label, tip)[0]}'
-                      f'{" checked" if not key else ""}> {voice_face(label)}</label>'
-                      for key, src, label, t, tip in opts)
-            + "</div>")
+            + "".join(radio(*o) for o in opts) + "</div>")
 
 
 # ── what the content file used to have to type ─────────────────────────────────────
@@ -344,20 +348,17 @@ def video_html(s, out_dir: Path) -> str:
     # two-column grid, so a band emitted as one of its children takes a column and stands
     # next to the picture instead of across the top of it. What it contradicts is the
     # picture, so it has to be the thing read first, full width.
-    # The voices ride at the right end of the Running app row: under the player they were
-    # a line of their own, height the film and its transcript did not get (5 Oct 2026). A
-    # page with no such row keeps them under the player, the one place left for them.
-    head = runtime_html(rt, switch) if rt else ""
-    if switch and not rt:
-        player = f'<div class="vidcol">{player}{switch}</div>'
+    head = runtime_html(rt) if rt else ""
     # The film's title heads the transcript column, not a row of its own above the player:
     # a row across the page held two words and left the rest of it empty (Victor, 7 Oct
     # 2026), and the player now starts right under the Running app band. The tab's presses
-    # (`place_tab_reruns` puts them at the end of this `h2`) re-record the film, not the app.
+    # (`place_tab_reruns` puts them at the end of this `h2`) re-record the film, not the app;
+    # the voice switch follows them on the same row. It used to ride the Running app band,
+    # but which voice narrates is a fact about the film, not about the app (Victor, 7 Oct).
     return (head + video_verdict_html(rel, out_dir)
             + f'<div class="vidwrap">{player}<div class="vidside">'
-            f'<h2 class="tabtitle">Intro video</h2><ol class="transcript">{items}</ol>'
-            '</div></div>')
+            f'<div class="vidhead"><h2 class="tabtitle">Intro video</h2>{switch}</div>'
+            f'<ol class="transcript">{items}</ol></div></div>')
 
 
 def embed_html(s, out_dir: Path) -> str:

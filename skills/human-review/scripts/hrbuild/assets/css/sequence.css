@@ -27,25 +27,6 @@ details.testpair[open] { padding-bottom:.8rem; }
    mark would still be there then, pointing at the previous question. */
 @keyframes seq-flash { from { border-color:var(--link); } to { border-color:var(--line); } }
 .testpair.seq-hit { animation:seq-flash 2s ease-out 1; }
-/* The quoted test, above the picture it explains, behind one control.
-   Closed on load: the tab is about the drawing, and the source is one click away.
-   That control is a single row — `Show Test`, then the file the bar names, the lines it
-   quotes and what changed in them — because the row that used to sit above the bar said
-   the line numbers a second time and nothing else. `SEQFOLD_JS` keeps a click on one of
-   the bar's own links from toggling the fold under it. */
-details.testsrc { margin:.55rem 0 0; }
-details.testsrc > summary { cursor:pointer; list-style:none; display:flex; gap:.5rem;
-  align-items:center; color:var(--muted); font-size:.82rem;
-  font-family:ui-monospace,Menlo,monospace; padding:.15rem 0; }
-details.testsrc > summary::-webkit-details-marker { display:none; }
-details.testsrc > summary::before { content:"▾"; font-size:.75rem; }
-details.testsrc:not([open]) > summary::before { content:"▸"; }
-details.testsrc > summary:hover > .foldlbl { color:var(--link); }
-details.testsrc > summary > .foldlbl::after { content:"Show Test"; }
-details.testsrc[open] > summary > .foldlbl::after { content:"Hide Test"; }
-/* The hoisted bar keeps its own right alignment and takes the rest of the row. */
-details.testsrc > summary > .srcbar { flex:1 1 auto; margin:0; }
-details.testsrc > .snippet { margin:.4rem 0 0; }
 .testlead { margin:.7rem 0 0; }
 /* The fold's own summary: the names of the scenarios drawn inside it. It used to be the
    file name, set quiet and monospace because it was a control beside a picture that was
@@ -56,11 +37,23 @@ details.testpair > summary { cursor:pointer; list-style:none; display:flex; gap:
   align-items:baseline; color:var(--fg); font-size:.95rem; font-weight:600;
   padding:.25rem 0; }
 details.testpair > summary::-webkit-details-marker { display:none; }
-/* The fold's caret, drawn as every other tab draws its own (`.cx-caret`, `.disclose`): the
-   full-size ▶/▼ at 13px in a 1.1rem box, link-blue, centred on the row. The small ▸/▾ at
-   .75rem read as a speck next to a 0.95rem title. FE0E keeps the glyph text, not emoji. */
-details.testpair > summary::before { content:"\25BC\FE0E"; font-size:13px; line-height:1;
-  flex:0 0 1.1rem; width:1.1rem; text-align:center; align-self:center; color:var(--link); }
+/* The fold's caret, the glyph every other tab draws (`.cx-caret`, `.disclose`): the
+   full-size ▶/▼, centred on the row, at 19px — half again the other tabs' 13px, because
+   here it is the one control on a row that is all one control; the ▸/▾ at .75rem it
+   replaced read as a speck next to a 0.95rem title. Grey, and link-blue with the title
+   when the row is hovered: at this size a blue caret on every row outshouted the titles.
+   FE0E keeps the glyph text, not emoji.
+   Tight on both sides: in the 1.1rem box the other tabs use, plus the card's padding and
+   the row's gap, it stood ~19px off the card's edge and ~10px off the pill — an indent
+   that read as a gutter. Its own width, the row pulled .55rem towards the edge (the open
+   card's body keeps its padding) and the gap trimmed past the glyph's own side bearing:
+   ~9px and ~5px of air either side of the ink. The box is the ▶'s advance, fixed, so the
+   narrower ▼ does not pull the pill and the title left by a pixel when the row opens. */
+details.testpair > summary { margin-left:-.55rem; }
+details.testpair > summary::before { content:"\25BC\FE0E"; font-size:19px; line-height:1;
+  flex:0 0 auto; width:.82em; text-align:center; margin-right:calc(3px - .4rem);
+  align-self:center; color:var(--muted); }
+details.testpair > summary:hover::before { color:var(--link); }
 details.testpair:not([open]) > summary::before { content:"\25B6\FE0E"; }
 details.testpair > summary:hover { color:var(--link); }
 /* What kind of test drew the sequence, in the chip the Tests tab wears for the same three
@@ -73,8 +66,11 @@ details.testpair > summary:hover { color:var(--link); }
    No `cursor:help`, deliberately: it lives inside the summary, and a click on it opens the
    fold like a click anywhere else on the row. The question mark is for a mark that only
    explains itself — TIP_JS says so, and excludes everything inside a summary for it. */
-.testcat { flex:0 0 auto; align-self:center; min-width:2.6rem;
-  text-align:center; padding:2px 7px; border-radius:999px;
+/* One width on every row, text centred: `API` and `E2E` are both three letters, but in
+   different weights, and a column of pills that does not line up reads as a column of
+   different things. 4.5em of the pill's own face fits the widest with its padding. */
+.testcat { flex:0 0 auto; align-self:center; display:inline-flex; justify-content:center;
+  min-width:4.5em; box-sizing:border-box; text-align:center; padding:2px 7px; border-radius:999px;
   font:700 .62rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
   letter-spacing:.08em; text-transform:uppercase;
   background:color-mix(in srgb, var(--tc) 13%, transparent); color:var(--tc); }
@@ -90,10 +86,19 @@ details.testpair > summary:hover > .testcat { color:var(--tc); }
   .testcat[data-cat=api]  { --tc:#d2b4ff; }
   .testcat[data-cat=unit] { --tc:#87e4e4; }
 }
-/* The test file's extension, small and muted at the right end of the row — the summary is a
-   flex row, so the auto margin pushes it there and the fold marker stays on the left. */
+/* The test's file name at the right end of the row, linked to its scenario's line in the
+   editor, with the source bar's file glyph beside it — the way to the code, now that the
+   pair no longer quotes it. The summary is a flex row, so the auto margin pushes it there
+   and the fold marker stays on the left. Regular weight and smaller than the title: it is
+   where the title lives, not a second title. */
 .seqlang { margin-left:auto; align-self:center; padding-left:.8rem; flex:0 0 auto;
-  font:.72rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted); opacity:.7; }
+  display:inline-flex; align-items:center; gap:.3rem; white-space:nowrap;
+  font:400 .8rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted); }
+/* `srcref` for the served page's open-in-editor handler and for its dotted rule under the
+   name — one underline, the page's file-reference one. Not for its box: that is a 12px
+   bold block with a bottom margin, which sat the name 4px above the row's centre. */
+.seqlang a.seqfile { margin:0; font:inherit; color:var(--link); text-decoration:none; }
+.seqlang a.seqfile:hover { border-bottom-style:solid; }
 /* The suites' own last lines, folded inside the band that says why this tab was not
    re-traced. Wrapped rather than scrolled sideways: a Maven line is wider than any panel. */
 .seqverdict pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:.76rem;

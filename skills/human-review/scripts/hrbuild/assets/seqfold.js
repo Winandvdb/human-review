@@ -44,21 +44,20 @@
     });
   });
 
-  // The fold's row carries the quoted test's source bar, and those are links: to VS Code,
-  // to the compare page on github.com. A click on one is also a click inside a <summary>,
-  // which a browser may read as a request to toggle the fold — so the reader would open
-  // the file AND have the block they were reading fold away under them.
+  // The row's file name is a link — to VS Code, at the scenario's line — and it sits inside
+  // the pair's <summary>, so a click on it is also a click on the row: the reader would open
+  // the file AND have the row fold open or shut under them.
   //
   // The fold is put back rather than the click stopped. `stopPropagation` is the usual
-  // remedy and it is wrong here: the handler that turns a `vscode://` reference into an
-  // *open diff* is a listener on `document`, so silencing the event on its way there would
-  // trade one bug for a better-hidden one. This runs after the browser's own activation
-  // behaviour and before the next paint, so a fold that never moved is left alone and one
-  // that did is put back with nothing drawn in between.
+  // remedy and it is wrong here: the handler that opens a `vscode://` reference through the
+  // served page's editor helper is a listener on `document`, so silencing the event on its
+  // way there would trade one bug for a better-hidden one. This runs after the browser's own
+  // activation behaviour and before the next paint, so a fold that never moved is left
+  // alone and one that did is put back with nothing drawn in between.
   document.addEventListener('click', function (ev) {
-    var link = ev.target.closest && ev.target.closest('details.testsrc > summary a');
+    var link = ev.target.closest && ev.target.closest('details.testpair > summary a');
     if (!link) return;
-    var fold = link.closest('details.testsrc');
+    var fold = link.closest('details.testpair');
     var was = fold.open;
     requestAnimationFrame(function () { if (fold.open !== was) fold.open = was; });
   }, true);

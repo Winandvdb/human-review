@@ -3867,13 +3867,13 @@ def test_a_pair_is_named_by_its_scenarios_and_addressed_by_its_test(tmp_path):
     out = build._folded_pair(puml, rel, ["<p>picture</p>"],
                              scenarios=[(4, "remembers the vet")])
     assert f'id="{build.pair_anchor(puml)}"' in out
-    assert "<summary data-tip=\"test/add-visit.feature\">remembers the vet<span class=\"seqlang\">.feature</span></summary>" in out
-    assert "add-visit.feature<" not in out, "the basename is not the heading any more"
+    assert "<summary data-tip=\"test/add-visit.feature\">remembers the vet<span class=\"seqlang\">add-visit.feature</span></summary>" in out
+    assert ">add-visit.feature</span></summary>" in out, "the basename is the label, not the heading"
     # Two chapters in one file are two lines of the contents, on one row.
     two = build._folded_pair(puml, rel, [""], scenarios=[(4, "one"), (9, "two")])
-    assert ">one · two<span class=\"seqlang\">.feature</span></summary>" in two
+    assert ">one · two<span class=\"seqlang\">add-visit.feature</span></summary>" in two
     # Nothing recorded — the basename is all there is to call it.
-    assert ">add-visit.feature<span class=\"seqlang\">.feature</span></summary>" in build._folded_pair(puml, rel, [""])
+    assert ">add-visit.feature<span class=\"seqlang\">add-visit.feature</span></summary>" in build._folded_pair(puml, rel, [""])
 
 
 def test_a_pair_says_what_kind_of_test_drew_it(tmp_path):
@@ -3885,7 +3885,7 @@ def test_a_pair_says_what_kind_of_test_drew_it(tmp_path):
                              cat=build._pair_cat(puml, tmp_path))
     assert '<span class="testcat" data-cat="e2e"' in out
     assert ">E2E</span>remembers the vet" in out, "it leads the sentence"
-    assert '<span class="seqlang">.feature</span></summary>' in out, "language at the right end"
+    assert '<span class="seqlang">add-visit.feature</span></summary>' in out, "file at the right end"
     # The tip is now composed, so it is escaped as one string: a literal em dash, not the
     # `&mdash;` entity that used to be concatenated in after the escaping.
     assert 'data-tip="end to end: clicks the screen' in out, "the legend is on the hover"
@@ -3900,8 +3900,8 @@ def test_a_pair_also_says_what_wrote_the_test(tmp_path):
     a reader no way to tell which was which — though only one of them is written in a
     language a non-programmer reads. The runner qualifies the kind inside the same pill."""
     assert ">E2E<" in build._cat_chip("e2e", "petclinic-test/src/book.feature")
-    assert build._lang_label("petclinic-test/src/add.spec.ts") == '<span class="seqlang">.spec.ts</span>'
-    assert ">.java<" in build._lang_label("src/test/java/AddVisitApiTest.java")
+    assert build._lang_label("petclinic-test/src/add.spec.ts") == '<span class="seqlang">add.spec.ts</span>'
+    assert ">AddVisitApiTest.java<" in build._lang_label("src/test/java/AddVisitApiTest.java")
     assert ">API<" in build._cat_chip("api", "src/test/java/AddVisitApiTest.java")
     # Unlike the kind, this IS the file: no diagram is consulted, and none is needed.
     assert build._pair_runner("a/b.feature") == ("Gherkin", "a Cucumber scenario")
@@ -3945,25 +3945,29 @@ def test_the_kind_is_read_off_the_diagram_not_guessed_from_the_path(tmp_path):
     assert build._pair_cat(ui, tmp_path, "nonsense") == "e2e", "…but only one of the three"
 
 
-def test_the_fold_over_a_quoted_test_is_the_blocks_own_source_bar(tmp_path):
-    """`the test · lines 60–61,70–94,124–155` above a bar reading `AddVisitApiTest.java:
-    60-61,70-94,124-155` said the line numbers twice and the second copy said them beside
-    the file they belong to. What is left of the row is the one thing the bar does not
-    carry — whether the test is open — so the control and the bar are one line."""
+def test_the_row_links_the_test_file_instead_of_quoting_the_test(tmp_path):
+    """The pair used to hold a "Show Test" fold: the excerpt under a bar reading
+    `AddVisitApiTest.java:60-61,70-94`. Victor, 7 Oct 2026, "in the spirit of not rendering
+    the code ourselves": the row's right end names the file, opens it in the editor at the
+    scenario's own line, and wears the bar's file glyph — and the code is not on the page."""
     rel, puml = _genseq_fixture(tmp_path)
     fig = ('<figure class="snippet"><div class="srcbar"><a>x.feature:4</a>'
            + build.filemark("2 lines changed") + '</div><pre>code</pre></figure>')
     out = build._folded_pair(puml, rel, ["<p>picture</p>"], [fig],
-                             scenarios=[(4, "remembers the vet")])
-    assert '<summary><span class="foldlbl"></span><div class="srcbar">' in out
-    assert "the test · lines" not in out, "the row it replaced"
-    assert out.count('<div class="srcbar">') == 1, "hoisted, not copied"
-    assert "<pre>code</pre>" in out
-    # Two words for two states, and neither is in the markup: the <details> knows which.
-    assert 'content:"Show Test"' in build.CSS and 'content:"Hide Test"' in build.CSS
-    # A second excerpt of the same file is a different window and still names itself.
-    two = build._folded_pair(puml, rel, [""], [fig, fig])
-    assert two.count('<div class="srcbar">') == 2
+                             scenarios=[(4, "remembers the vet")], root=tmp_path)
+    label = out[out.index('<span class="seqlang">'):out.index("</summary>")]
+    href = f'vscode://file/{(tmp_path / rel).resolve()}:4:1'
+    assert f'<a class="srcref seqfile" href="{href}"' in label, "a srcref, at the scenario's line"
+    assert 'data-tip="Open in VS Code: add-visit.feature (line 4)">add-visit.feature</a>' in label
+    assert 'class="filemark" data-kind="edited"' in label, "the bar's glyph, beside the name"
+    assert "testsrc" not in out and "<pre>code</pre>" not in out and "srcbar" not in out
+    assert "Show Test" not in build.CSS
+    # Not in this checkout: nothing to open, so the name is plain text.
+    gone = build._folded_pair(puml, "test/gone.feature", [""], root=tmp_path)
+    assert '<span class="seqlang">gone.feature</span>' in gone
+    # The click opens the file and leaves the row as it was — put back, never stopped,
+    # because the served page's editor handler listens on `document`.
+    assert "details.testpair > summary a" in build.SEQFOLD_JS
 
 
 def test_a_source_bar_draws_what_happened_to_the_file_instead_of_shouting_it():
@@ -4468,10 +4472,12 @@ def test_a_picture_says_whether_it_is_there_by_tag_or_because_the_branch_wrote_t
     assert 'data-why="added"' in by_title[True] and '<span class="sw-add">+</span></span>' in by_title[True]
     assert 'data-why="tagged"' in by_title[False] and '<span class="sw-at">@</span></span>' in by_title[False]
     assert "Decided to trace it because" in by_title[True]
-    # The branch's own scenario is quoted beside its picture, not left "not excerpted here".
+    # The branch's own scenario is linked from its row at its own line, not left "not
+    # excerpted here" — and not quoted: the page no longer renders the test's code.
     sorting = out[out.index(f'id="{build.pair_anchor(picked)}"'):]
     sorting = sorting.split('<details class="testpair"')[0]
-    assert "I sort the owners by" in html.unescape(sorting)
+    assert f'{feat}:7:1" data-tip="Open in VS Code: ' in sorting
+    assert "I sort the owners by" not in html.unescape(sorting)
     assert "not excerpted here" not in sorting
     assert "seqsel" not in out, "the badges say why each diagram is there; no summary line"
 

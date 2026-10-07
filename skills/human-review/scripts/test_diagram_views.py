@@ -564,7 +564,7 @@ def test_a_pair_does_not_list_the_scenarios_the_diagram_already_titles(tmp_path)
     One list, on the picture, where the reader is already looking."""
     html = _pairs_fixture(tmp_path)
     assert '<p class="testlead">' not in html
-    assert "dgmviews" in html and "snippet" in html      # the pair itself is intact
+    assert "dgmviews" in html and 'class="srcref seqfile"' in html   # the pair is intact
 
 
 def test_the_whole_pair_folds_away_and_starts_open(tmp_path):
@@ -578,24 +578,22 @@ def test_the_whole_pair_folds_away_and_starts_open(tmp_path):
     # Both inside the fold: to the pair's own closing tag, which is the last one on the
     # block — only the registry the tab writes for the 🎭 comes after it.
     pair = html_out[html_out.index('<details class="testpair"'):html_out.rindex("</details>")]
-    assert "snippet" in pair and 'class="diagram' in pair
+    assert 'class="srcref seqfile"' in pair and 'class="diagram' in pair
 
 
-def test_the_quoted_test_starts_closed_and_the_diagram_is_in_view(tmp_path):
-    """The tab is called Sequence. A thirty-line block of the spec above every diagram put
-    the picture below the fold on each exhibit; now the source is a closed fold inside the
-    open pair, its one row is the block's own source bar, and the diagram is outside it."""
+def test_the_pair_links_its_test_instead_of_quoting_it(tmp_path):
+    """There was a closed "Show Test" fold inside every pair: the excerpt under its source
+    bar. Victor, 7 Oct 2026, "in the spirit of not rendering the code ourselves": the row's
+    file name is the way to the test — a link to its line in the editor — and the pair
+    holds the diagram alone."""
     html_out = _pairs_fixture(tmp_path)
-    assert '<details class="testsrc">' in html_out
-    assert '<details class="testsrc" open>' not in html_out
-    src = html_out[html_out.index('<details class="testsrc">'):]
-    src = src[:src.index("</details>")]
-    assert "snippet" in src and 'class="diagram' not in src
-    assert '<summary><span class="foldlbl"></span><div class="srcbar">' in src
+    assert "testsrc" not in html_out and "Show Test" not in html_out
+    assert 'class="srcbar"' not in html_out and "<pre" not in html_out
     assert "the test · lines " not in html_out
-    after = html_out[html_out.index('<details class="testsrc">'):]
-    after = after[after.index("</details>"):]
-    assert 'class="diagram' in after
+    label = html_out[html_out.index('<span class="seqlang">'):]
+    label = label[:label.index("</summary>")]
+    assert f'href="vscode://file/{(tmp_path / "spec.ts").resolve()}:2:1"' in label
+    assert ">spec.ts</a>" in label
 
 
 def test_the_fold_is_labelled_with_the_scenario_and_keeps_the_path_as_its_tooltip(tmp_path):
@@ -604,7 +602,7 @@ def test_the_fold_is_labelled_with_the_scenario_and_keeps_the_path_as_its_toolti
     is not lost — it is the summary's tooltip — and it is not printed a third time here,
     because the fold's row under it and the diagram below both already carry it."""
     html_out = _pairs_fixture(tmp_path)
-    assert '<summary data-tip="spec.ts">A scenario<span class="seqlang">.ts</span></summary>' in html_out
+    assert '<summary data-tip="spec.ts">A scenario<span class="seqlang"><a class="srcref seqfile"' in html_out
 
 
 def test_a_paired_diagram_does_not_repeat_the_name_the_fold_just_said(tmp_path):
@@ -619,12 +617,13 @@ def test_a_paired_diagram_does_not_repeat_the_name_the_fold_just_said(tmp_path):
     assert "data-test-src=" in html_out
 
 
-def test_a_diagram_nobody_quoted_says_so_instead_of_saying_nothing(tmp_path):
+def test_a_diagram_nobody_quoted_still_names_and_links_its_test(tmp_path):
     """Silence would read as "this diagram has no test", which is never true — the
-    manifest knows about it only because a test generated it."""
+    manifest knows about it only because a test generated it. The row's file link says it."""
     html = _pairs_fixture(tmp_path, quote_test=False)
-    assert "not excerpted here" in html
-    assert "spec.ts" in html
+    # The row's file link says which test drew it; a sentence saying so again is gone.
+    assert "not excerpted here" not in html
+    assert 'class="srcref seqfile"' in html and ">spec.ts</a>" in html
 
 
 def test_a_diagram_whose_test_left_the_checkout_says_that_instead(tmp_path):
@@ -675,9 +674,9 @@ def test_a_test_whose_sequence_did_not_change_is_paired_and_marked_not_orphaned(
                                                    tmp_path, tmp_path)
     assert "No diagram came back" not in html
     # No chapter in that .puml, so the summary falls back to the basename — all there is.
-    assert '<summary data-tip="same.ts">same.ts<span class="seqlang">.ts</span></summary>' in html
+    assert '<summary data-tip="same.ts">same.ts<span class="seqlang"><a class="srcref seqfile"' in html
     assert '<span class="badge sev-info">unchanged</span>' in html
-    assert "<text>same</text>" in html and "untouched" in html
+    assert "<text>same</text>" in html and "untouched" not in html, "linked, not quoted"
     assert "dgmviews" not in html and "dgm-diff" not in html
     assert "data-test-src=" in html and 'class="genseq-details"' in html
     assert (weight, changes) == (1, 0)

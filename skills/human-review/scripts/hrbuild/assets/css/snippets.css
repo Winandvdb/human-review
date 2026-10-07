@@ -53,16 +53,19 @@ pre.code .ln-row * { text-indent:0; }
    `NEW CODE` in caps were read before the name they are a fact about; the words are on
    the hover, and the `+` column in the gutter below counts the lines the caps used to.
    Green for a file that did not exist, amber for one this branch edited (new code in it
-   included), the page's own quiet grey for one it left alone. */
-.srcbar .filemark { display:inline-flex; flex:0 0 auto; cursor:help; margin-left:-2px;
-  --fm:#1a7f37; }
-.srcbar .filemark[data-kind=edited] { --fm:var(--drift); }
-.srcbar .filemark[data-kind=unchanged] { --fm:var(--muted); }
-.srcbar .filemark svg { display:block; width:15px; height:15px; overflow:visible; }
-.srcbar .filemark .fm-page, .srcbar .filemark .fm-mark { fill:var(--fm); }
+   included), the page's own quiet grey for one it left alone.
+   Not scoped to the bar: the same glyph sits beside the file link on a Sequence row and on
+   the Tests tab's rows, and scoped here it lost its colours there — near black on dark
+   (Victor, 7 Oct 2026: "use the same CSS everywhere"). Only the bar's own nudge stays. */
+.filemark { display:inline-flex; flex:0 0 auto; --fm:#1a7f37; }
+.filemark[data-kind=edited] { --fm:var(--drift); }
+.filemark[data-kind=unchanged] { --fm:var(--muted); }
+.filemark svg { display:block; width:15px; height:15px; overflow:visible; }
+.filemark .fm-page, .filemark .fm-mark { fill:var(--fm); }
 @media (prefers-color-scheme: dark) {
-  .srcbar .filemark { --fm:#56d364; }
+  .filemark { --fm:#56d364; }
 }
+.srcbar .filemark { cursor:help; margin-left:-2px; }
 .ghdiff-scroll { overflow-x:auto; }
 table.ghdiff-body { border-collapse:collapse; width:100%;
                     font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; }

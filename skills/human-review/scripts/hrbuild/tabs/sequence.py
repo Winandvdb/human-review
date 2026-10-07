@@ -156,13 +156,38 @@ def _cat_chip(cat: str | None, test_rel: str = "") -> str:
             + f' data-tip="{html.escape(tip, quote=True)}">{html.escape(label)}</span>')
 
 
-def _lang_label(test_rel: str) -> str:
-    """The test file's extension — `.java`, `.feature`, `.spec.ts` — said small and muted at
-    the row's right end. The level pill says what kind of test it is; this says in what."""
+def _lang_label(test_rel: str, root: Path | None = None, line: int | None = None,
+                mark: str = "") -> str:
+    """The test's file name — `OwnerListTest.java`, `owner-search.feature`,
+    `add-visit.spec.ts` — at the row's right end, as the way to the code, with the glyph for
+    what the branch did to it right beside.
+
+    It used to be the bare extension here and, inside the pair, a "Show Test" fold quoting
+    the test under a bar that named the file again with its line range. The page does not
+    render the code any more: a reader who wants the test opens it where they read code,
+    and this link is how — at the scenario's own line, which is the line the diagram was
+    drawn from. No line numbers on the face: the hover says which line it opens at.
+
+    A `srcref` like every other file reference on the page, so the served page's
+    open-in-editor handler on `document` takes it; `SEQFOLD_JS` keeps the click from also
+    folding the row. A test not in this checkout has nothing to open and stays plain text.
+    """
     name = Path(test_rel).name
-    m = re.search(r"(\.(?:spec|test)\.[jt]sx?)$", name)
-    ext = m.group(1) if m else Path(name).suffix
-    return (f'<span class="seqlang">{html.escape(ext)}</span>') if ext else ""
+    if not name:
+        return ""
+    face = html.escape(name)
+    if root is not None and (root / test_rel).is_file():
+        at = line or 1
+        face = (f'<a class="srcref seqfile" href="vscode://file/{(root / test_rel).resolve()}'
+                f':{at}:1" data-tip="Open in VS Code: {html.escape(name, quote=True)}'
+                f' (line {at})">{face}</a>')
+    return f'<span class="seqlang">{face}{mark}</span>'
+
+
+#: The glyph `extract-snippet.py` puts on a quoted block's source bar for what the branch
+#: did to the lines it quotes (`shared/filemark.py`). Lifted off the bar rather than
+#: recomputed: only that module knows the window and the base it was measured against.
+FILEMARK = re.compile(r'<span class="filemark"[^>]*>.*?</span>', re.S)
 
 
 #: What `run-steps.py` `_sequence` writes about the tests it traced beyond the tagged ones —
@@ -346,45 +371,14 @@ def _scenarios_drawn(puml_rel: str, test_rel: str, root: Path) -> list[tuple[int
     return sorted(found.items())
 
 
-#: The header `extract-snippet.py` puts at the top of every quoted block: the file name
-#: with the lines it quotes, and the glyph for what changed in it. Matched rather than
-#: rebuilt, because only that module knows what the bar says — the window may have snapped
-#: past a leading comment, and the badge is computed against the review's own base. It has
-#: no nested `<div>`, so the first `</div>` is its own; anything else would need a parser.
-SRCBAR = re.compile(r'<div class="srcbar">.*?</div>', re.S)
-
-
-def _fold_over(quoted: list[str]) -> tuple[str, list[str]]:
-    """Move the first quoted block's source bar out of the block and onto the fold's row.
-
-    The row above a quoted test used to read `the test · lines 60–61,70–94,124–155`, and
-    the bar immediately below it read `AddVisitApiTest.java:60-61,70-94,124-155`. The same
-    line numbers twice, the second time beside the file they belong to — so the first copy
-    was saying nothing the second did not say better, and it cost a row on a tab whose
-    whole shape is one row per thing.
-
-    What is left of that row is the only thing it ever said that the bar does not: whether
-    the test is open. So the control and the bar become one line — `Show Test`, then the
-    file, its lines, and what changed in it — and the block underneath keeps the code
-    alone. Only the first block's bar moves: a second excerpt of the same file is a
-    different window and still has to name itself.
-    """
-    if not quoted:
-        return "", []
-    m = SRCBAR.search(quoted[0])
-    if not m:
-        return "", list(quoted)
-    return (m.group(0),
-            [quoted[0][: m.start()] + quoted[0][m.end():], *quoted[1:]])
-
-
 def _folded_pair(puml_rel: str, test_rel: str, pieces: list[str],
                  quoted: list[str] = (),
                  scenarios: list[tuple[int, str]] = (),
                  cat: str | None = None, why: str | None = None,
-                 also: str | None = None, via: tuple[str, ...] = ()) -> str:
-    """The test and the sequence its run recorded, foldable together — with the quoted
-    test folded closed inside it, and the whole pair folded closed too.
+                 also: str | None = None, via: tuple[str, ...] = (),
+                 root: Path | None = None) -> str:
+    """The test and the sequence its run recorded, folded closed together under one row
+    that names the test and links to it.
 
     Closed, because a sequence is tall. One of them is three or four screens of arrows, and
     a tab that opens on four of those opens on a wall: the reader scrolls past pictures
@@ -394,15 +388,17 @@ def _folded_pair(puml_rel: str, test_rel: str, pieces: list[str],
     inside every diagram are measured with `getBBox()` while the page loads, and
     `getBBox()` inside a closed `<details>` returns zeros; see that script.
 
-    Both halves fold, which is the older correction: the fold used to close over the quoted
-    test alone and leave the diagram standing underneath, orphaned. A sequence is a drawing
-    of one test — without the test above it, it is a picture of nothing.
+    The test is not quoted inside any more (Victor, 7 Oct 2026: "in the spirit of not
+    rendering the code ourselves"). There was a "Show Test" fold here with the excerpt and
+    a bar naming the file and its lines; the row's right end now names the file and opens
+    it at the scenario's line in the editor, with the bar's file glyph beside it. `quoted`
+    is still handed in — the rendered excerpts — because that glyph is measured on them.
 
     The summary names the *scenarios*, not the file — `AddVisitApiTest: remembers the vet
     who attended it`, which is what the generator wrote into the diagram's own title and
     what the Tests tab calls it. The path is not lost: it is the summary's tooltip, and the
-    fold's row under it names the file, the lines it quotes and what changed in them. A
-    pair whose generator recorded no chapter falls back to the basename, all there is.
+    file name is the link at the row's right end. A pair whose generator recorded no
+    chapter falls back to the basename, all there is.
 
     It leads with the kind of test this is, in the Tests tab's own chip. Shut, this tab is
     a list of sentences, and "which of these went through a browser?" was a question
@@ -414,18 +410,13 @@ def _folded_pair(puml_rel: str, test_rel: str, pieces: list[str],
     titles = [t for _, t in scenarios if t]
     name = (" · ".join(html.escape(t) for t in titles) if titles
             else html.escape(test_rel.rsplit("/", 1)[-1]))
-    src = ""
-    bar, blocks = _fold_over(list(quoted))
-    if blocks:
-        src = ('<details class="testsrc">'
-               f'<summary><span class="foldlbl"></span>{bar}</summary>'
-               + "\n".join(x.strip("\n") for x in blocks)
-               + "</details>\n")
+    lines = [ln for ln, _ in scenarios if ln]
+    mark = next((m.group(0) for q in quoted for m in [FILEMARK.search(q)] if m), "")
+    label = _lang_label(test_rel, root, min(lines) if lines else None, mark)
     return (f'<details class="testpair" open id="{pair_anchor(puml_rel)}"'
             f' data-test="{html.escape(test_rel)}">'
             f'<summary data-tip="{html.escape(test_rel)}">'
-            f'{_cat_chip(cat, test_rel)}{_why_chip(why, also, via)}{name}{_lang_label(test_rel)}</summary>'
-            + src
+            f'{_cat_chip(cat, test_rel)}{_why_chip(why, also, via)}{name}{label}</summary>'
             + "\n".join(x.strip("\n") for x in pieces)
             + "</details>")
 
@@ -1020,7 +1011,9 @@ def render_testpairs(block, dspec, manifest_rows, root: Path, out_dir: Path,
             # section headers are those same titles, linked to those same lines, drawn by
             # the generator. Two copies of one list, and the one on the picture is the one
             # that sits where the reader is already looking.
-            pieces = [] if quoted else [_unquoted_note(test_rel, root)]
+            # The row's file link is the way to the test, so the pair says nothing more
+            # about it — unless the file is not in this checkout, which is news.
+            pieces = [] if (root / test_rel).is_file() else [_unquoted_note(test_rel, root)]
             if puml_rel in lost_by_rel:
                 pieces.append(lost_note_html(lost_by_rel[puml_rel]))
             pieces.append(
@@ -1044,7 +1037,8 @@ def render_testpairs(block, dspec, manifest_rows, root: Path, out_dir: Path,
                 also = "touched" if via else None
             parts.append(_folded_pair(puml_rel, test_rel, pieces, quoted, scenarios,
                                       _pair_cat(puml_rel, root,
-                                                authored_cat.get(test_rel)), why, also, via))
+                                                authored_cat.get(test_rel)), why, also, via,
+                                      root=root))
             register(puml_rel, scenarios)
 
     orphaned = [x for x in snippets if id(x) not in used] + undrawn

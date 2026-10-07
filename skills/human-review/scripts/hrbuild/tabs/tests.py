@@ -1344,6 +1344,7 @@ REQMAP_CSS = """
   .reqmap .rm-tkhead,.reqmap .rm-scope,.reqmap .rm-covering-label,.reqmap .rm-note,
   .reqmap .rm-summary-line,.reqmap .rm-tsuite,.reqmap .rm-surf{color:var(--muted)}
   .reqmap .rm-cat{background:var(--code-bg)}
+  .reqmap .rm-cat[data-cat=e2e]{background:var(--rm-e2e-bg)}
   .reqmap .rm-none{color:#f08a8a}
   .reqmap .rm-s-asserted{background:#1b2c1f;color:#9ad3a5}
   .reqmap .rm-s-executed{background:#1c2738;color:#9dc0f5}

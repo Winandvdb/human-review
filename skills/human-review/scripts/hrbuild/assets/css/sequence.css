@@ -74,7 +74,7 @@ details.testpair > summary:hover { color:var(--link); }
   font:700 .62rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
   letter-spacing:.08em; text-transform:uppercase;
   background:color-mix(in srgb, var(--tc) 13%, transparent); color:var(--tc); }
-.testcat[data-cat=e2e]  { --tc:#164691; }
+.testcat[data-cat=e2e]  { --tc:#fff; background:#e8780f; font-weight:800; }
 .testcat[data-cat=api]  { --tc:#5c2c8e; }
 .testcat[data-cat=unit] { --tc:#0f5f5f; }
 /* The hover is the legend, so the chip must not also take the summary's link colour when
@@ -82,7 +82,7 @@ details.testpair > summary:hover { color:var(--link); }
 details.testpair > summary:hover > .testcat { color:var(--tc); }
 @media (prefers-color-scheme: dark) {
   .testcat { background:color-mix(in srgb, var(--tc) 16%, transparent); }
-  .testcat[data-cat=e2e]  { --tc:#a0c8ff; }
+  .testcat[data-cat=e2e]  { --tc:#fff4e6; background:#c2610f; }
   .testcat[data-cat=api]  { --tc:#d2b4ff; }
   .testcat[data-cat=unit] { --tc:#87e4e4; }
 }

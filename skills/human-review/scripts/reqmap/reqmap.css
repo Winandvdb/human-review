@@ -12,7 +12,7 @@
   --rm-exe:linear-gradient(180deg,rgba(214,122,10,.26),rgba(214,122,10,.44));
   --rm-mis:linear-gradient(180deg,rgba(178,28,28,.32),rgba(178,28,28,.52));
   --rm-g-edge:rgba(19,120,58,.85);--rm-o-edge:rgba(190,105,0,.9);--rm-r-edge:rgba(168,22,22,.9);
-  --rm-e2e-bg:rgba(28,90,175,.13);--rm-e2e-fg:rgba(22,70,145,1);
+  --rm-e2e-bg:#e8780f;--rm-e2e-fg:#fff;
   --rm-api-bg:rgba(112,58,168,.13);--rm-api-fg:rgba(92,44,142,1);
   --rm-unit-bg:rgba(20,120,120,.13);--rm-unit-fg:rgba(15,95,95,1);
   /* The band the two keys share above the two frames. Both rows claim it, so the
@@ -29,7 +29,7 @@
   --rm-mis:linear-gradient(180deg,rgba(255,95,95,.24),rgba(255,95,95,.44));
   --rm-g-edge:rgba(110,225,155,.85);--rm-o-edge:rgba(255,190,110,.9);
   --rm-r-edge:rgba(255,140,140,.92);
-  --rm-e2e-bg:rgba(120,175,255,.16);--rm-e2e-fg:rgba(160,200,255,1);
+  --rm-e2e-bg:#c2610f;--rm-e2e-fg:#fff4e6;
   --rm-api-bg:rgba(195,155,255,.16);--rm-api-fg:rgba(210,180,255,1);
   --rm-unit-bg:rgba(90,215,215,.16);--rm-unit-fg:rgba(135,228,228,1)}}
 /* --- the ticket frame -------------------------------------------------------------
@@ -121,6 +121,8 @@
 .reqmap .rm-cat{display:inline-block;flex:0 0 auto;font-size:10px;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px;
   background:var(--rm-e2e-bg);color:var(--rm-e2e-fg)}
+/* End-to-end tests are the most fragile and the most important: a solid orange pill. */
+.reqmap .rm-cat[data-cat=e2e]{font-weight:800}
 .reqmap .rm-cat[data-cat=api]{background:var(--rm-api-bg);color:var(--rm-api-fg)}
 .reqmap .rm-cat[data-cat=unit]{background:var(--rm-unit-bg);color:var(--rm-unit-fg)}
 .reqmap .rm-hint{margin-top:16px;font-size:12px;color:var(--muted,#6b6b6b);min-height:1.5em}

@@ -9,3 +9,4 @@ button.chip-serve:hover { border-color:var(--link); color:var(--fg); }
 @media (prefers-color-scheme: dark) {
   .added{color:#8fd39c} .removed{color:#f08a8a} .changed{color:#d29922}
 }
+.chip .angry-bot { height:1.05em; width:auto; vertical-align:-.15em; margin-right:.25em; }

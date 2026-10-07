@@ -2853,7 +2853,8 @@ def test_the_review_chip_leads_with_what_is_left_to_do(tmp_path):
                   for i in range(9)],
         autofixes=[{"title": f"a{i}", "source": "/simplify"} for i in range(3)]))
     # Eval run 10: the agent names moved to the hover, so the scope bar keeps one row.
-    assert '\U0001f916 <b>9 open</b> · <b>3 fixed</b>' in page, \
+    assert '"angry-bot" alt="" aria-hidden="true" src="data:image/png;base64,' in page and \
+        '<b>9 open</b> · <b>3 fixed</b>' in page, \
         "every count is bold together with what it counts"
     assert "auto-fixed" not in page[page.index('<header class="masthead">'):
                                     page.index("</header>")], \
@@ -2871,7 +2872,7 @@ def test_the_review_chip_names_the_model_instead_of_a_second_chip_beside_it(tmp_
         BARE, scope=[{"auto": "autofixed", "href": "#one", "by": "Opus 5"}],
         findings=[{"title": "f", "body": "<p>b</p>", "source": "/code-review"}]),
         env=_sessionless_env())
-    assert "\U0001f916 <b>1 open</b>" in page and "Review: 1 open" in page, \
+    assert "<b>1 open</b>" in page and "Review: 1 open" in page, \
         "the face counts, the hover names the role"
     # The model has one home, the hover.
     assert "Reviewed by Opus 5." in page
@@ -2885,7 +2886,7 @@ def test_a_page_rebuilt_with_no_idea_who_reviewed_it_says_exactly_that_much(tmp_
         BARE, scope=[{"auto": "autofixed", "href": "#one"}],
         findings=[{"title": "f", "body": "<p>b</p>", "source": "/code-review"}]),
         env=_sessionless_env())
-    assert "\U0001f916 <b>1 open</b>" in page and "Reviewed by" not in page, \
+    assert "<b>1 open</b>" in page and "Reviewed by" not in page, \
         "the robot already says a model did it; `LLM` was three letters saying it again"
     assert "LLM review" not in page
     # Scoped to the masthead on purpose. The claim is about the chip's own words, and
@@ -5008,7 +5009,8 @@ def test_the_chip_carries_the_coders_assumptions_as_its_own_sentence(tmp_path):
         + [_assumption(title="floating", refs=[])]),
         env=_sessionless_env())
     # Eval run 10: one robot, the counts only; the two agents are named in the hover.
-    assert '\U0001f916 <b>7 unsure</b> · <b>6 open</b> · <b>3 fixed</b>' in page, \
+    assert ('\U0001f916 <b>7 unsure</b> / <img class="angry-bot" alt="" aria-hidden="true" '
+            'src="data:image/png;base64,') in page and '<b>6 open</b> · <b>3 fixed</b>' in page, \
         "every count bold with its noun, the coder's first"
     assert "Coding agent: 7 unsure. Review: 6 open · 3 fixed." in page, \
         "the hover's first sentence spells out what the face abbreviates"
@@ -5968,9 +5970,11 @@ def test_the_review_chip_face_is_counts_only_so_the_scope_bar_keeps_one_row():
     """Eval run 10: `🤖Code: 6 unsure; 🤖Review: 10 open · 3 refuted, 6 fixed` was 379px of
     a 1040px bar and wrapped it, taking the sticky header from 108px to 164px. And the
     refuted count is gone from it altogether (Victor, 5 Oct 2026)."""
-    assert build.review_chip_face(10, 6, 6) == \
-        '\U0001f916 <b>6 unsure</b> · <b>10 open</b> · <b>6 fixed</b>'
-    assert build.review_chip_face(1, 0, 0) == '\U0001f916 <b>1 open</b> · <b>0 fixed</b>', \
+    face = build.review_chip_face(10, 6, 6)
+    assert face.startswith('\U0001f916 <b>6 unsure</b> / <img class="angry-bot"')
+    assert face.endswith('<b>10 open</b> · <b>6 fixed</b>')
+    face = build.review_chip_face(1, 0, 0)
+    assert "unsure" not in face and face.endswith('<b>1 open</b> · <b>0 fixed</b>'), \
         "no assumptions: that count is absent, not zeroed"
     assert build.review_chip_key(10, 6, 6) == \
         "Coding agent: 6 unsure. Review: 10 open · 6 fixed."

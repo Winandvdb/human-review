@@ -564,7 +564,7 @@ def chip_html(c: dict) -> str:
 
 
 def review_chip_face(open_n: int, fixed_n: int, assumed_n: int) -> str:
-    """`🤖 <b>6 unsure</b> · <b>10 open</b> · <b>6 fixed</b>` — the masthead's review chip,
+    """`🤖 <b>6 unsure</b> / <angry-bot> <b>10 open</b> · <b>6 fixed</b>` — the masthead's review chip,
     numbers only, one robot.
 
     Eval run 10: `🤖Code: 6 unsure; 🤖Review: 10 open · 3 refuted, 6 fixed` was 379px of a
@@ -576,9 +576,26 @@ def review_chip_face(open_n: int, fixed_n: int, assumed_n: int) -> str:
     With no assumptions the `unsure` count is absent rather than zeroed: a zero is a claim
     the page cannot stand behind (`pile_numbers` counts the piles the tab renders). The
     refuted claims are not on the page at all (Victor, 5 Oct 2026), so not here either."""
-    parts = ([f"<b>{assumed_n} unsure</b>"] if assumed_n else []) + [f"<b>{open_n} open</b>"]
-    parts.append(f"<b>{fixed_n} fixed</b>")
-    return "\U0001f916 " + " · ".join(parts)
+    rest = f"{_angry_bot()}<b>{open_n} open</b> · <b>{fixed_n} fixed</b>"
+    if not assumed_n:
+        return rest
+    # A slash after the coder's guesses, then the angry robot for what the review left open:
+    # two robots, two moods, one chip.
+    return f"\U0001f916 <b>{assumed_n} unsure</b> / {rest}"
+
+
+_ANGRY_BOT: str | None = None
+
+
+def _angry_bot() -> str:
+    """Victor's angry robot as an inline `<img>` with a data URI: the page stays one file."""
+    global _ANGRY_BOT
+    if _ANGRY_BOT is None:
+        import base64
+        png = (Path(__file__).resolve().parent.parent / "assets" / "angry-bot.png").read_bytes()
+        _ANGRY_BOT = ('<img class="angry-bot" alt="" aria-hidden="true" '
+                      f'src="data:image/png;base64,{base64.b64encode(png).decode()}">')
+    return _ANGRY_BOT
 
 
 def review_chip_key(open_n: int, fixed_n: int, assumed_n: int) -> str:

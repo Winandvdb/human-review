@@ -48,7 +48,10 @@
    declared once, here, for the three of them, and they are centred on each other rather
    than on a baseline — a glyph, a word and a fraction have no common baseline to sit on. */
 .titleside { display:inline-flex; align-items:center; gap:.5rem; margin-left:auto; }
-.masthead .scopebar { margin:.3rem 0 .05rem; }
+/* Centred, not stretched: one chip taller than the rest (the branch chip with its `+1 ▸`
+   badge) made every chip in the row as tall, and the masthead 2px taller on a branch with
+   commits outside the scope than on one without (UX review, 7 Oct 2026). */
+.masthead .scopebar { margin:.3rem 0 .05rem; align-items:center; }
 /* Header chips ~30% shorter than the body's (28px -> ~20px): tighter padding and a 1.1
    line box. Scoped to the scopebar so chips elsewhere keep their size; 1.1 still clears
    the emoji glyph height at .82rem. */
@@ -120,14 +123,15 @@ a.titlescore:hover { filter:brightness(1.06); box-shadow:0 0 0 1px currentColor 
    FLOW at the foot of the masthead, under the tab strip -- never over it (eval run 8 found an
    overlay covering 11 of 13 tabs) and never above it, where it would move every tab out from
    under the pointer. tabs.js closes it on Esc and on a click anywhere outside it. */
-.chip.refchip .sn-badge { margin-left:.35rem; padding:0 .3rem; font:inherit; font-size:.78em;
-              line-height:1.35; color:var(--muted); background:transparent;
-              border:1px solid var(--line); border-radius:999px; cursor:pointer;
-              vertical-align:baseline; }
+/* A marker like `5↓main`: bold, the drift colour, the chip's own size and line -- no pill, no
+   border, no caret. It is still a button (click lists the commits, the tooltip says so). With
+   the line inherited it no longer makes the chip taller (the old pill pushed it to 22px). */
+.chip.refchip .sn-badge { background:none; border:0; padding:0 0 0 .3rem; margin:0;
+              font:inherit; font-weight:700; color:var(--drift); font-size:inherit;
+              line-height:inherit; box-shadow:none; cursor:pointer; vertical-align:baseline; }
 .chip.refchip .sn-badge:hover, .chip.refchip .sn-badge[aria-expanded="true"] {
-              color:var(--fg); border-color:var(--muted); }
-.sn-badge .sn-caret { display:inline-block; margin-left:.1rem; transition:transform .12s ease; }
-.sn-badge[aria-expanded="true"] .sn-caret { transform:rotate(90deg); }
+              text-decoration:underline; }
+.chip.refchip .sn-badge .sn-caret { display:none; }
 .scopenote { margin:.3rem 0 .4rem; font-size:.78rem; color:var(--muted); line-height:1.35; }
 .scopenote[hidden] { display:none; }
 .scopenote .sn-head { margin:0 0 .2rem; }

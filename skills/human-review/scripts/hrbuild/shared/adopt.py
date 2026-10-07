@@ -202,15 +202,18 @@ def adopt_prompt(piece: str, title: str = "") -> str | None:
             "show me the result.")
 
 
-def adopt_html(piece: str, title: str = "", how: str = "in") -> str:
+def adopt_html(piece: str, title: str = "", how: str = "in", page: bool = False) -> str:
     prompt = adopt_prompt(piece, title)
     if not prompt:
         return ""
+    # A pill on the tab's title row (`page`) is about the whole tab; every other placement,
+    # a diagram card's included, is about a smaller area of a screen and keeps the short label.
+    label = "Prompt to get this page" if page else "Prompt to get this"
     return (f'<div class="adoptline adopt-{how}"><button type="button" class="adopt copycmd" '
             f'data-piece="{html.escape(piece)}" data-copy="{html.escape(prompt, quote=True)}" '
             'data-say="Copied — paste it to your coding agent" '
             'data-tip="Copy a prompt for your coding agent to get this into your project">'
-            f'{ROBOT} Prompt to get this</button></div>')
+            f'{ROBOT} {label}</button></div>')
 
 
 def place_prompts(tid: str, body: str) -> str:
@@ -264,7 +267,8 @@ def place_prompts(tid: str, body: str) -> str:
                     edits.append((span[0], span[0], adopt_html(name, title, "in")))
             elif how == "title":
                 edits.append((hit.start(), hit.start(), '<div class="adopthead">'))
-                edits.append((span[1], span[1], adopt_html(name, title, "title") + "</div>"))
+                edits.append((span[1], span[1], adopt_html(
+                    name, title, "title", page=piece is not None) + "</div>"))
             elif how == "col":
                 edits.append((hit.start(), hit.start(), '<div class="adoptcol">'))
                 edits.append((span[1], span[1], adopt_html(name, title, "after") + "</div>"))

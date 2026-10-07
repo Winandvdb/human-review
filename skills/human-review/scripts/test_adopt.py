@@ -208,3 +208,18 @@ def test_a_header_cell_marked_data_adopt_takes_the_button_instead_of_the_last():
     out = place_prompts("cost", body)
     assert re.search(r'<th scope="col" data-adopt><div class="adoptline adopt-th">.*?</button>'
                      r'</div>time</th><th scope="col">cost</th>', out)
+
+
+def test_tab_title_pills_say_page_and_smaller_areas_keep_the_short_label():
+    """Victor, 7 Oct 2026: a pill on a whole tab's title row reads "…this page"; the ones
+    on a diagram card or a part of a screen stay "…this"."""
+    tab = place_prompts("city", '<h2 class="tabtitle">City</h2><p>x</p>')
+    assert "Prompt to get this page</button>" in tab
+    api = place_prompts("api", '<div class="apiverdict ok">v</div>')
+    assert "Prompt to get this page</button>" in api
+    card = place_prompts("data", _card("Domain Model", "DomainModel.puml",
+                                       '<p class="sub dgm-unseen">Also changed</p>'))
+    assert "adopt-title" in card and "Prompt to get this</button>" in card
+    assert "this page" not in card
+    cost = place_prompts("review", '<h2 id="assumed">A</h2><p class="pileround">r</p>')
+    assert "Prompt to get this</button>" in cost and "this page" not in cost

@@ -2345,6 +2345,7 @@ def render(result: dict, assets_prefix: str, *, root: Path | None = None,
         + ') changed and is not in <code>steps.dsaudit.screens</code>.</p>'
         for u in unlisted)
     return (
+        f'<!-- ds-audit render {RENDER_STAMP} -->'
         '<div class="dsa-run">'
         '<h2 class="tabtitle">UX design system</h2>'
         f'{unlisted_line}'
@@ -2736,6 +2737,9 @@ def main():
                     help="no browser, no snapshots: re-render the fragment from an earlier "
                          "--json and the PNGs already in --assets, recomputing the change "
                          "frames; the JSON is rewritten with them")
+    ap.add_argument("--rerender-if-stale", metavar="REVIEW_DIR",
+                    help="re-render REVIEW_DIR/assets/ds-audit.html from the JSON beside it, "
+                         "but only when another version of this script drew it")
     ap.add_argument("--keep-capture", metavar="DIR",
                     help="write the raw snapshots there for a later --from-capture")
     ap.add_argument("-o", "--out", default="ds-audit.html")
@@ -2746,6 +2750,11 @@ def main():
 
     if args.css:
         print(CSS)
+        return
+    if args.rerender_if_stale:
+        done = rerender_if_stale(Path(args.rerender_if_stale))
+        if not done:
+            print("[ds-audit] fragment already drawn by this ds-audit.py", file=sys.stderr)
         return
     args.asset_prefix = asset_prefix(args.asset_prefix)
     commits = {"new": args.commit_new or _git("rev-parse", "HEAD"),
@@ -2921,6 +2930,63 @@ def changed_files(base: str, sources: list[Path]) -> list[str]:
         return []
     return _git("diff", "--name-only", base, "HEAD", "--",
                 *[str(s) for s in sources]).split()
+
+
+#: Which ds-audit.py drew a fragment: a hash of this file, written into the fragment's
+#: first line. A page build pastes `assets/ds-audit.html` whole, and the step that writes it
+#: (two Docker stacks, both sides captured) is never part of a plain refresh — so an edit to
+#: how this script *renders* never reached a page whose capture was older. The visit-vet
+#: report kept its 5 Oct fragment through every rebuild after the 7 Oct title change: no
+#: `h2.tabtitle`, so the build gave the tab a bare "UX" title row and, with no title to join,
+#: the prompt fell to the panel's end. With the stamp, `refresh-report.py` notices a fragment
+#: drawn by other code and re-renders it from its JSON (`rerender_if_stale`), free.
+RENDER_STAMP = hashlib.sha1(Path(__file__).read_bytes()).hexdigest()[:12]
+_RENDER_STAMP = re.compile(r"<!-- ds-audit render ([0-9a-f]+) -->")
+
+
+def rendered_by(fragment: str) -> str | None:
+    """The `RENDER_STAMP` a fragment was drawn with, or None for one older than stamps."""
+    m = _RENDER_STAMP.search(fragment[:200])
+    return m.group(1) if m else None
+
+
+def rerender_if_stale(review: Path) -> bool:
+    """Re-render `<review>/assets/ds-audit.html` (and its stylesheet) from the JSON beside
+    it when this script did not draw it. True when it did. No browser, no stacks: the
+    verdicts and the PNGs are the capture's, only the drawing is this file's. Each side keeps
+    the commit its capture recorded, and the template search reads the same `source` dirs
+    the step was given (`steps.dsaudit.source` in `human-review.json`)."""
+    assets = review / "assets"
+    js, frag = assets / "ds-audit.json", assets / "ds-audit.html"
+    if not js.is_file():
+        return False
+    try:
+        if rendered_by(frag.read_text(encoding="utf-8")) == RENDER_STAMP:
+            return False
+    except OSError:
+        pass
+    result = json.loads(js.read_text(encoding="utf-8"))
+    commits: dict[str, str] = {}
+    for sc in result.get("screens") or []:
+        for side, meta in (sc.get("sides") or {}).items():
+            if meta.get("commit"):
+                commits.setdefault(side, meta["commit"])
+    root = Path(_git("rev-parse", "--show-toplevel", cwd=review) or review.resolve().parent)
+    try:
+        cfg = json.loads((root / "human-review.json").read_text(encoding="utf-8"))
+        sources = [root / s for s in ((cfg.get("steps") or {}).get("dsaudit") or {})
+                   .get("source") or []]
+    except (OSError, ValueError, AttributeError):
+        sources = []
+    cwd = os.getcwd()
+    os.chdir(root)       # `changed_files` and the template search run git from here
+    try:
+        rerender(js, assets, asset_prefix("assets"), frag, commits or None,
+                 sources=sources, repo_root=root)
+    finally:
+        os.chdir(cwd)
+    (assets / "ds-audit.css").write_text(CSS + "\n", encoding="utf-8")
+    return True
 
 
 def rerender(json_path: Path, assets: Path, prefix: str, out: Path,

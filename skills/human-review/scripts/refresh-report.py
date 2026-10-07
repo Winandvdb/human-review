@@ -57,6 +57,7 @@ HERE = Path(__file__).resolve().parent
 RUN_STEPS = HERE / "run-steps.py"
 BUILD = HERE / "build-review-html.py"
 SERVE = HERE / "serve-review.py"
+DS_AUDIT = HERE / "ds-audit.py"
 REVIEW_COMMITS = HERE / "review-commits.py"
 CONFIG = "human-review.json"
 
@@ -246,6 +247,12 @@ def plan(review: Path, steps: str, base: str | None, serve: bool,
                    # and moving `.steps.json` costs the build the whole cost ledger, which
                    # is keyed on it. See `run-steps.Ctx`.
                    + ["--no-ledger"])
+    # The UX tab is a fragment pasted whole, written by a step no refresh runs (it needs both
+    # sides' stacks up). Re-drawn here from its own JSON when an older ds-audit.py drew it —
+    # a no-op otherwise — so a change to how the audit renders reaches every page on its next
+    # rebuild, rather than only the pages whose audit happens to be captured again.
+    if (review / "assets" / "ds-audit.json").is_file():
+        out.append([sys.executable, str(DS_AUDIT), "--rerender-if-stale", str(review)])
     build = [sys.executable, str(BUILD), str(review / "content.json"),
              "--out", str(review / "review.html")]
     if not allow_model:

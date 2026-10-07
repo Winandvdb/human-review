@@ -1030,6 +1030,17 @@ def _main(argv=None) -> int:
             if block["id"] == "swaggerdiff" and 'class="apiverdict red"' in body:
                 auto_badge["tabClass"] = "alarm"
                 auto_badge["label"] = "breaking contract change"
+            # The UX audit's header names the gaps this branch added (`⚠ +N gap`, the one
+            # warning on that line): the pill goes amber with it, the CODEOWNERS way. A gap
+            # the base already had is not this branch's and leaves the pill alone.
+            if block["id"] == "ds-audit":
+                hdr = re.search(r'<p class="dsa-hdr">.*?</p>', body, re.S)
+                gap = hdr and re.search(r'class="dsa-gap"[^>]*>(?:⚠ )?\+(\d+) gap',
+                                        hdr.group(0))
+                if gap:
+                    n = int(gap.group(1))
+                    auto_badge["tabClass"] = "warn"
+                    auto_badge["label"] = f"{n} new design-system gap{'' if n == 1 else 's'}"
             # A section is prose we wrote about the change, so it counts as a change
             # unless it declares itself context.
             return body, 1, 0 if unchanged_ids.get(block["id"]) else 1

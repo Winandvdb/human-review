@@ -73,12 +73,24 @@ MERGE_BASE="$(git merge-base "$BASE_REF" HEAD)"
 # What the Sequence step's traced run drew is filed in the review directory, never over the
 # committed files: run-steps.py `_sequence` copies it there and puts the work tree back, so
 # a review leaves the branch clean. Read through that copy — it wins over the work tree —
-# but only while HEAD is the commit it was traced at (`.head`): after a new commit, the
-# committed diagrams are the newer truth.
+# file by file: a commit since the one it was traced at (`.head`) that changed a diagram is
+# the newer truth for THAT diagram. It used to drop the whole copy on any commit at all —
+# and with it the pictures of the tests the branch wrote, which exist nowhere else (the
+# step traces them untagged and leaves nothing in the work tree). Same rule as
+# `hrbuild/shared/genseq.py` `_overlay_state`.
 OVERLAY="${PUML_OVERLAY:-.human-review/assets/genseq}"
-if [ ! -d "$OVERLAY" ] || [ "$(cat "$OVERLAY/.head" 2>/dev/null)" != "$(git rev-parse HEAD)" ]; then
+SUPERSEDED=""
+TRACED_AT="$(cat "$OVERLAY/.head" 2>/dev/null)"
+if [ ! -d "$OVERLAY" ] || [ -z "$TRACED_AT" ] \
+   || ! SUPERSEDED="$(git diff --name-only --no-renames "$TRACED_AT" HEAD 2>/dev/null)"; then
   OVERLAY=""
 fi
+# The overlay's copy of a repository path, if it has one a later commit did not replace.
+overlay_copy() {
+  [ -n "$OVERLAY" ] && [ -s "$OVERLAY/$1" ] || return 1
+  printf '%s\n' "$SUPERSEDED" | grep -Fqx -- "$1" && return 1
+  printf '%s\n' "$OVERLAY/$1"
+}
 
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
@@ -96,7 +108,8 @@ done < <(
   {
     git diff --name-only "$MERGE_BASE" -- '*.puml'
     git ls-files --others --exclude-standard -- '*.puml'
-    [ -z "$OVERLAY" ] || (cd "$OVERLAY" && find . -type f -name '*.puml' | sed 's|^\./||')
+    [ -z "$OVERLAY" ] || (cd "$OVERLAY" && find . -type f -name '*.puml' | sed 's|^\./||') \
+      | while IFS= read -r f; do if overlay_copy "$f" >/dev/null; then printf '%s\n' "$f"; fi; done
   } | sort -u
 )
 
@@ -186,7 +199,7 @@ for rel in "${CHANGED[@]}"; do
   fi
 
   new="$ROOT/$rel"
-  [ -n "$OVERLAY" ] && [ -f "$OVERLAY/$rel" ] && new="$OVERLAY/$rel"
+  copy="$(overlay_copy "$rel")" && new="$copy"
   if [ ! -f "$new" ]; then
     new="$TMP/$name.empty.puml"
     : >"$new"
@@ -319,7 +332,7 @@ for rel in "${CHANGED[@]}"; do
         rm -f "$OUT_DIR/$name.old.json"
       fi
       sidecar="$ROOT/${rel%.puml}.json"
-      [ -n "$OVERLAY" ] && [ -s "$OVERLAY/${rel%.puml}.json" ] && sidecar="$OVERLAY/${rel%.puml}.json"
+      copy="$(overlay_copy "${rel%.puml}.json")" && sidecar="$copy"
       if [ -s "$sidecar" ] && cp "$sidecar" "$OUT_DIR/$name.new.json"; then
         new_details="$(basename "$OUT_DIR/$name.new.json")"
       else

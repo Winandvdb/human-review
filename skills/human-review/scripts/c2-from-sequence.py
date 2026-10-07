@@ -868,27 +868,43 @@ def worktree_sources(root: Path, sources: list[str], exclude: list[str]) -> list
     return sorted(seen)
 
 
-def traced_overlay(root: Path, overlay: Path) -> Path | None:
-    """Where the Sequence step filed what its traced run drew, if that is this HEAD's run.
+def traced_overlay(root: Path, overlay: Path) -> tuple[Path, frozenset[str]] | None:
+    """Where the Sequence step filed what its traced run drew, and which of its files a
+    commit since the trace replaced — or `None` when it traced no commit of this history.
 
     `run-steps.py` `_sequence` copies each re-traced diagram there under its repository path
     and gives the committed files their bytes back, so the work tree alone would project the
-    committed diagrams, not this run's. `.head` is the commit it traced: after a new commit
-    the committed files are the newer truth, and the copy is ignored."""
+    committed diagrams, not this run's. `.head` is the commit it traced: a file a later
+    commit changed is the newer truth for that file, and only for it. Dropping the whole copy
+    on any commit lost the pictures of the tests the branch wrote, which exist nowhere else
+    (same rule as `hrbuild/shared/genseq.py` `_overlay_state`)."""
     try:
-        head = (overlay / ".head").read_text(encoding="utf-8").strip()
+        traced_at = (overlay / ".head").read_text(encoding="utf-8").strip()
     except OSError:
         return None
-    return overlay if head and head == sh(["git", "rev-parse", "HEAD"], root).stdout.strip() \
-        else None
+    if not traced_at:
+        return None
+    since = sh(["git", "diff", "--name-only", "--no-renames", traced_at, "HEAD"], root)
+    if since.returncode != 0:
+        return None
+    return overlay, frozenset(since.stdout.split("\n")) - {""}
 
 
-def overlay_sources(overlay: Path | None, sources: list[str], exclude: list[str]) -> list[str]:
+def overlay_file(overlay, rel: str) -> Path | None:
+    """The traced run's copy of `rel`, unless it has none or a later commit replaced it."""
+    if overlay is None:
+        return None
+    d, superseded = overlay
+    return d / rel if rel not in superseded and (d / rel).is_file() else None
+
+
+def overlay_sources(overlay, sources: list[str], exclude: list[str]) -> list[str]:
     if overlay is None:
         return []
-    return sorted(p.relative_to(overlay).as_posix() for p in overlay.rglob("*.puml")
-                  if matches(p.relative_to(overlay).as_posix(), sources,
-                             [x for x in exclude if ".human-review" not in x]))
+    d = overlay[0]
+    return sorted(rel for rel in (p.relative_to(d).as_posix() for p in d.rglob("*.puml"))
+                  if overlay_file(overlay, rel) is not None
+                  and matches(rel, sources, [x for x in exclude if ".human-review" not in x]))
 
 
 def base_sources(root: Path, base: str, sources: list[str], exclude: list[str]) -> list[str]:
@@ -989,7 +1005,7 @@ def main(argv=None) -> int:
         return 3
 
     def traced(rel: str) -> str:
-        path = overlay / rel if overlay is not None and (overlay / rel).is_file() else root / rel
+        path = overlay_file(overlay, rel) or root / rel
         return path.read_text(encoding="utf-8", errors="replace")
 
     new = build(root, rels, traced, containers)

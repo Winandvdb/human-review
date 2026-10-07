@@ -37,12 +37,31 @@ SKIP_DIRS = {".git", "node_modules", "target", "build", "out", "dist", ".idea", 
 #: Where `run-steps.py` `_sequence` files what its traced run drew, under each diagram's
 #: repository path — the committed `generated/*.genseq.*` get their own bytes back after
 #: every run, so the page reads this run's pictures from here. `.head` pins the copy to the
-#: commit it was traced at; once HEAD moves, the committed files are the newer truth.
+#: commit it was traced at; a file a later commit changed is the newer truth for that file.
 GENSEQ_OVERLAY = Path(".human-review") / "assets" / "genseq"
 
 
-def genseq_overlay(root: Path) -> Path | None:
-    """The Sequence step's copy of this run's diagrams, when it was traced at this HEAD."""
+@functools.lru_cache(maxsize=None)
+def committed_since(root: str, traced_at: str, head: str) -> frozenset[str] | None:
+    """Every path a commit changed between `traced_at` and `head`, or `None` when git cannot
+    say (`traced_at` is not a commit of this repository)."""
+    if traced_at == head:
+        return frozenset()
+    r = subprocess.run(["git", "-C", root, "diff", "--name-only", "--no-renames",
+                        traced_at, head], capture_output=True, text=True)
+    return frozenset(r.stdout.split("\n")) - {""} if r.returncode == 0 else None
+
+
+def _overlay_state(root: Path) -> tuple[Path, frozenset[str]] | None:
+    """The overlay directory and the paths later commits superseded in it, or `None`.
+
+    It used to be all or nothing: the copy counted only while HEAD was the very commit it was
+    traced at. Any commit after the trace then threw away every picture in it — and the
+    pictures of the tests the branch wrote, which the step traces untagged and never leaves in
+    the work tree, exist nowhere else. The visit-vet review lost both of its auto-picked JUnit
+    diagrams that way (6 Oct 2026) to a `review-points.md` commit and a merge of `main`,
+    neither of which touched a diagram. A later commit is the newer truth only for the files
+    it actually changed, so that is what is ruled out: per file, not per run."""
     d = Path(root) / GENSEQ_OVERLAY
     try:
         traced_at = (d / ".head").read_text(encoding="utf-8").strip()
@@ -50,14 +69,32 @@ def genseq_overlay(root: Path) -> Path | None:
         return None
     head = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
                           capture_output=True, text=True).stdout.strip()
-    return d if traced_at and traced_at == head else None
+    if not traced_at or not head:
+        return None
+    since = committed_since(str(root), traced_at, head)
+    return None if since is None else (d, since)
+
+
+def genseq_overlay(root: Path) -> Path | None:
+    """The Sequence step's copy of its run's diagrams, when it was traced at a commit of
+    this history. Some of its files may be superseded since: ask `genseq_overlay_copy`."""
+    state = _overlay_state(root)
+    return state[0] if state else None
+
+
+def genseq_overlay_copy(rel: str, root: Path) -> Path | None:
+    """The traced run's copy of `rel`, unless there is none or a commit since replaced it."""
+    state = _overlay_state(root)
+    if state is None:
+        return None
+    d, superseded = state
+    return d / rel if rel not in superseded and (d / rel).is_file() else None
 
 
 def genseq_file(rel: str, root: Path) -> Path:
     """Where to read a generated diagram (or its sidecar) from: this run's copy when the
     traced run drew one, else the file in the work tree."""
-    d = genseq_overlay(root)
-    return d / rel if d is not None and (d / rel).is_file() else Path(root) / rel
+    return genseq_overlay_copy(rel, root) or Path(root) / rel
 
 
 def _annotation_span(lines, i: int):
@@ -347,6 +384,8 @@ def genseq_by_test(root: Path) -> dict[str, tuple[str, ...]]:
     if overlay is not None:
         for puml in overlay.rglob("*.genseq.puml"):
             rel = puml.relative_to(overlay).as_posix()
+            if genseq_overlay_copy(rel, root) is None:
+                continue      # a commit since the trace replaced it: the work tree has it
             test = test_of_genseq(rel, root)
             if rel not in found.get(test, []):
                 found.setdefault(test, []).append(rel)

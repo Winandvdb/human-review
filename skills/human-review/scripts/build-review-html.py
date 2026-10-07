@@ -93,7 +93,8 @@ from hrbuild.shared.svg import (
 )
 from hrbuild.shared.genseq import (
     genseq_by_test, GENSEQ_CALL_TITLE, genseq_details, genseq_details_at_base,
-    genseq_details_at_render, genseq_file, genseq_overlay, GENSEQ_OVERLAY, GENSEQ_HANDLE, HTTP_VERBS, MAPPING_ANNOTATION, MAPPING_NAMED_PATH,
+    genseq_details_at_render, genseq_file, genseq_overlay, genseq_overlay_copy,
+    committed_since, _overlay_state, GENSEQ_OVERLAY, GENSEQ_HANDLE, HTTP_VERBS, MAPPING_ANNOTATION, MAPPING_NAMED_PATH,
     MAPPING_POSITIONAL_PATH, METHOD_NAME, pair_anchor, REQUEST_METHOD, SKIP_DIRS,
     spring_handlers, test_of_genseq, TYPE_DECL, _annotation_span, _controller_routes,
     _declared_test, _details_carrier, _join_route, _mapping_path, _with_handlers

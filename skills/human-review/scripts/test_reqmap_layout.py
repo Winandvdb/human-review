@@ -465,3 +465,26 @@ def test_the_card_title_says_how_the_list_was_computed():
     assert "JaCoCo for Backend JUnit" in tip and "Karma for Frontend Karma" in tip
     assert "JaCoCo + V8 for E2E Playwright" in tip and "Idle" not in tip
     assert tip.endswith("executed at least one line this branch changed.")
+
+
+def test_a_traced_test_is_never_folded_out_of_the_covering_card():
+    """An end-to-end run walks the whole stack, so the coverage join ranks every one as a
+    pass-through. A test on the Sequence tab (or with a recording) gets its own open group."""
+    blob = {"ranks": {"0": "p", "1": "b", "2": "own", "3": "gone", "4": "aimed", "5": "pass"},
+            "fold": {"from": 4, "label": "x"}, "foldOwn": {"from": 2, "to": 3, "label": "o"},
+            "foldGone": {"from": 3, "to": 4, "label": "g", "min": 3},
+            "tests": {"app/src/add-visit.spec.ts:31": {"rank": 5},
+                      "app/src/other.spec.ts:9": {"rank": 5},
+                      "app/src/Own.java:5": {"rank": 2}, "app/src/Paired.java:1": {}}}
+    page = ('<script type="application/json" id="hr-genseq">[{"test": '
+            '"app/src/add-visit.spec.ts:31", "pair": "x"}]</script>'
+            '<script type="application/json" class="rm-data">' + json.dumps(blob) + '</script>')
+    out = T.promote_traced(page)
+    d = json.loads(out.split('class="rm-data">')[1].split("</script>")[0])
+    assert d["tests"]["app/src/add-visit.spec.ts:31"]["rank"] == 2
+    assert d["tests"]["app/src/other.spec.ts:9"]["rank"] == 6, "untraced pass-through moves down"
+    assert d["tests"]["app/src/Own.java:5"]["rank"] == 3
+    assert d["ranks"]["2"] == T.TRACED_LABEL and d["ranks"]["6"] == "pass"
+    assert (d["fold"]["from"], d["foldOwn"]["from"], d["foldOwn"]["to"],
+            d["foldGone"]["from"], d["foldGone"]["to"]) == (5, 3, 4, 4, 5)
+    assert T.promote_traced(out) == out, "idempotent"

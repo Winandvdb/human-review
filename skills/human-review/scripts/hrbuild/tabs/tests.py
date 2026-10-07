@@ -1148,6 +1148,74 @@ def relabel_cats(frag: str) -> str:
                   flags=re.S)
 
 
+#: A test that drew a diagram on the Sequence tab, or has a Playwright recording, is the
+#: evidence the page is built around — never one of the "only pass through changed code"
+#: rows folded out of sight. An end-to-end run walks the whole stack, so every one of them
+#: looks like a pass-through to the coverage join.
+TRACED_RANK = 2
+TRACED_LABEL = "Traced on the Sequence tab, paired with no sentence"
+
+
+def promote_traced(page: str) -> str:
+    """Give the covering-tests rows that are traced their own group, above the folds.
+
+    Done on the finished page because the two registries that say which tests are traced
+    (`hr-genseq`, `hr-traces`) are written by other tabs. The new group takes integer rank 2:
+    every rank from 2 up moves one place down, and the fold thresholds with them, so the
+    reader (`reqmap.js`) is unchanged. Only the untouched, unpaired ranks are promoted — a
+    traced test the branch wrote or edited already has a group that is open."""
+    def reg(id_: str):
+        m = re.search(r'<script type="application/json" id="%s">(.*?)</script>' % id_, page, re.S)
+        try:
+            return json.loads(m.group(1).replace("<\\/", "</")) if m else None
+        except ValueError:
+            return None
+    keys: set[str] = set()
+    for e in reg("hr-genseq") or []:
+        if isinstance(e, dict) and e.get("test"):
+            keys.add(e["test"])
+            keys.add(e["test"].split("/")[-1])
+    for e in (reg("hr-traces") or {}).get("tests", []):
+        if isinstance(e, dict) and e.get("test"):
+            keys.add(e["test"])
+    if not keys:
+        return page
+    m = re.search(r'(<script type="application/json" class="rm-data">)(.*?)(</script>)', page, re.S)
+    if not m:
+        return page
+    try:
+        data = json.loads(m.group(2).replace("<\\/", "</"))
+    except ValueError:
+        return page
+    ranks, tests = data.get("ranks"), data.get("tests")
+    if not isinstance(ranks, dict) or not isinstance(tests, dict) or TRACED_LABEL in ranks.values():
+        return page
+    fold_from = (data.get("fold") or {}).get("from")
+    if fold_from is None:
+        return page
+    traced = [i for i, t in tests.items()
+              if t.get("rank", 0) >= fold_from and (i in keys or i.split("/")[-1] in keys)]
+    if not traced:
+        return page
+    shift = lambda r: r + 1 if r >= TRACED_RANK else r
+    for t in tests.values():
+        if "rank" in t:
+            t["rank"] = shift(t["rank"])
+    data["ranks"] = {str(shift(int(k))): v for k, v in ranks.items()}
+    data["ranks"][str(TRACED_RANK)] = TRACED_LABEL
+    data["ranks"] = dict(sorted(data["ranks"].items(), key=lambda kv: int(kv[0])))
+    for name in ("fold", "foldOwn", "foldGone"):
+        f = data.get(name)
+        if isinstance(f, dict):
+            for k in ("from", "to"):
+                if isinstance(f.get(k), int):
+                    f[k] = shift(f[k])
+    for i in traced:
+        tests[i]["rank"] = TRACED_RANK
+    body = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    return page[:m.start(2)] + body + page[m.end(2):]
+
+
 def cats_filter(cats: str) -> str:
     """The Unit/API/E2E key, each entry wrapped in a checked checkbox that filters the card.
 

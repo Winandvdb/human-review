@@ -27,5 +27,7 @@ def page_source() -> str:
     pkg = HERE / "hrbuild"
     parts = [(HERE / "build-review-html.py").read_text(encoding="utf-8")]
     parts += [p.read_text(encoding="utf-8") for p in sorted(pkg.rglob("*.py"))]
-    parts += [p.read_text(encoding="utf-8") for p in sorted((pkg / "assets").rglob("*")) if p.is_file()]
+    # Text assets only: a binary one (the angry robot's PNG) has no source to grep.
+    parts += [p.read_text(encoding="utf-8") for p in sorted((pkg / "assets").rglob("*"))
+              if p.is_file() and p.suffix.lower() not in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".woff", ".woff2"}]
     return "\n".join(parts)

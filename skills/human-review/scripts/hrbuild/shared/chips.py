@@ -1,6 +1,7 @@
 """The scope bar: what the base is, what the diff measures, how a chip renders."""
 from __future__ import annotations
 
+import functools
 import html
 import json
 import re
@@ -584,18 +585,13 @@ def review_chip_face(open_n: int, fixed_n: int, assumed_n: int) -> str:
     return f"\U0001f916 <b>{assumed_n} unsure</b> / {rest}"
 
 
-_ANGRY_BOT: str | None = None
-
-
+@functools.lru_cache(maxsize=None)
 def _angry_bot() -> str:
     """Victor's angry robot as an inline `<img>` with a data URI: the page stays one file."""
-    global _ANGRY_BOT
-    if _ANGRY_BOT is None:
-        import base64
-        png = (Path(__file__).resolve().parent.parent / "assets" / "angry-bot.png").read_bytes()
-        _ANGRY_BOT = ('<img class="angry-bot" alt="" aria-hidden="true" '
-                      f'src="data:image/png;base64,{base64.b64encode(png).decode()}">')
-    return _ANGRY_BOT
+    import base64
+    png = (Path(__file__).resolve().parent.parent / "assets" / "angry-bot.png").read_bytes()
+    return ('<img class="angry-bot" alt="" aria-hidden="true" '
+            f'src="data:image/png;base64,{base64.b64encode(png).decode()}">')
 
 
 def review_chip_key(open_n: int, fixed_n: int, assumed_n: int) -> str:

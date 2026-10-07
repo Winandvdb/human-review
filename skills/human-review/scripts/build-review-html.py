@@ -122,7 +122,7 @@ from hrbuild.shared.chips import (
     _compare_href, _numstat, _resolve_base, BASE_SOURCES, COMMITS_JSON, measured_from,
     page_base, POINTS_JSON, _front_matter, _is_ancestor, _recorded_bases,
     GENERATED_GLOBS, generated_globs, REVIEW_BOOKKEEPING, _project_cfg,
-    raised_by_reviewer, review_chip_face, review_chip_key, reviewer_names, _REVIEWER_WORD,
+    raised_by_reviewer, review_chip_face, review_chip_key, _angry_bot, reviewer_names, _REVIEWER_WORD,
     patch_equivalent, NO_FETCH_ENV, fetch_base
 )
 from hrbuild.shared.masthead import (

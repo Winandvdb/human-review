@@ -12,16 +12,18 @@
 
 ## What you see
 
-- **The verdict band** — *backwards compatible* or *breaking*, from `oasdiff`, double-checked
-  by this skill's own `openapi-diff.py`. When the two disagree, that disagreement is the line
-  to read first.
+- **The verdict band** — *backwards compatible* or *breaking*, and how many endpoints, from
+  [`oasdiff`](https://github.com/oasdiff/oasdiff) alone, with its full report one click away.
+  The skill used to run its own differ beside it; [an eval on 121 spec
+  pairs](../../skills/human-review/reference/openapi-differ-eval.md) showed it wrong far more
+  often than oasdiff, so it was dropped and the clear cases only it caught were reported upstream.
 - **The OpenAPI visual diff** — every operation the branch touched, expanded, with each change
   labelled; the untouched ones folded away.
 - **The effective payload** — `$ref`s resolved, so a property that moved in a shared schema
   shows up at every operation that serves it, not once in a place nobody looks.
 
 It reads the contract, not the handler: a `PUT` that starts *clearing* a field looks
-additive to any structural differ. The raw unified diff rides along for that reason.
+additive to any structural differ.
 
 ## What it needs
 
@@ -31,6 +33,5 @@ additive to any structural differ. The raw unified diff rides along for that rea
 ## Deeper
 
 - [The OpenAPI contract differ](../../README.md#the-openapi-contract-differ)
-- Produced by [`openapi-compat.py`](../../skills/human-review/scripts/openapi-compat.py),
-  [`openapi-diff.py`](../../skills/human-review/scripts/openapi-diff.py) and
+- Produced by [`openapi-compat.py`](../../skills/human-review/scripts/openapi-compat.py) and
   [`openapi-visual-diff.py`](../../skills/human-review/scripts/openapi-visual-diff.py)

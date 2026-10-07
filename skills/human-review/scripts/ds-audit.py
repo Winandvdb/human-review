@@ -26,7 +26,7 @@ changed was not on the list" is the failure this arrangement exists to rule out.
 
 The JSON is the artefact; the picture is its rendering. An adversarial review agent
 reads `--json` and never has to OCR a PNG. Emit the stylesheet the fragment needs with
-`--css`, the same way `openapi-diff.py` and friends do.
+`--css`, the same way `openapi-compat.py` and friends do.
 
 The one thing fixed with the design system is that a DS component marks its host with
 `data-ds="<name>"`. Nothing here depends on its class names or its DOM shape.

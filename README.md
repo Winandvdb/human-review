@@ -281,7 +281,7 @@ per half.
 
 **Rerun** is the free one, and the one to reach for. It runs `refresh-report.py --steps
 static` — the diagram deltas, the container view, the complexity increment, the REST
-contract and its two second opinions, the logging scan, code owners and the test manifest —
+contract and its second opinion, the logging scan, code owners and the test manifest —
 rebuilds the page, and reloads the tab you are on, in place, keeping its scroll. Not the
 model's half. Not the feature film, which needs the application up and is a decision, not a
 refresh. Not the traced suites either, whose `commands` are the project's own e2e run.
@@ -613,24 +613,32 @@ diagram. It needs nothing installed either way.
 
 ## The OpenAPI contract differ
 
-`skills/human-review/scripts/openapi-diff.py` reads two revisions of an OpenAPI spec as
-*structures* rather than as text, and classifies every difference by what it does to
-somebody already calling the API:
+The API tab does not classify the contract itself. `skills/human-review/scripts/openapi-compat.py`
+runs [oasdiff](https://github.com/oasdiff/oasdiff) over the spec at the review base and the
+working tree, and the band reads its verdict as is — `oasdiff breaking` is every entry at
+WARN or above — with the full changelog one click away:
 
 ```sh
-python3 openapi-diff.py --base origin/main --out fragment.html   # vs the merge-base
-python3 openapi-diff.py before.yaml after.yaml --json            # two files, no repo needed
+python3 openapi-compat.py --base origin/main --panel --out verdict.html   # the one-line band
+python3 openapi-compat.py before.yaml after.yaml --json                    # two files, no repo
 ```
 
-**breaking** — a removed operation, response, or property; a tightened constraint; a
-newly-required request field; a changed type or `$ref`. **additive** — anything that cannot
-break an existing caller. **changed** — `readOnly`, `default`, `deprecated`, `operationId`:
-real, but a judgement call. **cosmetic** — documentation only.
+oasdiff resolves `$ref`s, so an operation is listed because of *any* schema it reaches, and it
+knows the direction of each change: a looser `maxLength` breaks nobody on a request and every
+strict reader on a response. Without oasdiff the script falls back to OpenAPITools/openapi-diff
+and says on the band that its list is a lower bound.
+
+Until October 2026 the skill also ran its own classifier, `openapi-diff.py`, as a second
+opinion, and painted the band "Verdict disputed" whenever the two disagreed.
+[An eval on 121 spec pairs](skills/human-review/reference/openapi-differ-eval.md) found it
+missed 31 breaking changes oasdiff caught (every parameter change, every response-side
+widening), raised 15 false alarms to oasdiff's 2, and caught 5 that oasdiff missed — the clear ones went upstream as oasdiff issues, the arguable
+ones to a human, instead of staying a private patch. One differ, maintained by people
+whose whole job it is, is the better second opinion.
 
 It reads the contract, not the handler, so it cannot see a semantic break that leaves the
 spec additive — a `PUT` that starts *clearing* a field it was not sent looks like "an
-optional field appeared" to any structural differ. The unified diff rides along in a
-`<details>` for exactly that reason.
+optional field appeared" to any structural differ.
 
 ## The design-system audit
 

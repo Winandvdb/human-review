@@ -47,7 +47,6 @@ def _load(stem: str, filename: str):
 
 
 oac = _load("openapi_compat", "openapi-compat.py")
-oad = _load("openapi_diff", "openapi-diff.py")
 
 HAVE_OASDIFF = bool(shutil.which(os.environ.get("OASDIFF_BIN", "oasdiff")))
 SKIP_REASON = "oasdiff is not installed — the ref-resolving engine cannot be exercised"
@@ -277,7 +276,7 @@ def test_every_operation_the_schema_change_reaches_is_listed():
         return
     with tempfile.TemporaryDirectory() as tmp:
         base, head = specs(Path(tmp))
-        proc = compat(str(base), str(head), "--json", "--no-cross-check")
+        proc = compat(str(base), str(head), "--json")
         assert proc.returncode == 0, proc.stderr
         report = json.loads(proc.stdout)
 
@@ -298,7 +297,7 @@ def test_optional_additions_stay_non_breaking():
         return
     with tempfile.TemporaryDirectory() as tmp:
         base, head = specs(Path(tmp))
-        proc = compat(str(base), str(head), "--state", "--no-cross-check")
+        proc = compat(str(base), str(head), "--state")
         assert proc.returncode == 0, proc.stderr
     # Optional properties in both directions: a longer list must not become a scarier one.
     assert proc.stdout.strip() == oac.COMPATIBLE
@@ -316,7 +315,7 @@ def test_a_required_addition_to_a_request_body_is_breaking():
         base, head = Path(tmp) / "before.yaml", Path(tmp) / "after.yaml"
         base.write_text(BASE_SPEC, encoding="utf-8")
         head.write_text(breaking, encoding="utf-8")
-        proc = compat(str(base), str(head), "--state", "--no-cross-check")
+        proc = compat(str(base), str(head), "--state")
         assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == oac.INCOMPATIBLE
 
@@ -340,7 +339,7 @@ def test_every_listed_operation_draws_the_fields_that_moved():
         return
     with tempfile.TemporaryDirectory() as tmp:
         base, head = specs(Path(tmp))
-        proc = compat(str(base), str(head), "--no-cross-check")
+        proc = compat(str(base), str(head))
         assert proc.returncode == 0, proc.stderr
         fragment = proc.stdout
 
@@ -360,7 +359,7 @@ def test_a_list_that_may_be_short_never_gets_a_clean_seal():
     partial = {"state": oac.COMPATIBLE, "breaks": [], "deprecated": [], "elsewhere": [],
                "additive": [{"method": "GET", "path": "/api/visits", "note": "changed"}],
                "complete": False, "source": f"openapi-diff {oac.VERSION}"}
-    fragment = oac.render(partial, None, "provenance", "")
+    fragment = oac.render(partial, "provenance", "")
 
     seal = re.search(r'oac-seal">([^<]+)', fragment).group(1)
     assert seal != "COMPATIBLE", "a bare COMPATIBLE seal over a list we know can be short"
@@ -369,7 +368,7 @@ def test_a_list_that_may_be_short_never_gets_a_clean_seal():
     assert "brew install oasdiff" in fragment, "the band does not say how to fix it"
     assert "$ref" in fragment, "the band does not say what the fallback cannot follow"
 
-    whole = oac.render({**partial, "complete": True}, None, "provenance", "")
+    whole = oac.render({**partial, "complete": True}, "provenance", "")
     assert re.search(r'oac-seal">([^<]+)', whole).group(1) == "COMPATIBLE"
     assert "oac-incomplete" not in whole, "the band shows up when the list is complete"
 
@@ -379,13 +378,13 @@ def test_no_changes_does_not_claim_two_different_specs_are_identical():
     that sentence have to survive, or the seal contradicts the tab next to it."""
     moved = oac.render({"state": oac.NO_CHANGES, "breaks": [], "additive": [],
                         "deprecated": [], "elsewhere": [], "complete": True,
-                        "identical": False}, None, "provenance", "")
+                        "identical": False}, "provenance", "")
     assert "structurally identical" not in moved
     assert "The specs differ" in moved
 
     same = oac.render({"state": oac.NO_CHANGES, "breaks": [], "additive": [],
                        "deprecated": [], "elsewhere": [], "complete": True,
-                       "identical": True}, None, "provenance", "")
+                       "identical": True}, "provenance", "")
     assert "structurally identical" in same
 
 
@@ -404,50 +403,6 @@ def test_missing_oasdiff_is_a_fallback_not_a_crash():
         assert oac.oasdiff_version() is None
     finally:
         oac.OASDIFF = saved
-
-
-# ── truncations that used to be silent ───────────────────────────────────────────
-def test_a_cut_disagreement_list_says_how_much_it_cut():
-    ours = {"breaking": [f"GET /api/{n} — gone" for n in range(20)], "subjects": 20}
-    fragment = oac.cross_check(oac.COMPATIBLE, ours)
-    assert f"showing {oac.CROSS_CHECK_LIMIT} of 20" in re.sub("<[^>]+>", "", fragment)
-
-    short = {"breaking": ["GET /api/one — gone"], "subjects": 1}
-    assert "showing" not in re.sub("<[^>]+>", "", oac.cross_check(oac.COMPATIBLE, short))
-
-
-def test_a_cut_value_says_how_much_it_cut():
-    long_value = {"payload": "x" * 400}
-    rendered = oad.show(long_value)
-    assert "showing 160 of" in rendered, rendered
-    assert oad.show({"a": 1}) == '{"a": 1}', "a value that fits must not gain a suffix"
-
-
-def test_a_date_in_an_example_renders_instead_of_raising():
-    """PyYAML turns `2013-01-01` into a `date`, which plain json.dumps refuses."""
-    import datetime
-    assert "2013-01-01" in oad.show([{"date": datetime.date(2013, 1, 1)}])
-
-
-# ── the mislabel ─────────────────────────────────────────────────────────────────
-def test_a_dto_on_both_sides_is_not_called_a_request_body():
-    import yaml
-    spec = yaml.safe_load(HEAD_SPEC)
-    req, res = oad.request_side(spec), oad.response_side(spec)
-    # VisitDto is the body of POST /api/visits *and* the response of two GETs.
-    assert oad.side_note("VisitDto", req, res) == "request & response body"
-    # VisitFieldsDto really is request-only, and must keep saying so.
-    assert oad.side_note("VisitFieldsDto", req, res) == "request body"
-    # OwnerDto is never posted anywhere.
-    assert oad.side_note("OwnerDto", req, res) == "response body"
-
-
-def test_the_paths_diff_admits_how_many_operations_a_schema_serves():
-    """`paths` is byte-identical here; "0 operations moved" is true and useless alone."""
-    import yaml
-    spec = yaml.safe_load(HEAD_SPEC)
-    served = oad.operations_touching(spec, {"VisitDto", "VisitFieldsDto"})
-    assert {(p, m.upper()) for p, m in served} == {(p, m) for m, p in AFFECTED}
 
 
 # ── the one line at the top of the tab ───────────────────────────────────────────
@@ -477,11 +432,9 @@ def _op(method, path, n_reasons):
 
 def test_the_panel_has_exactly_three_colours():
     """Three states, three treatments. A fourth class means a fourth palette."""
-    nothing = oac.panel(_result(oac.NO_CHANGES, identical=True), {"breaking": [], "subjects": 0})
-    safe = oac.panel(_result(oac.COMPATIBLE, additive=[_op("GET", "/api/owners", 3)]),
-                     {"breaking": [], "subjects": 1})
-    broken = oac.panel(_result(oac.INCOMPATIBLE, breaks=[_op("GET", "/api/owners", 2)]),
-                       {"breaking": ["OwnerDto — gone"], "subjects": 1})
+    nothing = oac.panel(_result(oac.NO_CHANGES, identical=True))
+    safe = oac.panel(_result(oac.COMPATIBLE, additive=[_op("GET", "/api/owners", 3)]))
+    broken = oac.panel(_result(oac.INCOMPATIBLE, breaks=[_op("GET", "/api/owners", 2)]))
     assert [_panel_class(f) for f in (nothing, safe, broken)] == ["none", "green", "red"]
 
     # Grey, and struck through — the CSS has to carry the strike, not just the class.
@@ -502,42 +455,37 @@ def test_the_panel_counts_what_the_differ_found_and_nothing_else():
                                                _op("GET", "/api/pets", 22)])
     assert oac.change_count(result) == 25
     # The band counts endpoints (7 Oct 2026), not the 25 changes inside them.
-    assert "2 endpoints changed" in _panel_text(oac.panel(result, {"breaking": [],
-                                                                  "subjects": 2}))
+    assert "2 endpoints changed" in _panel_text(oac.panel(result))
     # One more endpoint and the sentence moves with it. No fixture pins "2".
     result["additive"].append(_op("GET", "/api/vets", 1))
-    assert "3 endpoints changed" in _panel_text(oac.panel(result, {"breaking": [],
-                                                                  "subjects": 3}))
+    assert "3 endpoints changed" in _panel_text(oac.panel(result))
     # More changes on an endpoint already counted do not move it.
     result["additive"].append(_op("GET", "/api/vets", 4))
-    assert "3 endpoints changed" in _panel_text(oac.panel(result, {"breaking": [],
-                                                                  "subjects": 3}))
+    assert "3 endpoints changed" in _panel_text(oac.panel(result))
     # A single endpoint is not "1 endpoints".
     one = _result(oac.COMPATIBLE, additive=[_op("GET", "/api/vets", 1)])
-    assert "1 endpoint changed" in _panel_text(oac.panel(one, {"breaking": [],
-                                                              "subjects": 1}))
+    assert "1 endpoint changed" in _panel_text(oac.panel(one))
 
 
 def test_the_breaking_panel_counts_the_endpoints_broken_and_nothing_else():
     """7 Oct 2026: "9 changes, 1 breaking across 1 endpoint · checked by oasdiff,
-    double-checked by openapi-diff.py" wrapped onto two lines. The band says how many
+    double-checked by …" wrapped onto two lines. The band says how many
     endpoints break; the changes inside them are what the tab below lists."""
     result = _result(oac.INCOMPATIBLE,
                      breaks=[_op("DELETE", "/api/visits/{id}", 2)],
                      additive=[_op("GET", "/api/owners", 3)])
-    text = _panel_text(oac.panel(result, {"breaking": ["a", "b"], "subjects": 2}))
+    text = _panel_text(oac.panel(result))
     # verdict · counts · who checked it — the same shape as the green line.
     assert text.startswith("Breaking changes · 1 endpoint broken · checked by"), text
-    assert text.endswith("checked by oasdiff and our openapi-diff.py"), text
+    assert text == "Breaking changes · 1 endpoint broken · checked by oasdiff", text
     assert "double-checked" not in text and "change," not in text, text
 
     single = _result(oac.INCOMPATIBLE, breaks=[_op("DELETE", "/api/visits/{id}", 1)])
-    assert _panel_text(oac.panel(single, {"breaking": ["a"], "subjects": 1})).startswith(
+    assert _panel_text(oac.panel(single)).startswith(
         "Breaking change · 1 endpoint broken ·")
     two = _result(oac.INCOMPATIBLE, breaks=[_op("DELETE", "/api/visits/{id}", 1),
                                             _op("GET", "/api/owners", 1)])
-    assert "· 2 endpoints broken ·" in _panel_text(oac.panel(two, {"breaking": ["a", "b"],
-                                                                   "subjects": 2}))
+    assert "· 2 endpoints broken ·" in _panel_text(oac.panel(two))
 
 
 def _entry(level, rule, op="GET", path="/api/owners"):
@@ -555,29 +503,16 @@ def test_one_break_among_additions_counts_as_one_break():
     assert result["state"] == oac.INCOMPATIBLE
     assert oac.breaking_count(result) == 1
     assert oac.change_count(result) == 6
-    text = _panel_text(oac.panel(result, {"breaking": ["GET /api/owners — replaced"],
-                                          "subjects": 2}))
+    text = _panel_text(oac.panel(result))
     assert text.startswith("Breaking change · 1 endpoint broken ·"), text
     # The INFO entries are not dropped: the operation's compatible movement lists them.
-    fragment = oac.render(result, None, "provenance", "")
+    fragment = oac.render(result, "provenance", "")
     assert re.search(r'What breaks <span class="oac-count">1<', fragment), fragment
     assert "5 compatible changes besides the break above" in fragment
     # A WARN entry is breaking too — oasdiff's own `breaking` command is level >= 2.
     warn = oac.read_changelog([_entry(2, "request-param-enum-value-removed"),
                                _entry(1, "x")])
     assert oac.breaking_count(warn) == 1 and oac.change_count(warn) == 2
-
-
-def test_a_different_count_under_the_same_verdict_cannot_contradict_the_band():
-    """Both differs say breaking, but count it differently. The band used to name both
-    numbers so the second report would not contradict it silently; since it counts
-    endpoints, not breaking changes, there is no count of theirs for it to contradict."""
-    result = _result(oac.INCOMPATIBLE, breaks=[_op("GET", "/api/owners", 1)],
-                     additive=[_op("GET", "/api/owners", 5)])
-    text = _panel_text(oac.panel(result, {"breaking": ["a", "b", "c"], "subjects": 2}))
-    assert _panel_class(oac.panel(result, {"breaking": ["a"], "subjects": 2})) == "red"
-    assert text.startswith("Breaking change · 1 endpoint broken · checked by"), text
-    assert "counts" not in text and "breaking" not in text.lower().split("·", 1)[1], text
 
 
 def test_the_band_wraps_as_a_sentence_and_never_opens_a_line_on_the_dot():
@@ -589,78 +524,57 @@ def test_the_band_wraps_as_a_sentence_and_never_opens_a_line_on_the_dot():
     band = re.search(r"\.apiverdict\{([^}]*)\}", css).group(1)
     assert "display:block" in band and "align-items:center" not in band, band
     result = _result(oac.INCOMPATIBLE, breaks=[_op("GET", "/api/owners", 1)])
-    html_ = oac.panel(result, None)
+    html_ = oac.panel(result)
     assert '</span>&nbsp;<span class="n">·&nbsp;' in html_
     assert "Breaking change" in _panel_text(html_)
 
 
-def test_a_replaced_schema_is_one_breaking_change_not_three():
-    """`type: array` + `items` → `$ref`: one node swapped its shape. Ours used to list
-    `$ref added`, `items removed`, `type removed` — 3 breaking beside oasdiff's 1."""
-    before = {"responses": {"200": {"content": {"application/json": {"schema": {
-        "type": "array", "items": {"$ref": "#/components/schemas/OwnerDto"}}}}}}}
-    after = {"responses": {"200": {"content": {"application/json": {"schema": {
-        "$ref": "#/components/schemas/OwnerPageDto"}}}}}}
-    changes = oad.changes_from_leaves(before, after)
-    breaking = [c for c in changes if c.level == oad.BREAKING]
-    assert len(breaking) == 1, [c.text for c in changes]
-    assert "OwnerDto[]" in breaking[0].text and "OwnerPageDto" in breaking[0].text
-    # A lone `format` change is still its own line — only a moved $ref/type folds.
-    lone = oad.changes_from_leaves({"schema": {"type": "string", "format": "date"}},
-                                   {"schema": {"type": "string", "format": "date-time"}})
-    assert len(lone) == 1 and "date-time" in lone[0].text
-
-
 def test_nothing_moved_says_so_and_gets_out_of_the_way():
-    same = oac.panel(_result(oac.NO_CHANGES, identical=True), {"breaking": [], "subjects": 0})
+    same = oac.panel(_result(oac.NO_CHANGES, identical=True))
     assert _panel_text(same).startswith("No API changes · 0 endpoints changed · checked by")
     # A reworded description moves the spec without moving the contract; the panel must
     # not flatly claim the two files are the same, the way the seal below does not.
-    moved = oac.panel(_result(oac.NO_CHANGES, identical=False), {"breaking": [], "subjects": 0})
+    moved = oac.panel(_result(oac.NO_CHANGES, identical=False))
     assert "0 endpoints changed for a caller" in _panel_text(moved)
-
-
-def test_a_disagreement_never_claims_both_tools_checked_it():
-    """"checked by oasdiff and our openapi-diff.py" is a claim that the two agreed. When they
-    do not, the panel has to say the opposite — and it must not read as safe."""
-    over_strict = oac.panel(_result(oac.COMPATIBLE, additive=[_op("GET", "/api/owners", 3)]),
-                            {"breaking": ["VisitDto.vetId — type changed"], "subjects": 4})
-    text = _panel_text(over_strict)
-    assert _panel_class(over_strict) == "red", "a contested verdict rendered as safe"
-    assert "checked by" not in text, text
-    assert text == ("Verdict disputed · 1 endpoint changed, breaking by our openapi-diff.py, "
-                    "not by oasdiff · the two differs disagree — one of them is wrong "
-                    "about somebody's client"), text
-
-    missed = oac.panel(_result(oac.INCOMPATIBLE, breaks=[_op("DELETE", "/api/x", 2)]),
-                       {"breaking": [], "subjects": 1})
-    missed_text = _panel_text(missed)
-    assert _panel_class(missed) == "red"
-    assert "checked by" not in missed_text
-    assert "1 endpoint broken by oasdiff, none by our openapi-diff.py" in missed_text
 
 
 def test_the_panel_credits_only_the_differ_that_actually_ran():
     """With oasdiff installed the Java tool is never invoked; crediting it would be a
     check that did not happen. The fallback is the other way round."""
-    with_oasdiff = oac.panel(_result(oac.COMPATIBLE, additive=[_op("GET", "/api/o", 1)]),
-                             {"breaking": [], "subjects": 1})
+    with_oasdiff = oac.panel(_result(oac.COMPATIBLE, additive=[_op("GET", "/api/o", 1)]))
     assert "OpenAPITools/openapi-diff" not in with_oasdiff
     assert "github.com/oasdiff/oasdiff" in with_oasdiff
 
     fallback = _result(oac.COMPATIBLE, source=f"openapi-diff {oac.VERSION}", complete=False,
                        additive=[{"method": "GET", "path": "/api/owners", "note": "changed"}])
-    text = _panel_text(oac.panel(fallback, {"breaking": [], "subjects": 1}))
+    text = _panel_text(oac.panel(fallback))
     assert "OpenAPITools/openapi-diff" in text
     assert "oasdiff" in text and "lower bound" in text, (
         "a count from a list that cannot follow a $ref must not look whole")
     # An operation nobody itemised is still one endpoint changed, not zero.
     assert "1 endpoint changed" in text
 
-    # Nobody to cross-check against is its own admission, not silence.
-    alone = _panel_text(oac.panel(_result(oac.COMPATIBLE,
-                                          additive=[_op("GET", "/api/o", 1)]), None))
-    assert "the cross-check did not run" in alone
+
+
+def test_the_band_names_one_differ_and_it_is_not_ours():
+    """7 Oct 2026: our own `openapi-diff.py` used to sit beside oasdiff as a second opinion
+    and turn the band red as "Verdict disputed" whenever the two disagreed. An eval on 121
+    spec pairs (`reference/openapi-differ-eval.md`) showed it wrong far more often than the
+    tool it checked, so it was deleted; what it alone caught was reported to oasdiff. The
+    band credits the one differ that ran, with its report — and nothing home-made."""
+    with tempfile.TemporaryDirectory() as tmp:
+        assets = Path(tmp)
+        (assets / oac.REPORTS["engine"]).write_text("x", encoding="utf-8")
+        band = oac.panel(_result(oac.INCOMPATIBLE, breaks=[_op("GET", "/api/owners", 1)]),
+                         assets)
+    assert _panel_text(band) == ("Breaking change · 1 endpoint broken · "
+                                 "checked by oasdiff (report ↗)"), _panel_text(band)
+    assert not (HERE / "openapi-diff.py").exists(), "the home-made differ is back"
+    source = COMPAT.read_text(encoding="utf-8")
+    for gone in ("our_verdict", "cross_check", "--no-cross-check"):
+        assert gone not in source, gone
+    band_code = source[source.index("def panel("):source.index("# ── the tool's markdown")]
+    assert "disputed" not in band_code.lower(), "a second differ is arguing with the tool again"
 
 
 def test_the_panel_count_matches_what_oasdiff_reported():
@@ -670,7 +584,7 @@ def test_the_panel_count_matches_what_oasdiff_reported():
         return
     with tempfile.TemporaryDirectory() as tmp:
         base, head = specs(Path(tmp))
-        rendered = compat(str(base), str(head), "--panel", "--no-cross-check")
+        rendered = compat(str(base), str(head), "--panel")
         assert rendered.returncode == 0, rendered.stderr
         raw = subprocess.run([os.environ.get("OASDIFF_BIN", "oasdiff"), "changelog",
                               str(base), str(head), "-f", "json"],
@@ -750,7 +664,7 @@ def test_a_swapped_media_type_is_one_change_on_the_band_as_in_the_visual_diff():
     result = oac.read_changelog(_swap_entries())
     assert oac.change_count(result) == 3, result
     assert oac.breaking_count(result) == 2
-    text = _panel_text(oac.panel(result, None))
+    text = _panel_text(oac.panel(result))
     assert text.startswith("Breaking changes · 1 endpoint broken"), text
     # The folded line says what happened, in one sentence, at the higher severity.
     reasons = " ".join(t for b in result["breaks"] for _, t in b["reasons"])
@@ -768,13 +682,13 @@ def test_the_band_counts_no_changes_so_neither_oasdiff_nor_the_toggle_can_disagr
     ("8 changes" over "expand 7 impacted"), then with `oasdiff changelog` itself (7 vs 8),
     and needed a hover to own up to the fold. Since 7 Oct 2026 the band counts endpoints,
     which the fold never changes: the swap is on one endpoint however it is counted."""
-    band = oac.panel(oac.read_changelog(_swap_entries()), None)
+    band = oac.panel(oac.read_changelog(_swap_entries()))
     assert "data-tip" not in band, band
     text = _panel_text(band)
     assert text.startswith("Breaking changes · 1 endpoint broken ·"), text
     assert not re.search(r"\d+ changes?\b", text), text
     plain = [e for e in _swap_entries() if e["id"] != "response-media-type-added"]
-    assert _panel_text(oac.panel(oac.read_changelog(plain), None)).startswith(
+    assert _panel_text(oac.panel(oac.read_changelog(plain))).startswith(
         "Breaking changes · 1 endpoint broken ·")
 
 
@@ -786,7 +700,7 @@ def test_the_band_counts_the_endpoints_oasdiff_broke_end_to_end():
         base, head = Path(tmp) / "before.yaml", Path(tmp) / "after.yaml"
         base.write_text(SWAP_BEFORE, encoding="utf-8")
         head.write_text(SWAP_AFTER, encoding="utf-8")
-        band = compat(str(base), str(head), "--panel", "--no-cross-check")
+        band = compat(str(base), str(head), "--panel")
         assert band.returncode == 0, band.stderr
         raw = subprocess.run([os.environ.get("OASDIFF_BIN", "oasdiff"), "changelog",
                               str(base), str(head), "-f", "json"],
@@ -810,16 +724,15 @@ def test_the_report_calls_the_review_base_the_review_base():
 
 
 def test_a_differ_name_and_its_report_link_wrap_as_one():
-    """Run 6, 1440px: the band broke between `openapi-diff.py` and its "(report ↗)",
+    """Run 6, 1440px: the band broke between a differ's name and its "(report ↗)",
     leaving the arrow alone on the second line."""
     with tempfile.TemporaryDirectory() as tmp:
         assets = Path(tmp)
         for name in oac.REPORTS.values():
             (assets / name).write_text("x", encoding="utf-8")
-        frag = oac.panel(_result(oac.INCOMPATIBLE, breaks=[_op("GET", "/api/owners", 2)]),
-                         {"breaking": ["a", "b"], "subjects": 1}, assets)
+        frag = oac.panel(_result(oac.INCOMPATIBLE, breaks=[_op("GET", "/api/owners", 2)]), assets)
     units = re.findall(r'<span class="who">(.*?</a>\))</span>', frag)
-    assert len(units) == 2 and all("report" in u for u in units), frag
+    assert len(units) == 1 and "oasdiff" in units[0] and "report" in units[0], frag
     assert ".apiverdict .who{white-space:nowrap}" in oac.PANEL_CSS
 
 if __name__ == "__main__":

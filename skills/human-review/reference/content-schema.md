@@ -219,8 +219,8 @@ deletion is visible in a diff, and a face carrying all three would invite readin
 smallest of them as the answer.
 
 ```json
-"extraCss": ["assets/openapi-diff.css", "assets/openapi-compat.css",
-             "assets/complexity-delta.css", "assets/ds-audit.css"],
+"extraCss": ["assets/openapi-compat.css", "assets/complexity-delta.css",
+             "assets/ds-audit.css"],
 "testChanges": "assets/test-changes.json",
 "playwrightTraces": "assets/traces.json",
 "footer": "Report built by /human-review against the running stack on 2 Sep 2026."

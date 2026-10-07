@@ -1701,12 +1701,11 @@ def _complexity(ctx: Ctx):
 def _api(ctx: Ctx):
     spec = ctx.cfg.get("spec", "openapi.yaml")
     for cmd in (
-        # `--report` is the openable twin of each fragment, written in the same run so the
-        # two cannot drift. The verdict band links to them by name, and only links to the
-        # ones it can see on disk — so these have to be written before the --panel call.
-        f"{HERE}/openapi-diff.py   --base {ctx.base} --spec {spec} --out {ART}/openapi-diff.html"
-        f" --report {ART}/openapi-diff-report.html",
-        f"{HERE}/openapi-diff.py   --css  >  {ART}/openapi-diff.css",
+        # `--report` is the openable twin of the fragment, written in the same run so the
+        # two cannot drift. The verdict band links to it by name, and only when it can see
+        # it on disk — so it has to be written before the --panel call. oasdiff is the one
+        # differ: our own openapi-diff.py was dropped on 7 Oct 2026, see
+        # reference/openapi-differ-eval.md.
         f"{HERE}/openapi-compat.py --base {ctx.base} --spec {spec} --out {ART}/openapi-compat.html"
         f" --report {ART}/openapi-compat-report.html",
         f"{HERE}/openapi-compat.py --css  >  {ART}/openapi-compat.css",
@@ -2149,10 +2148,9 @@ STEP_INPUTS = {
                      "outputs": ("assets/complexity-delta.html",
                                  "assets/complexity-delta.css")},
     "api":          {"paths": ("*.yaml", "*.yml", "*.json"),
-                     "tools": ("openapi-diff.py", "openapi-compat.py",
-                               "openapi-visual-diff.py"),
-                     "outputs": ("assets/openapi-verdict.html", "assets/openapi-diff.html",
-                                 "assets/openapi-compat.html", "assets/openapi-diff.css",
+                     "tools": ("openapi-compat.py", "openapi-visual-diff.py"),
+                     "outputs": ("assets/openapi-verdict.html",
+                                 "assets/openapi-compat.html",
                                  "assets/openapi-compat.css",
                                  "assets/openapi-visual-diff.html")},
     "specchanges":  {"paths": ("*.yaml", "*.yml"),

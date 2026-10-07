@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Is the new REST contract backward compatible? — answered by a tool, not by us.
 
-`openapi-diff.py`, next door, is *our* reading of the spec: it classifies every
-difference and it is the thing a human actually reads. This script asks the same
-question of an independent differ and puts its verdict at the top of the contract
-tab:
+This script asks an independent, open-source differ and puts its verdict at the top
+of the contract tab:
 
     no_changes  ·  compatible  ·  incompatible
 
-Two differs, one contract. That is the point: a verdict nobody can accuse of
-being the same code that produced the change, and a **cross-check** that says out
-loud when the two disagree. A disagreement is not noise — it is the single most
-review-worthy line on the page, because exactly one of the two is wrong about
-whether somebody's client breaks.
+**One differ, and not ours.** The skill used to run its own classifier,
+`openapi-diff.py`, as a second opinion beside the tool, and turned the band red as
+"Verdict disputed" whenever the two disagreed. An eval on 121 spec pairs (7 Oct 2026,
+`reference/openapi-differ-eval.md`) settled it: ours missed 31 breaking changes oasdiff
+caught, raised 15 false alarms to oasdiff's 2, and caught 5 oasdiff missed — the clear ones
+reported upstream rather than kept as a private patch. A home-made second opinion that
+is wrong far more often than the tool it checks only teaches a reviewer to ignore red.
 
 **Which differ, and why it matters more than it sounds.** The list of affected
 operations used to come from *OpenAPITools/openapi-diff* (the Java tool), read out
@@ -419,26 +419,6 @@ def read_report(report: dict) -> dict:
             "elsewhere": [], "source": f"openapi-diff {VERSION}", "complete": False}
 
 
-# ── the second opinion: what our own classifier said ──────────────────────────────
-def our_verdict(argv: list) -> dict | None:
-    """`openapi-diff.py`'s own answer, so the page can say when the two disagree."""
-    sibling = Path(__file__).with_name("openapi-diff.py")
-    if not sibling.is_file():
-        return None
-    proc = run([sys.executable, str(sibling), *argv, "--json"])
-    if proc.returncode != 0:
-        print(f"[openapi-compat] cross-check skipped: {proc.stderr.strip()}", file=sys.stderr)
-        return None
-    try:
-        subjects = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return None
-    breaking = [f"{s['name']} — {c['text']}"
-                for s in subjects for c in s.get("changes", []) if c["level"] == "breaking"]
-    breaking += [s["name"] for s in subjects if s["status"] == "removed" and not s.get("changes")]
-    return {"breaking": breaking, "subjects": len(subjects)}
-
-
 # ── rendering ─────────────────────────────────────────────────────────────────────
 VERB_CLASS = {"GET": "get", "POST": "post", "PUT": "put", "PATCH": "put", "DELETE": "delete"}
 
@@ -463,7 +443,7 @@ INCOMPLETE_BAND = (
 )
 
 
-def render(result: dict, ours: dict | None, provenance: str, changelog: str,
+def render(result: dict, provenance: str, changelog: str,
            before: dict | None = None, after: dict | None = None) -> str:
     state = result["state"]
     breaks, additive = result["breaks"], result["additive"]
@@ -490,7 +470,7 @@ def render(result: dict, ours: dict | None, provenance: str, changelog: str,
         # is the same overstatement in miniature.
         sub = ("The specs differ, but nothing that moved can reach a client: no operation, "
                "payload, status or constraint changed. The rest — a description, a version, "
-               "an example — is on the openapi-diff.py tab.")
+               "an example — is documentation, not contract.")
 
     # A seal is a claim about *everything*. Over a list we know can be short it would be a
     # lie of omission, so it says so on its face rather than only in the small print.
@@ -554,50 +534,11 @@ def render(result: dict, ours: dict | None, provenance: str, changelog: str,
                      f'<span class="oac-count">{len(result["elsewhere"])}</span></div>'
                      f'<div class="oac-row"><ul class="oac-reasons">{items}</ul></div>')
 
-    parts.append(cross_check(state, ours))
     if changelog:
         parts.append('<details class="oac-log"><summary>The full changelog, as the tool '
                      "wrote it</summary>" + changelog + "</details>")
     parts.append("</div>")
     return "\n".join(p for p in parts if p)
-
-
-CROSS_CHECK_LIMIT = 8
-
-
-def cross_check(state: str, ours: dict | None) -> str:
-    if ours is None:
-        return ""
-    we_break, they_break = bool(ours["breaking"]), state == INCOMPATIBLE
-    if we_break == they_break:
-        verdict = "breaking" if we_break else "safe"
-        # "subjects" counts operations *and* schemas, its own way — spelling that out keeps
-        # the number from reading as a rival count of the operation list above.
-        return ('<div class="oac-agree"><b>Both differs agree.</b> '
-                f'<code>openapi-diff.py</code> read {ours["subjects"]} changed subject'
-                f'{"s" if ours["subjects"] != 1 else ""} — operations and schemas, counted its '
-                "own way, not the list above — out of the same two revisions, and also "
-                f'calls this <b>{verdict}</b>. The verdict is not one tool\'s opinion.</div>')
-    # A cut list is fine. A cut list that looks whole is how a reviewer concludes there
-    # were eight, so the count of what is not on screen goes on screen.
-    total = len(ours["breaking"])
-    shown = ours["breaking"][:CROSS_CHECK_LIMIT]
-    listed = "".join(f"<li>{html.escape(x)}</li>" for x in shown) or "<li>—</li>"
-    if total > len(shown):
-        listed += (f'<li class="oac-more">showing {len(shown)} of {total} — the remaining '
-                   f'{total - len(shown)} are in the classified list on this tab, which is '
-                   "where they came from</li>")
-    if we_break and not they_break:
-        body = ("our own classifier flagged something as breaking that the reference "
-                "implementation considers compatible. Either we are over-strict, or the tool's "
-                "rule set does not cover this shape — read the lines below and decide, because "
-                "one of the two is wrong about somebody's client:")
-    else:
-        body = ("the reference implementation found an incompatibility our classifier missed. "
-                "Trust the tool here and treat the section above as the real list; "
-                "<code>openapi-diff.py</code> has a gap worth fixing. It flagged:")
-    return (f'<div class="oac-disagree"><b>The two differs disagree</b> — {body}'
-            f'<ul class="oac-reasons">{listed}</ul></div>')
 
 
 # ── the one line at the top of the API tab ────────────────────────────────────────
@@ -607,25 +548,18 @@ def cross_check(state: str, ours: dict | None) -> str:
 # this whole report exists to prevent.
 #
 # Three states, three colours: nothing moved (grey, struck through), it moved and nothing
-# breaks (green), something breaks (red). The two differs disagreeing is a fourth
-# *situation*, not a fourth colour: a contested verdict is exactly as review-worthy as a
-# breaking one, and the single thing it certainly is not is "safe, checked by both". So it
-# renders red, and the clause that would have claimed agreement says the opposite instead.
+# breaks (green), something breaks (red).
 OASDIFF_URL = "https://github.com/oasdiff/oasdiff"
 JAVA_DIFF_URL = "https://github.com/OpenAPITools/openapi-diff"
-# Not "openapi-diff": with oasdiff installed the Java tool never runs, so naming it here
-# would credit a check that did not happen. The cross-check's other half is our sibling
-# script, and it is named as one.
-OURS_LABEL = "<code>openapi-diff.py</code>"
-# The openable copies of the two full reports, written by `--report` in the same runs that
-# write the fragments. Naming a differ in the band and giving the reader nowhere to check
-# it is half an answer: the counts are a summary, and the working is on disk either way.
-REPORTS = {"engine": "openapi-compat-report.html", "ours": "openapi-diff-report.html"}
+# The openable copy of the full report, written by `--report` in the same run that writes
+# the fragment. Naming a differ in the band and giving the reader nowhere to check it is
+# half an answer: the counts are a summary, and the working is on disk either way.
+REPORTS = {"engine": "openapi-compat-report.html"}
 
 PANEL_CSS = """<style>
 /* Running text, not a flex row. As a row the label sat vertically centred beside a
    two-line count, so the count's second line hung under nothing (eval run 8: "Breaking
-   changes" floating mid-band, "openapi-diff.py (report)" wrapped beneath the counts). Inline,
+   changes" floating mid-band, the differ's "(report)" wrapped beneath the counts). Inline,
    the sentence wraps the way a sentence does: from the left edge, under the label.
    Slim, and close to the frame under it (Victor, 5 Oct 2026): the band is one line read
    once, and every pixel it takes is a pixel of the diff below — which fills the window. */
@@ -726,50 +660,24 @@ def who(label: str) -> str:
     return f'<span class="who">{label}</span>'
 
 
-def panel(result: dict, ours: dict | None,
-          assets: Path | None = None, prefix: str = "assets/") -> str:
+def panel(result: dict, assets: Path | None = None, prefix: str = "assets/") -> str:
     """The verdict, how many endpoints it touches, and who checked it — on one line."""
     state = result["state"]
-    # Built once, with its report already attached, because the name is used in three
-    # different sentences below — credited, disputed, or standing alone — and a reader
-    # who can open the working in one of them should be able to in all three.
-    # Each name and its "(report ↗)" are one unbreakable unit: at 1440px the band wrapped
-    # between them and left the second "(report ↗)" alone on a line of its own.
+    # The name and its "(report ↗)" are one unbreakable unit: at 1440px the band wrapped
+    # between them and left "(report ↗)" alone on a line of its own.
     engine = who(engine_link(result) + report_link("engine", assets, prefix))
-    # "our": the second differ is this skill's own script, not a second tool off the
-    # shelf, and the band says so wherever it names it (Victor, 7 Oct 2026). The word
-    # sits outside the unbreakable unit; only the name and its report link must not part.
-    ours_label = "our " + who(OURS_LABEL + report_link("ours", assets, prefix))
     n_break = breaking_count(result)
     # The band counts *endpoints*, not changes: "N changes, M breaking across K endpoints"
     # made the reader do arithmetic the diff right below already does, row by row, and
     # pushed the band onto a second line. What a reader needs from the band is how many
     # endpoints a caller has to worry about; which changes, and how many, is what the
-    # tab is for (Victor, 7 Oct 2026). Same reason the two differs are joined by "and":
-    # "double-checked by" was the long way of saying it.
+    # tab is for (Victor, 7 Oct 2026).
     n_broken = len(result.get("breaks") or [])
     n_changed = endpoint_count(result)
 
-    they_break = state == INCOMPATIBLE
-    we_break = bool(ours and ours["breaking"])
-    disputed = ours is not None and we_break != they_break
+    checked = f"checked by {engine}"
 
-    checked = (f"checked by {engine} and {ours_label}"
-               if ours is not None else
-               f"checked by {engine} alone — the cross-check did not run")
-
-    if disputed:
-        cls, verdict = "red", "Verdict disputed"
-        # openapi-diff.py reports schema nodes, not endpoints, so only the engine's side
-        # can be counted in the band's currency; ours is named, not numbered.
-        counts = (f"{endpoints(n_broken)} broken by {engine}, none by {ours_label}"
-                  if they_break else
-                  f"{endpoints(n_changed)} changed, breaking by {ours_label}, "
-                  f"not by {engine}")
-        # The counts clause just named both tools; repeating them here only buys a
-        # second copy of the same link.
-        checked = "the two differs disagree — one of them is wrong about somebody's client"
-    elif state == INCOMPATIBLE:
+    if state == INCOMPATIBLE:
         cls = "red"
         verdict = f"Breaking change{'' if n_break == 1 else 's'}"
         counts = f"{endpoints(n_broken)} broken"
@@ -893,7 +801,6 @@ CSS = """
 .oac-reasons { list-style:none; margin:.45rem 0 0; padding:0; display:grid; gap:.28rem; }
 .oac-reasons li { font-size:.88rem; line-height:1.6; }
 .oac-reasons li::before { content:"↳"; color:var(--muted); margin-right:.45rem; }
-.oac-reasons li.oac-more { color:var(--muted); font-size:.8rem; font-style:italic; }
 .oac-lv { font:700 .64rem/1.8 inherit; text-transform:uppercase; letter-spacing:.04em;
           border-radius:3px; padding:0 .3rem; }
 .oac-lv-err  { background:#fdeaea; color:#8a1c1c; }
@@ -903,11 +810,6 @@ CSS = """
 .oac code { font:600 12px/1.5 ui-monospace,Menlo,monospace; background:var(--code-bg);
             border-radius:3px; padding:0 .25rem; }
 .oac b.oac-add { color:#2e7d32; } .oac b.oac-del { color:#c62828; }
-.oac-agree, .oac-disagree { margin:1.2rem 0 0; border-radius:8px; padding:.65rem .85rem;
-                            font-size:.86rem; line-height:1.7; }
-.oac-agree { background:var(--code-bg); color:var(--muted); }
-.oac-agree b { color:var(--fg); }
-.oac-disagree { background:#fdf3e2; color:#6b4a0f; border:1px solid #e5c98f; }
 .oac-log { margin:1.4rem 0 0; }
 .oac-log summary { cursor:pointer; color:var(--muted); font-size:.85rem; }
 .oac-log-op { margin:.9rem 0 .2rem; display:flex; align-items:center; gap:.5rem; }
@@ -926,7 +828,7 @@ CSS = """
   .oac-compatible   .oac-seal { background:#1b2c1f; color:#9ad3a5; }
   .oac-partial .oac-seal { background:#3a3018; color:#e6c07b; }
   .oac b.oac-add { color:#8fd39c; } .oac b.oac-del { color:#f08a8a; }
-  .oac-disagree, .oac-incomplete { background:#3a3018; color:#e6c07b; border-color:#6b5520; }
+  .oac-incomplete { background:#3a3018; color:#e6c07b; border-color:#6b5520; }
   .oac-lv-err  { background:#3a1f1f; color:#f2a0a0; }
   .oac-lv-warn { background:#3a3018; color:#e6c07b; }
 }
@@ -971,8 +873,6 @@ def main(argv=None) -> int:
                          "(report) links the --panel band puts after each differ")
     ap.add_argument("--jar", help="path to openapi-diff-cli-*-all.jar (default: fetch & cache)")
     ap.add_argument("--docker", action="store_true", help=f"run {DOCKER_IMAGE} instead of java")
-    ap.add_argument("--no-cross-check", action="store_true",
-                    help="skip comparing the verdict against openapi-diff.py")
     ap.add_argument("--no-oasdiff", action="store_true",
                     help="ignore oasdiff and use the Java fallback (which cannot follow a $ref)")
     args = ap.parse_args(argv)
@@ -982,18 +882,17 @@ def main(argv=None) -> int:
         print(schema_tree.CSS)
         return 0
 
-    # Where the sibling reports land: right next to this panel, because the API step writes
-    # all three into the same assets directory. Without `--out` there is no directory to
+    # Where the report lands: right next to this panel, because the API step writes both
+    # into the same assets directory. Without `--out` there is no directory to
     # look in, and `report_link` then emits nothing rather than guessing.
     assets = Path(args.out).parent if args.out else None
 
-    sibling_args, spec_rel = [], args.spec
+    spec_rel = args.spec
     with tempfile.TemporaryDirectory(prefix="openapi-compat-") as tmp:
         tmpdir = Path(tmp)
         if args.before and args.after:
             before, after = Path(args.before).resolve(), Path(args.after).resolve()
             spec_rel = args.after
-            sibling_args = [args.before, args.after]
             pair = (f"<code>{html.escape(before.name)}</code> → "
                     f"<code>{html.escape(after.name)}</code>")
         else:
@@ -1004,7 +903,6 @@ def main(argv=None) -> int:
             merge_base = run(["git", "merge-base", args.base, "HEAD"], cwd=root)
             base_ref = merge_base.stdout.strip() if merge_base.returncode == 0 else args.base
             base_spec = run(["git", "show", f"{base_ref}:{spec_rel}"], cwd=root)
-            sibling_args = ["--base", args.base, "--spec", args.spec]
             which = base_name(args.base, run(["git", "rev-parse", "--verify", "--quiet",
                                               f"{args.base}^{{commit}}"],
                                              cwd=root).stdout.strip(), base_ref)
@@ -1014,9 +912,9 @@ def main(argv=None) -> int:
                 # No spec at the base means no client compiled against one. Nothing to break.
                 fresh = {"state": NO_CHANGES, "breaks": [], "additive": [],
                          "deprecated": [], "elsewhere": [], "complete": True}
-                frag = (panel(fresh, None, assets, args.asset_prefix) if args.panel
+                frag = (panel(fresh, assets, args.asset_prefix) if args.panel
                         else render(
-                    fresh, None,
+                    fresh,
                     pair + f". The spec did not exist at {which}, so there is "
                     "no prior contract to break.", ""))
                 return emit(args, frag, {"state": NO_CHANGES})
@@ -1033,7 +931,7 @@ def main(argv=None) -> int:
             result = read_changelog(entries)
             provenance = (
                 f"{pair}, read by <b>oasdiff {html.escape(oasdiff_version() or '')}</b> — an "
-                "independent differ, not ours. It resolves <code>$ref</code>s, so an operation "
+                "independent, open-source differ. It resolves <code>$ref</code>s, so an operation "
                 "is listed here because of <i>any</i> schema it reaches, not only because its "
                 "own <code>paths</code> entry moved. Every line below carries the rule id that "
                 "produced it."
@@ -1066,13 +964,11 @@ def main(argv=None) -> int:
         print(result["state"])
         return 0
 
-    ours = None if args.no_cross_check else our_verdict(sibling_args)
-    frag = (panel(result, ours, assets, args.asset_prefix) if args.panel
-            else render(result, ours, provenance, changelog, before_spec, after_spec))
+    frag = (panel(result, assets, args.asset_prefix) if args.panel
+            else render(result, provenance, changelog, before_spec, after_spec))
     if args.report and not args.panel:
-        # Same body, second file — never a second run of oasdiff. See the twin comment in
-        # openapi-diff.py: a report that disagrees with the fragment it came from is the
-        # one failure this cross-checking page cannot afford to ship.
+        # Same body, second file — never a second run of oasdiff: a report that disagrees
+        # with the fragment it came from is the one failure this page cannot afford to ship.
         rep = Path(args.report)
         rep.parent.mkdir(parents=True, exist_ok=True)
         rep.write_text(report_page.wrap(

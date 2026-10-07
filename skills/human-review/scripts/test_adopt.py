@@ -85,6 +85,19 @@ def test_each_data_card_gets_its_own_button_inside_its_border_with_its_own_promp
         "test and diffed base against branch"]
 
 
+def test_a_drawio_card_whose_head_holds_its_action_buttons_is_still_a_drawio_piece():
+    """16fe638 moved a card's action buttons into its head, before the file name. Read up
+    to the first `</div>`, the head ended at the buttons, the `.drawio` file name was never
+    seen, and the Deployment card got the PlantUML prompt and the PlantUML (i) — found by
+    tonight's from-scratch rebuild against the hand-polished page."""
+    head_buttons = ('<div class="rerun-acts"><a class="dgm-edit" href="#">Edit</a></div>')
+    body = ('<div class="diagram"><div class="head"><b>Deployment</b>' + head_buttons
+            + '<a class="dgm-src">Deployment.drawio.png</a></div>'
+            '<div class="svgbox"><svg></svg></div></div>')
+    out = place_prompts("packages", body)
+    assert 'data-piece="diagram.drawio' in out, out
+
+
 def test_a_diagram_inside_a_test_pair_is_part_of_the_pair_not_a_piece_of_its_own():
     body = '<div class="diagram dgm-bare"><div class="head"></div></div>'
     assert place_prompts("packages", body) == body

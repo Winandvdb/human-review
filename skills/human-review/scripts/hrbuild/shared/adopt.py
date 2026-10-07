@@ -447,10 +447,16 @@ def place_prompts(tid: str, body: str) -> str:
             taken.append((hit.start(), span[1]))
             name, title = piece, ""
             if piece is None:       # a diagram card: its piece is read off its head
-                head = re.search(r'<div class="head">(.*?)</div>', body[hit.start():span[0]],
-                                 re.S)
-                text = html.unescape(re.sub(r"<[^>]+>", " ", head.group(1) if head else ""))
-                b = re.search(r"<b>(.*?)</b>", head.group(1) if head else "", re.S)
+                # The whole head, balanced: since the action buttons moved into it
+                # (16fe638) it nests a `rerun-acts` div before the file name, and a
+                # non-greedy `.*?</div>` stopped there — a draw.io card then lost its
+                # `.drawio` and got the PlantUML prompt and explainer.
+                card = body[hit.start():span[0]]
+                h0 = card.find('<div class="head">')
+                h1 = _close(card, h0) if h0 >= 0 else None
+                inner = card[h0 + len('<div class="head">'):h1[0]] if h1 else ""
+                text = html.unescape(re.sub(r"<[^>]+>", " ", inner))
+                b = re.search(r"<b>(.*?)</b>", inner, re.S)
                 title = html.unescape(re.sub(r"<[^>]+>", "", b.group(1))).strip() if b else ""
                 name = next((k for k, rx in DIAGRAM_KINDS if rx.search(text)), "diagram")
             if how == "in":

@@ -651,13 +651,17 @@ COV_SHIELD = ('<svg viewBox="0 0 16 16"><path d="M8 .9 14.2 3.2v4.6c0 3.6-2.6 6.
               '1.8 11.4 1.8 7.8V3.2Z"/><path class="rm-play" d="M6.4 5.1v5.6l4.4-2.8Z"/></svg>')
 
 
+#: The card title's hover, and its twin while "All tests" is checked (testchapters.js
+#: swaps them). No count (Victor, 7 Oct 2026): "Each of the 363 tests ran alone..." read as
+#: a statistic to check, when all the hover has to say is where the list comes from.
+COVCARD_TIP = "Tests that ran a changed line, as captured by a coverage probe."
+COVCARD_TIP_ALL = "All tests, as captured by a coverage probe."
+
+
 def covcard_tip(doc: dict) -> str:
-    """How the card was computed, in one line, the count taken from the measurement (the
-    sum of the suites' tests). `COVCARD_TIP` was defined once and never emitted, so the
-    title had no hover at all."""
-    total = sum(int(x.get("tests") or 0) for x in doc.get("suites") or [] if isinstance(x, dict))
-    return (f"Each of the {total} tests ran alone under a coverage probe. "
-            "Listed: those that ran a changed line.")
+    """How the card was computed, in one line. `doc` is the measurement the card was drawn
+    from; the hover no longer quotes its size."""
+    return COVCARD_TIP
 
 
 #: A changed line counts as "passed through" when more than this share of a suite's
@@ -910,10 +914,49 @@ def _cov_cat(r: dict, root: Path) -> str:
     if (r.get("suite") or "").endswith("Cucumber"):
         return "api"
     try:
-        text = (root / r.get("file", "")).read_text(encoding="utf-8")
+        text = (root / (r.get("file") or "")).read_text(encoding="utf-8")
     except OSError:
         return "unit"
     return "api" if _API_MARKERS.search(text) else "unit"
+
+
+#: The id of the JSON block `all_tests_inventory` writes and testchapters.js reads.
+ALL_TESTS_ID = "rm-all-tests"
+
+
+def all_tests_inventory(frag: str, doc: dict | None, root: Path) -> str:
+    """Every test the coverage run executed that the card does not already list, as the
+    JSON block the card's "All tests" checkbox draws from (testchapters.js).
+
+    The inventory is the one the build already has: `test-coverage.json` ran each test
+    alone under a probe, so its `tests` are every test that ran, with suite, file and line.
+    Name, kind (`_cov_cat`, the same call that badges the card's own rows), file and the
+    file's `vscode://` link - nothing to preview, so no source. Data, not markup: the rows
+    are built in the browser on the first check, because a big repo runs thousands of tests
+    and nobody has asked to see them yet. Empty when there was no measurement."""
+    if not doc:
+        return ""
+    on_card: set[str] = set()
+    m = re.search(r'<script type="application/json" class="rm-data">(.*?)</script>', frag, re.S)
+    if m:
+        try:
+            on_card = {k.replace("@base", "") for k in (json.loads(m.group(1)).get("tests") or {})}
+        except ValueError:
+            pass
+    seen, out = set(on_card), []
+    for r in doc.get("tests") or []:
+        file, line = r.get("file") or "", r.get("line") or 0
+        key = f"{file}:{line}" if file and line else f"?{r.get('suite')}:{r.get('title')}"
+        if key in seen:
+            continue
+        seen.add(key)
+        t = {"title": r.get("title") or key, "cat": _cov_cat(r, root), "file": file, "line": line}
+        if file and line:
+            t["href"] = f"vscode://file/{(root / file).resolve()}:{line}:1"
+        out.append(t)
+    out.sort(key=lambda t: (t["file"], t["line"], t["title"]))
+    body = json.dumps({"tests": out}, ensure_ascii=False).replace("</", "<\\/")
+    return f'<script type="application/json" id="{ALL_TESTS_ID}">{body}</script>'
 
 
 def coverage_tests(frag: str, doc: dict, test_doc: dict | None, root: Path) -> str:
@@ -1209,25 +1252,17 @@ def promote_traced(page: str) -> str:
     return page[:m.start(2)] + body + page[m.end(2):]
 
 
-def cats_filter(cats: str) -> str:
-    """The Unit/API/E2E key, each entry wrapped in a checked checkbox that filters the card.
+def all_tests_toggle(cats: str) -> str:
+    """The title row over the card, without the Unit/API/E2E filters that stood on it.
 
-    The key already named every kind the card lists, one chip and a few words each, so the
-    filter is the key itself rather than a second row of the same three words. The few
-    words go on the chip's hover and only the chip stays on the row (Victor, 5 Oct 2026):
-    the row is the card's title row, and it also carries the tab's "Prompt to get this".
-    Entries the regex does not recognise are left as the model wrote them."""
-    def entry(m: re.Match) -> str:
-        cat = html.escape(m.group(2), quote=True)
-        words = " ".join(html.unescape(re.sub(r"<[^>]+>", "", m.group(3))).split())
-        chip = m.group(1)
-        if words and "data-tip=" not in chip:
-            chip = chip.replace('<span class="rm-cat"', '<span class="rm-cat" data-tip="'
-                                + html.escape(words, quote=True) + '"', 1)
-        return (f'<label class="rm-catf"><input type="checkbox" checked data-cat="{cat}">'
-                f'{chip}</label>')
-    return re.sub(r'<span>\s*(<span class="rm-cat" data-cat="([^"]+)"[^>]*>.*?</span>)(.*?)</span>',
-                  entry, cats, flags=re.S)
+    The filters went when the card was split into E2E/API/UNIT chapters (Victor, 7 Oct
+    2026): a closed chapter is the filter, and the kind's few words are the chapter's
+    subtitle. The switch the card gained, "All tests", sits on the card's own title row
+    (testchapters.js puts it there, before the changed-tests counts). The `<p
+    class="rm-cats">` stays, empty, because the title row's grid and the adopt line hang
+    off it."""
+    m = re.match(r'(<p class="rm-cats"[^>]*>)', cats.strip())
+    return (m.group(1) if m else '<p class="rm-cats">') + '</p>'
 
 
 #: The layout above, as the stylesheet that has to hold it. Emitted with the fragment
@@ -1283,20 +1318,36 @@ REQMAP_CSS = """
 /* The Unit/API/E2E key sits on the title row, over the card, in the stretch the title left
    empty; its margins are the title's, so the two read as one line. */
 .reqmap .rm-cats{grid-column:2;grid-row:1;align-self:center;min-height:0;margin:.2rem 2px .15rem}
-.reqmap .rm-cats .rm-catf{display:inline-flex;align-items:center;gap:0;cursor:pointer;
-  user-select:none}
-.reqmap .rm-cats .rm-catf input{margin:0 -20px 0 8px;width:12px;height:12px;cursor:pointer;
-  position:relative;z-index:1}
-/* A little air on both sides of the filter badge (Victor, 7 Oct 2026): the box 8px in,
-   the word 7px after it, 13px after the word. */
-.reqmap .rm-cats .rm-catf > .rm-cat{padding-left:27px;padding-right:13px}
-.reqmap .rm-cats .rm-catf+.rm-catf{margin-left:9px}
-/* The whole badge is a toggle, so the whole badge is a hand - the pill's tooltip span
-   included, which otherwise shows `[data-tip]`'s help cursor. Hand = clickable, `?` =
-   tooltip-only (Victor, 7 Oct 2026). */
-.reqmap .rm-cats .rm-catf,.reqmap .rm-cats .rm-catf *{cursor:pointer}
-.reqmap .rm-cats .rm-catf:has(input:not(:checked)){opacity:.5}
-.reqmap .rm-t[data-catoff=yes]{display:none}
+/* The card in three chapters by kind of test (testchapters.js): headed like the sentence
+   headings they replace - 12px, the page's ink, a rule under - with the row's own badge and
+   arrow in the row's own columns, so a chapter reads as the first line of its rows. */
+.reqmap .rm-list > .rm-tgroup,.reqmap .rm-list > .rm-fold{display:none}
+.reqmap .rm-chh{display:flex;align-items:center;gap:8px;padding:8px 10px 7px 22px;
+  font-size:12px;font-weight:600;line-height:1.35;color:var(--fg,#1c1c1c);cursor:pointer;
+  user-select:none;border-bottom:1px solid var(--line,#e2e2e2)}
+.reqmap .rm-chh:hover{background:rgba(127,127,127,.07)}
+.reqmap .rm-chh .rm-cat{display:inline-flex;justify-content:center;min-width:4.5em}
+.reqmap .rm-chh .rm-chev{flex:0 0 auto;font-size:13px!important;line-height:1;color:var(--muted);opacity:.8;transition:transform .15s ease}
+.reqmap .rm-ch[data-open=yes] > .rm-chh .rm-chev{transform:rotate(90deg)}
+.reqmap .rm-chsub{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.reqmap .rm-chn{flex:0 0 auto;font-weight:400;color:var(--muted,#6b6b6b);font-variant-numeric:tabular-nums}
+.reqmap .rm-ch[data-open=no] > .rm-chb{display:none}
+.reqmap .rm-ch:last-child .rm-chb > .rm-t:last-child,
+.reqmap .rm-ch:last-child .rm-cho > .rm-t:last-child{border-bottom:0}
+.reqmap .rm-chb > .rm-t:last-of-type{border-bottom:1px solid var(--line,#e2e2e2)}
+/* "All tests": off, the card lists what it always did; on, the rest of the run too. On
+   the card's title row, right-aligned, just before the changed-tests counts. */
+.reqmap .rm-list:not([data-all=yes]) .rm-cho{display:none}
+.reqmap .rm-code > .rm-tkhead > .rm-allf{margin-left:auto;align-self:center;display:inline-flex;
+  align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--muted,#6b6b6b);
+  user-select:none;white-space:nowrap}
+.reqmap .rm-code > .rm-tkhead > .rm-allf + .tledger{margin-left:14px}
+.reqmap .rm-allf,.reqmap .rm-allf *{cursor:pointer}
+.reqmap .rm-allf:hover,.reqmap .rm-allf:has(input:checked){color:var(--fg,#1c1c1c)}
+.reqmap .rm-allf input{margin:0;width:12px;height:12px}
+/* A row of the rest of the run has no preview and no stamp: both slots kept, empty. */
+.reqmap .rm-st-none{width:15px;height:15px}
+.reqmap .rm-other .rm-thead{cursor:default}
 /* Two columns, two scrollbars (Victor, 4 Oct 2026): the ticket and the test list each
    scroll on their own, so a sentence and the tests that cover it can be read side by side
    however far apart they are. Clicking either brings the other side's matches into view
@@ -1422,28 +1473,12 @@ REQMAP_SEMCOV_JS = """
   });
 })();</script>"""
 
-#: The key's checkboxes: a row whose kind is unchecked wears `data-catoff`, and the
-#: stylesheet hides it. The rows are the fragment's own, drawn by its script, so they are
-#: marked rather than rebuilt; a resize is dispatched after so its wires are redrawn.
-REQMAP_CATS_JS = """
-<script>(function () {
-  document.addEventListener('change', function (ev) {
-    var box = ev.target;
-    if (!box || !box.matches || !box.matches('.rm-cats input')) return;
-    var map = box.closest('.reqmap');
-    if (!map) return;
-    var off = {};
-    map.querySelectorAll('.rm-cats input').forEach(function (b) {
-      if (!b.checked) off[b.dataset.cat] = 1;
-    });
-    map.querySelectorAll('.rm-code .rm-t').forEach(function (row) {
-      var c = row.querySelector('.rm-thead .rm-cat');
-      if (c && off[c.dataset.cat]) row.dataset.catoff = 'yes';
-      else delete row.dataset.catoff;
-    });
-    window.dispatchEvent(new Event('resize'));
-  });
-})();</script>"""
+#: The card split into E2E/API/UNIT chapters, and the "All tests" checkbox that adds the
+#: rest of the run to them (Victor, 7 Oct 2026). A real file, `assets/testchapters.js`,
+#: inlined after the map has drawn its rows: it moves them, the renderer does not know.
+REQMAP_CHAPTERS_JS = ("<script>"
+                      + (Path(__file__).resolve().parent.parent / "assets" / "testchapters.js")
+                      .read_text(encoding="utf-8") + "</script>")
 
 #: The changed-tests summary, moved onto the covering card's title row (Victor, 4 Oct
 #: 2026): rendered as its own block after the matrix, it floated at the bottom of the left
@@ -1568,14 +1603,16 @@ def reqmap_layout(frag: str, spec: dict, out_dir: Path, root: Path | None = None
                              generated=generated)
     ref = (generated and drawn_ticket(frag)) or ticket_ref(spec, out_dir)
     body = (m.group(0) + ticket_head(ref)
-            + text_col + cats_filter(cats) + side_col + "</div>")
+            + text_col + all_tests_toggle(cats) + side_col + "</div>")
     out = frag[:a] + body + frag[b:]
     doc = load_coverage(out_dir, spec)
     if doc is not None:
         out = coverage_tests(out, doc, _load_test_changes(spec, out_dir),
                              root if root is not None else out_dir.resolve().parent)
     out = relabel_cats(out)
-    return out + REQMAP_CSS + REQMAP_FIT_JS + REQMAP_TIP_JS + REQMAP_SEMCOV_JS + REQMAP_CATS_JS + REQMAP_LEDGER_JS
+    inventory = all_tests_inventory(out, doc, root if root is not None else out_dir.resolve().parent)
+    return (out + REQMAP_CSS + inventory + REQMAP_FIT_JS + REQMAP_TIP_JS + REQMAP_SEMCOV_JS
+            + REQMAP_CHAPTERS_JS + REQMAP_LEDGER_JS)
 
 
 # --- the third run mode: run the tests, then re-derive ---------------------------------

@@ -241,8 +241,14 @@
    spent a third of the row on a file name nobody was reading. */
 .reqmap .rm-tw{flex:0 0 auto;font-size:10.5px;margin-bottom:0;padding-top:1px}
 /* One width for every extension, right-aligned: `.feature`/`.spec.ts` came out 50.6px and
-   `.java` 31.6px, so the 🎼/🎭 left of it jumped 19px between rows (UX review, 7 Oct 2026). */
+   `.java` 31.6px, so the ⇥/🎭 left of it jumped 19px between rows (UX review, 7 Oct 2026).
+   The dotted line is the text's own underline, not the srcref's bottom border: a border
+   runs the whole 51px box, so `.java` wore a stray line in front of it (Victor, 7 Oct). */
 .reqmap .rm-tw{min-width:51px;text-align:right;box-sizing:border-box}
+.reqmap .rm-tw.srcref{border-bottom:0;text-decoration:underline dotted 1px;text-underline-offset:3px}
+/* The open row shows the test's body and nothing above it: the file and line bar was
+   noise, since the row's own extension link already opens the file (Victor, 7 Oct 2026). */
+.reqmap .rm-tinner .rm-srcbar{display:none}
 /* What the branch did to this test, on the test itself. It is the fact the deleted
    evidence cards carried in prose ("the new one", "the pre-existing flow, extended") -
    worth one word on the row. An untouched test used to get silence, on the theory that

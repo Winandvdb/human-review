@@ -15,7 +15,7 @@
 //
 // Which pair is open is in the URL, both ways round. A reader who opens one and sends the
 // address sends the picture they are looking at, not the tab it is on — the same handle
-// the 🎼 on the Tests tab already jumps through. `replaceState`, not `location.hash`,
+// the ⇥ on the Tests tab already jumps through. `replaceState`, not `location.hash`,
 // because assigning the hash scrolls the page out from under the click that caused it.
 (function () {
   var wanted = decodeURIComponent((location.hash || '').slice(1));

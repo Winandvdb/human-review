@@ -90,27 +90,92 @@ def test_the_colour_legend_moves_under_the_ticket_it_explains(tmp_path):
     assert 'class="rm-legend"' in col
 
 
-def test_the_surface_key_moves_onto_the_title_row_as_a_filter(tmp_path):
-    """Over the card, level with the ticket's title, and each kind a checked checkbox."""
+def test_the_title_row_over_the_card_offers_all_tests_where_the_filters_stood(tmp_path):
+    """Victor, 7 Oct 2026: the card is split into E2E/API/UNIT chapters, so the three
+    filter checkboxes went; the row over the card keeps its place, and one checkbox, "All
+    tests", off by default, goes on the card's title row before the counts."""
     out = _laid_out(tmp_path)
     head, cats, side = _order(out, 'class="tabtitle rm-head"', 'class="rm-cats"',
                               'class="rm-side"')
     assert head < cats < side
-    assert '<label class="rm-catf"><input type="checkbox" checked data-cat="e2e">' in out
-    assert ".reqmap .rm-t[data-catoff=yes]{display:none}" in out
+    assert "lab.innerHTML = '<input type=\"checkbox\"> All tests';" in T.REQMAP_CHAPTERS_JS
+    assert "head.insertBefore(lab, head.querySelector('.tledger'))" in T.REQMAP_CHAPTERS_JS
+    assert ".reqmap .rm-code > .rm-tkhead > .rm-allf{margin-left:auto;" in T.REQMAP_CSS
+    assert '<label class="rm-catf"' not in out and "data-catoff=yes" not in out
+    assert T.REQMAP_CHAPTERS_JS in out
 
 
-def test_each_filter_is_its_chip_alone_with_the_words_on_its_hover():
-    """The filter shares the title row with the tab's "Prompt to get this" (Victor, 5 Oct
-    2026), so each kind shows its chip only; what it means moves to the chip's tooltip."""
-    cats = T.cats_filter('<p class="rm-cats"><span><span class="rm-cat" data-cat="e2e">UI'
-                         '</span>clicks the screen</span><span><span class="rm-cat" '
-                         'data-cat="api">API</span>REST/MCP</span></p>')
-    assert cats == ('<p class="rm-cats"><label class="rm-catf"><input type="checkbox" checked '
-                    'data-cat="e2e"><span class="rm-cat" data-tip="clicks the screen" '
-                    'data-cat="e2e">UI</span></label><label class="rm-catf"><input '
-                    'type="checkbox" checked data-cat="api"><span class="rm-cat" '
-                    'data-tip="REST/MCP" data-cat="api">API</span></label></p>')
+def test_the_title_row_keeps_its_paragraph_and_drops_the_chips():
+    cats = T.all_tests_toggle('<p class="rm-cats"><span><span class="rm-cat" data-cat="e2e">UI'
+                              '</span>clicks the screen</span></p>')
+    assert cats == '<p class="rm-cats"></p>'
+
+
+def test_the_card_is_read_in_chapters_by_kind_not_by_sentence():
+    """The pairing to ticket sentences moved between runs and the card's shape with it
+    (Victor, 7 Oct 2026). The chapters are the badge's three kinds, open by default (closed,
+    the card is three lines in an empty frame), and a sentence click opens the chapters
+    holding the tests it lights."""
+    js = T.REQMAP_CHAPTERS_JS
+    for words in ("'end-to-end, from the browser'", "'calling the API directly'"):
+        assert words in js
+    assert "var OPEN = {e2e: 1, api: 1, unit: 1};" in js
+    assert "el.classList.contains('rm-tgroup')" in js             # sentence headings go
+    assert "list.querySelectorAll('.rm-t[data-hit=yes]')" in js   # the selection follows
+    # The hooks other decorators (the fixture dot) find rows by.
+    for hook in ("row.dataset.cat", "row.dataset.file", "row.dataset.testName",
+                 'data-test-name="', 'data-file="'):
+        assert hook in js
+    css = T.REQMAP_CSS
+    assert ".reqmap .rm-list > .rm-tgroup,.reqmap .rm-list > .rm-fold{display:none}" in css
+    assert ".reqmap .rm-ch[data-open=no] > .rm-chb{display:none}" in css
+    assert ".reqmap .rm-list:not([data-all=yes]) .rm-cho{display:none}" in css
+
+
+def test_a_row_of_the_rest_of_the_run_keeps_every_column_and_opens_nothing():
+    """Name, badge and file link only; the arrow's slot is kept, blank (`data-shut`), so
+    the titles stay in one column; the link is an ordinary `vscode://` href, which the
+    page's one click handler opens in VS Code or hands on."""
+    js = T.REQMAP_CHAPTERS_JS
+    assert '<div class="rm-t rm-other" data-shut="yes"' in js
+    assert '<span class="rm-chev" aria-hidden="true">&#9654;</span>' in js
+    assert '<button class="rm-link" type="button" disabled' in js
+    assert '<span class="rm-st rm-st-none" aria-hidden="true">' in js
+    assert ".reqmap .rm-st-none{width:15px;height:15px}" in T.REQMAP_CSS
+    # Built on the first check, not at load.
+    assert "if (on) buildOthers();" in js
+
+
+def test_the_inventory_is_every_test_that_ran_minus_the_card(tmp_path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/OwnerTest.java").write_text("class OwnerTest { MockMvc mvc; }")
+    frag = ('<script type="application/json" class="rm-data">'
+            '{"tests":{"src/OwnerTest.java:10":{},"gone.java:3@base":{}}}</script>')
+    doc = {"tests": [
+        {"suite": "Backend JUnit", "title": "onCard", "file": "src/OwnerTest.java", "line": 10},
+        {"suite": "Backend JUnit", "title": "other", "file": "src/OwnerTest.java", "line": 20},
+        {"suite": "E2E Cucumber", "title": "Outline </script>", "file": "x.feature", "line": 5,
+         "source": "jacoco+v8"},
+        {"suite": "E2E Cucumber", "title": "Outline </script>", "file": "x.feature", "line": 5,
+         "source": "jacoco+v8"},
+        {"suite": "Frontend Karma", "title": "renders", "file": "a.spec.ts", "line": 7,
+         "source": "karma"},
+        {"suite": "Backend ArchUnit", "title": "adheres", "file": None, "line": None},
+    ]}
+    out = T.all_tests_inventory(frag, doc, tmp_path)
+    assert out.startswith('<script type="application/json" id="rm-all-tests">')
+    assert "</script>" not in out[len('<script'):-len("</script>")]   # a title cannot close it
+    body = json.loads(out[out.index(">") + 1:-len("</script>")].replace("<\\/", "</"))
+    got = [(t["title"], t["cat"], t["file"], t.get("href")) for t in body["tests"]]
+    assert got == [
+        ("adheres", "unit", "", None),
+        ("renders", "unit", "a.spec.ts", f"vscode://file/{(tmp_path / 'a.spec.ts').resolve()}:7:1"),
+        ("other", "api", "src/OwnerTest.java",
+         f"vscode://file/{(tmp_path / 'src/OwnerTest.java').resolve()}:20:1"),
+        ("Outline </script>", "e2e", "x.feature",
+         f"vscode://file/{(tmp_path / 'x.feature').resolve()}:5:1"),
+    ]
+    assert T.all_tests_inventory(frag, None, tmp_path) == ""
 
 
 def test_the_ticket_title_is_a_link_over_the_ticket(tmp_path):
@@ -356,7 +421,7 @@ def test_nothing_of_the_ticket_or_the_test_list_is_lost_in_the_move(tmp_path):
     out = _laid_out(tmp_path)
     for kept in ("The visit should name its vet.", "opened on Jun 13, 2026",
                  'class="rm-issue"', 'class="rm-gap"', 'class="rm-list"',
-                 'class="rm-data"', "clicks the screen", "fully covered"):
+                 'class="rm-data"', "fully covered"):
         assert kept in out, kept
 
 
@@ -496,14 +561,21 @@ def test_the_fit_script_rides_with_the_matrix_and_the_sheet_reads_it(tmp_path):
     assert out.index("--rm-tail-h', v)") > out.index('class="rm-body"')
 
 
-def test_the_row_pills_are_one_width_and_the_filters_have_room():
-    """Victor, 7 Oct 2026: E2E was wider than API/UNIT and broke the titles' column; the
-    filter badges over the card were tight around their checkbox and word."""
+def test_the_row_pills_are_one_width():
+    """Victor, 7 Oct 2026: E2E was wider than API/UNIT and broke the titles' column."""
     css = (HERE / "reqmap" / "reqmap.css").read_text(encoding="utf-8")
     assert ".reqmap .rm-thead .rm-cat{display:inline-flex;justify-content:center;min-width:4.5em}" in css
-    assert "input{margin:0 -20px 0 8px;" in T.REQMAP_CSS
-    assert ".rm-catf > .rm-cat{padding-left:27px;padding-right:13px}" in T.REQMAP_CSS
-    assert ".reqmap .rm-cats .rm-catf,.reqmap .rm-cats .rm-catf *{cursor:pointer}" in T.REQMAP_CSS
+    # The chapter headings wear the same pill, the same width.
+    assert ".reqmap .rm-chh .rm-cat{display:inline-flex;justify-content:center;min-width:4.5em}" in T.REQMAP_CSS
+
+
+def test_the_extension_is_underlined_alone_and_the_preview_is_the_body_alone():
+    """Victor, 7 Oct 2026: the srcref's dotted border ran the whole right-aligned 51px box,
+    a stray line in front of `.java`; and the open row's file:line bar was noise."""
+    css = (HERE / "reqmap" / "reqmap.css").read_text(encoding="utf-8")
+    assert (".reqmap .rm-tw.srcref{border-bottom:0;text-decoration:underline dotted 1px;"
+            "text-underline-offset:3px}") in css
+    assert ".reqmap .rm-tinner .rm-srcbar{display:none}" in css
 
 
 def test_a_models_ui_label_is_renamed_e2e_at_build_time():
@@ -523,8 +595,11 @@ def test_a_models_ui_label_is_renamed_e2e_at_build_time():
 def test_the_card_title_says_how_the_list_was_computed():
     tip = T.covcard_tip({"suites": [{"name": "A", "source": "jacoco", "tests": 222},
                                     {"name": "B", "source": "karma", "tests": 123}]})
-    assert tip == ("Each of the 345 tests ran alone under a coverage probe. "
-                   "Listed: those that ran a changed line.")
+    assert tip == "Tests that ran a changed line, as captured by a coverage probe."
+    # The checkbox swaps it while the card lists the whole run.
+    js = T.REQMAP_CHAPTERS_JS
+    assert "'Tests that ran a changed line, as captured by a coverage probe.'" in js
+    assert "'All tests, as captured by a coverage probe.'" in js
 
 
 def test_a_traced_test_is_never_folded_out_of_the_covering_card():

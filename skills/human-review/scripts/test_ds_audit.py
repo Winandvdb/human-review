@@ -1391,3 +1391,13 @@ def test_each_side_records_its_commit_and_the_old_side_is_labelled_by_it(tmp_pat
     # A recorded commit is not overwritten by a later resolution.
     again = ds.stamp_sides({"old": {"label": "x", "commit": base}}, {"old": head}, tmp_path)
     assert again["old"]["commit"] == base
+
+
+def test_the_count_has_a_tooltip_that_names_each_side_once():
+    reg, screen = _owners_screen()
+    screen["sides"]["new"].update(label="abc12345", commit="abc12345" + "0" * 32)
+    screen["sides"]["old"].update(label="main", commit="d01c3776" + "0" * 32)
+    frag = ds.render(ds.build_result([screen], reg), "")
+    tip = ds.count_tooltip(ds.build_result([screen], reg))
+    assert 'class="dsa-count" data-tip="' in frag and "on abc12345 and on main (d01c3776)" in tip
+    assert 'class="disclose"' in frag

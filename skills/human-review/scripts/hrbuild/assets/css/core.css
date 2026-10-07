@@ -191,3 +191,12 @@ figcaption { color:var(--muted); font-size:.86rem; }
   :root { --diff-add-bg:#12261e; --diff-add-gutter:#1b4721;
           --diff-del-bg:#2d1214; --diff-del-gutter:#5c2225; }
 }
+
+/* The expand/collapse triangle of a `<details>` row, one rule for every tab: the full-size
+   U+25B6 / U+25BC (forced to text with U+FE0E so macOS does not swap in the emoji), 13px,
+   in the link colour, in a 1.1rem centred box. Put `<span class="disclose">` in the
+   summary; `.cx-caret` (Complexity) is the same look and can adopt it. */
+.disclose { display:inline-block; flex:none; width:1.1rem; font-size:13px; line-height:1;
+            color:var(--link); text-align:center; }
+details > summary .disclose::before { content:"\25B6\FE0E"; }
+details[open] > summary .disclose::before { content:"\25BC\FE0E"; }

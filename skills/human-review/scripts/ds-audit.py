@@ -1533,8 +1533,6 @@ details.dsa-screen > summary { cursor: pointer; list-style: none; display: flex;
   align-items: baseline; color: var(--fg); font-size: .95rem; font-weight: 600;
   padding: .25rem 0; }
 details.dsa-screen > summary::-webkit-details-marker { display: none; }
-details.dsa-screen > summary::before { content: "▾"; font-size: .75rem; }
-details.dsa-screen:not([open]) > summary::before { content: "▸"; }
 details.dsa-screen > summary:hover { color: var(--link); }
 .dsa-route { opacity: .7; font-weight: 400; }
 .dsa-considered { margin: .6rem 0 0; font-size: .84rem; opacity: .85; }
@@ -1575,6 +1573,7 @@ details.dsa-screen > summary .dsa-sumtail { font-weight: 400; }
   padding: 0 .35rem; font-weight: 700; white-space: nowrap; }
 .dsa-fixed { color: var(--dsa-ok); }
 .dsa-pre { opacity: .7; }
+.dsa-count { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
 .dsa-gap, .dsa-comp, .dsa-fixed, .dsa-pre { cursor: help; }
 .dsa-unlisted { color: var(--dsa-bad); border: 1px solid var(--dsa-bad); border-radius: 6px;
   padding: .45rem .7rem; margin: .4rem 0 .8rem; font-size: .9rem; }
@@ -2190,7 +2189,7 @@ def render_screen(screen: dict, assets_prefix: str, build, registry: dict | None
     # asked to see yet.
     return (f'<div class="dsa">'
             f'<details class="dsa-screen" id="dsa-{slug(screen["screen"])}">'
-            f'<summary>{summary}</summary>'
+            f'<summary><span class="disclose" aria-hidden="true"></span>{summary}</summary>'
             f'{_with_frame_toggle(build.dgm_views_html(panes, initial="new"), frames)}'
             f'{table}{considered}</details></div>')
 
@@ -2208,6 +2207,28 @@ def _with_frame_toggle(viewer: str, frames: dict) -> str:
     head, sep, rest = viewer.partition('<div class="dgmbar">')
     bar, close, tail = rest.partition("</div>")
     return head + sep + bar + FRAME_TOGGLE + close + tail
+
+
+def _side_name(meta: dict) -> str:
+    """`label (sha)`, or just the sha when the label already is its short form."""
+    label, commit = meta.get("label") or "", (meta.get("commit") or "")[:8]
+    if label and commit and label != commit:
+        return f"{label} ({commit})"
+    return label or commit or "?"
+
+
+def count_tooltip(result: dict) -> str:
+    """How "N of M screens changed" is arrived at — `screen_touched` and `combine`, in words."""
+    screens = result["screens"]
+    sides = (screens[0].get("sides") if screens else None) or {}
+    new, old = _side_name(sides.get("new") or {}), _side_name(sides.get("old") or {})
+    return (f"Every one of the {len(screens)} screens listed in human-review.json was opened "
+            f"twice, side by side: on {new} and on {old}, same data, same browser. A screen "
+            "counts as changed when its page structure (DOM) differs \u2014 an element added, "
+            "removed or changed; an element that only moved does not count. When the DOM is "
+            f"identical, an element repainted by more than {RESTYLE_CHURN:.0%} of its own box "
+            "counts too, and so does a gap or design-system component the branch added or "
+            "removed.")
 
 
 def regression_tip(result: dict) -> str:
@@ -2268,7 +2289,10 @@ def render(result: dict, assets_prefix: str, *, root: Path | None = None,
     if touched and not deltas:
         deltas = ['<span class="dsa-pre">no gap and no design-system component added or '
                   "removed</span>"]
-    verdict_line = " \u00b7 ".join([f'{len(touched)} of {n} screens changed'] + deltas)
+    count_tip = html.escape(count_tooltip(result), quote=True)
+    verdict_line = " \u00b7 ".join(
+        [f'<span class="dsa-count" data-tip="{count_tip}">{len(touched)} of {n} screens '
+         'changed</span>'] + deltas)
 
     # The embedded copy drops the per-element table. It is keyed on every signature on
     # every screen — 190KB of it on a seven-screen run, most of the fragment's weight —

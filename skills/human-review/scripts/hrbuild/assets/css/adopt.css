@@ -75,3 +75,18 @@ button.adopt:focus-visible { outline:2px solid var(--adopt); outline-offset:1px;
             vertical-align:middle; }
 .adopt-th > button.adopt { position:absolute; right:.9rem; top:-.08rem;
                             transform:translateY(-50%); }
+/* The prompt pill's hover, borrowed from the Register/Enroll buttons on agentic.how
+   (`.btn-fancy`): a conic burst blooms from the centre and then turns slowly, a one-shot
+   diagonal shimmer crosses it, a halo glows, the pill lifts 1px and its text goes white.
+   Recoloured to the pill's purple; the copy behaviour and its "Copied" feedback are the
+   button's own and untouched. */
+.adoptline .adopt{position:relative;overflow:hidden;isolation:isolate;transition:color 280ms ease,box-shadow 420ms ease,transform 240ms ease}
+.adoptline .adopt:hover,.adoptline .adopt:focus-visible{color:#fff!important;box-shadow:0 0 18px rgba(167,139,250,.55),0 0 40px rgba(139,92,246,.28);transform:translateY(-1px);outline:none}
+.adoptline .adopt::before{content:'';position:absolute;left:50%;top:50%;width:260%;height:700%;background:conic-gradient(from 0deg,#8b5cf6 0%,#c084fc 14%,#7c3aed 32%,#a78bfa 50%,#8b5cf6 68%,#6d28d9 86%,#8b5cf6 100%);transform:translate(-50%,-50%) scale(0) rotate(0deg);z-index:-2;pointer-events:none;filter:blur(.4px) saturate(115%)}
+.adoptline .adopt:hover::before,.adoptline .adopt:focus-visible::before{animation:hrFancyFill 520ms cubic-bezier(.34,1.56,.64,1) forwards,hrFancySpin 5s linear 520ms infinite}
+.adoptline .adopt::after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 36%,rgba(255,255,255,.55) 50%,transparent 64%);transform:translateX(-140%);pointer-events:none;z-index:-1}
+.adoptline .adopt:hover::after,.adoptline .adopt:focus-visible::after{animation:hrFancyShimmer 900ms cubic-bezier(.4,0,.2,1) 240ms forwards}
+@keyframes hrFancyFill{from{transform:translate(-50%,-50%) scale(0) rotate(0)}to{transform:translate(-50%,-50%) scale(1) rotate(180deg)}}
+@keyframes hrFancySpin{from{transform:translate(-50%,-50%) scale(1) rotate(180deg)}to{transform:translate(-50%,-50%) scale(1) rotate(540deg)}}
+@keyframes hrFancyShimmer{from{transform:translateX(-140%)}to{transform:translateX(140%)}}
+@media (prefers-reduced-motion:reduce){.adoptline .adopt::before,.adoptline .adopt::after{animation:none!important}.adoptline .adopt:hover{background:#8b5cf6;transform:none}}

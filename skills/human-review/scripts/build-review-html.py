@@ -245,8 +245,8 @@ from hrbuild.tabs.tests import (
     render_traces,
     REQMAP_CSS, REQMAP_CUT, REQMAP_SEMCOV_JS, REQMAP_TIP_JS, reqmap_layout, resolve_tests,
     REQMAP_CHAPTERS_JS, REQMAP_LEDGER_JS, all_tests_toggle, all_tests_inventory, ALL_TESTS_ID,
-    SEMCOV_LABEL, _SEMCOV_TIP, semcov_switch, SILENCED_LABEL, VIA_HELPER_LABEL, via_helper_tip,
     test_cover_files, TEST_COVER_ID, TEST_COVER_MAX,
+    SEMCOV_LABEL, _SEMCOV_TIP, semcov_switch, SILENCED_LABEL, VIA_HELPER_LABEL, via_helper_tip,
     test_index, TEST_STATES,
     TICKET_CACHE, ticket_head, ticket_ref, tests_chip, _append_inside, _element, _find,
     drawn_ticket,
@@ -285,7 +285,8 @@ from hrbuild.tabs.cost import (
     _cost_tab_rows, _cost_tokens, _when, components_html, cost_pill_label, cost_pill_title,
     _legacy_ledger_html, _HARNESS, _aic, _component_money, _minutes, _entry_line,
     guide_breakdown_html, _extension_line, _instants, _stamp_s, _span, _cost_cell,
-    BUSY_TIP, _duration, _time_cell
+    BUSY_TIP, _duration, _time_cell, COST_TITLE, _WHAT_SHORT, _cost_ledger_body, _entry_row,
+    _split
 )
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from pathlib import Path
 import shlex
 
@@ -162,18 +163,18 @@ TAB_RERUN_TIP = "Regenerate (scripted, free)"
 
 
 def tab_rerun_html(tab_id: str, label: str, info: dict | None) -> str:
-    """The masthead's ↻, narrowed to one tab, beside that tab's pill on the strip.
+    """The masthead's ↻, narrowed to one tab, at the end of that tab's own title.
 
-    A sibling of the pill and not inside it: the pill is a `<button>`, and a button in a
-    button is markup every browser repairs differently. CSS shows the pair only while its
-    tab is the selected one (`.tab[aria-selected="true"] + .tabre`), so the strip carries
-    one extra glyph, next to the name of the thing it re-derives — and nothing at all on a
-    static copy, where the probe raises nothing.
+    It used to sit on the tab strip, drawn into the selected pill — and a name with three
+    rings after it ("Tests ⚙️⏳🤖") read as part of the name (Victor, 7 Oct 2026). The strip
+    is navigation, so it now carries the labels and nothing else; the presses go where the
+    tab says what it is (`place_tab_reruns`), the same 18px rings as the masthead's.
 
     Same two faces as the masthead, and the same machine behind both (`rerun.js`): the
     green ↻ re-runs this tab's producers and rebuilds the page, free; the amber 🤖 is
     there only on a tab with a model half (Tests, Review, Demo) and opens the same confirmation
-    the masthead's paid chip does. Empty when the tab has no producer to re-run."""
+    the masthead's paid chip does. Empty when the tab has no producer to re-run; and on a
+    static copy every button stays `hidden`, so the span takes no room at all."""
     if not info:
         return ""
     tid = html.escape(tab_id, quote=True)
@@ -190,8 +191,7 @@ def tab_rerun_html(tab_id: str, label: str, info: dict | None) -> str:
            f'data-tip="{tip}">'
            f'{rerun_face(RERUN_MARK_SCRIPT)}</button>')
     # A tab's own further presses (the Tests tab's ↺⏳, which runs the suites first), drawn
-    # by the tab that owns them and placed here, inside the span: the strip shows `.tabre`
-    # only as the selected pill's next sibling, so a second span beside it would never show.
+    # by the tab that owns them and placed here, inside the span, so the group moves as one.
     # Right after the ↺, before the paid one: ↺ then ↺⏳ are the same free verb, the second
     # one slower, and they read as a pair only when nothing stands between them.
     out += info.get("extra") or ""
@@ -214,6 +214,58 @@ def tab_rerun_html(tab_id: str, label: str, info: dict | None) -> str:
                 f'data-tip="costs money. {tip}">'
                 f'{rerun_face(RERUN_MARK_AI)}</button>')
     return out + "</span>"
+
+
+#: A tab that opens on no title of its own gets this one, so its presses have somewhere to
+#: stand: Structure was a stack of diagram cards with nothing above the first (Victor,
+#: 7 Oct 2026). Any other untitled tab with presses is given its own label.
+TAB_TITLES = {"packages": "Structure diagrams"}
+
+#: Tabs whose header is each of their cards: Data is three pictures of one model (the
+#: domain, the database, the concept), each in its own card, and each card carries the
+#: tab's presses at the end of its own title.
+CARD_HEADED_TABS = frozenset({"data"})
+
+_TABTITLE_OPEN = re.compile(r'<h2 class="tabtitle\b[^>]*>')
+_CARD_TITLE = re.compile(r'(<div class="diagram\b[^"]*"[^>]*><div class="head"><b>.*?</b>)', re.S)
+
+
+def tab_title_row(title: str) -> str:
+    """The title row an untitled tab is given: the `h2.tabtitle` every titled tab opens on."""
+    return f'<div class="adopthead"><h2 class="tabtitle">{html.escape(title)}</h2></div>'
+
+
+def place_tab_reruns(tab_id: str, label: str, body: str, presses: str) -> str:
+    """Put a tab's presses (`tab_rerun_html`) at the end of that tab's own title.
+
+    Read off the panel's markup, not off a list per tab, because five of the tabs are a
+    producer's fragment pasted whole (CLAUDE.md): wherever the tab says what it is, in this
+    order — the Review tab's pile line (its sticky header), a `h2.tabtitle` (Tests,
+    Sequence, City, UX, Complexity, Logging, CODEOWNERS, the Demo's film, Structure's),
+    the API verdict band (after its last word), and a title row made for a tab that has none.
+    A card-headed tab (Data) gets one set per card. `presses` empty: only the title."""
+    if tab_id in TAB_TITLES and not _TABTITLE_OPEN.search(body):
+        body = tab_title_row(TAB_TITLES[tab_id]) + body
+    if not presses:
+        return body
+    if tab_id in CARD_HEADED_TABS and _CARD_TITLE.search(body):
+        return _CARD_TITLE.sub(lambda m: m.group(1) + presses, body)
+    lede = body.find('<p class="sub counts pilelede"')
+    if lede >= 0:
+        end = body.find("</p>", lede)
+        if end >= 0:
+            return body[:end] + presses + body[end:]
+    title = _TABTITLE_OPEN.search(body)
+    if title:
+        end = body.find("</h2>", title.end())
+        if end >= 0:
+            return body[:end] + presses + body[end:]
+    band = re.search(r'<div class="apiverdict\b[^>]*>', body)
+    end = body.find("</div>", band.end()) if band else -1
+    if end >= 0:            # the band holds spans only: its own `</div>` is the first one
+        return body[:end] + presses + body[end:]
+    return (f'<div class="adopthead"><h2 class="tabtitle">{html.escape(label)}{presses}'
+            '</h2></div>' + body)
 
 
 # The confirmation, in the page rather than in the browser.
@@ -647,7 +699,7 @@ def rerun_html(rerun: dict | None, rebuild: str, name: str = "",
     return ('<div class="rerun">' + where
             + '<div class="rerun-acts">'
             + edit
-            + command_html(line, aid, label="Update report", icon="\u21ba", tip=served,
+            + command_html(line, aid, label="Load changes", icon="\u21ba", tip=served,
                            running="Re-rendering the diagram…")
             + again
             + '</div>'

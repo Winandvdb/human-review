@@ -72,12 +72,16 @@
     // has not come undone. The tab's own steps take it to 80%, the build that follows them
     // the rest of the way: until the reload nothing on the tab has changed, but a bar that
     // stood still for the fifteen seconds of the build read as a run that had hung.
-    var tabs = [];
-    document.querySelectorAll('.tabstrip .tabre > .tabrerun[data-rerun="__rerun__"][data-steps]')
+    // The presses sit in each tab's own title now, not beside its pill, so the pill is found
+    // by the tab they name — once per tab: the Data tab carries a set per card.
+    var tabs = [], seen = {};
+    document.querySelectorAll('.tabre > .tabrerun[data-rerun="__rerun__"][data-tab][data-steps]')
       .forEach(function (b) {
-        var pill = b.parentNode.previousElementSibling;
-        if (!pill || !pill.classList.contains('tab')) return;
-        tabs.push({pill: pill, id: b.getAttribute('data-tab'), on: false, at: 0,
+        var id = b.getAttribute('data-tab');
+        var pill = document.getElementById('tabbtn-' + id);
+        if (seen[id] || !pill || !pill.classList.contains('tab')) return;
+        seen[id] = true;
+        tabs.push({pill: pill, id: id, on: false, at: 0,
                    steps: b.getAttribute('data-steps').split(',').filter(Boolean)});
       });
     // A lit pill is the run's bar, so the band under the masthead steps aside for it: the

@@ -54,7 +54,7 @@ import code_xref  # noqa: E402 - resolved from next to this file, not from site-
 # --------------------------------------------------------------------------- #
 
 from hrbuild.shared.util import (
-    CODEOWNERS, EXTRACT, PENCIL, TESTCHANGES, _git, _pretty   # HERE: defined above, same value
+    CODEOWNERS, EXTRACT, PENCIL, SPELLED_OUT, TESTCHANGES, _git, _pretty   # HERE: defined above, same value
 )
 from hrbuild.shared.actions import (
     ACTIONS, ACTIONS_FILE, declare_action, declare_rerun_actions, declare_rerun_tests_action,
@@ -74,6 +74,7 @@ from hrbuild.shared.commands import (
     PROGRESS_BUILD_SECONDS, PROGRESS_STEP_DEFAULT, rerun_progress_html, step_expectations,
     rerun_face, RERUN_MARK_AI, RERUN_MARK_SCRIPT, RERUN_MARK_SLOW, _RERUN_RING,
     rerun_html, rerun_tests_chip, RUN_TESTS_FACE, tab_rerun_html, TAB_RERUN_TIP,
+    place_tab_reruns, tab_title_row, TAB_TITLES, CARD_HEADED_TABS, _TABTITLE_OPEN, _CARD_TITLE,
     reveal_html, runtime_html, STATIC_RUN_TIP, _app_anchor
 )
 from hrbuild.shared.snippets import (
@@ -351,7 +352,7 @@ def _main(argv=None) -> int:
     declare_rerun_actions(root, out_dir, HERE)
     # And the masthead's ↺⏳: the tests and every other slow producer, forced, then the build.
     rerun_tests = declare_rerun_tests_action(root, out_dir, HERE)
-    # And one per tab, for the ↻ that sits beside the selected pill on the served page.
+    # And one per tab, for the ↻ at the end of that tab's own title on the served page.
     tab_reruns = declare_tab_reruns(root, out_dir, HERE,
                                     [t.get("id") for t in spec.get("tabs") or [] if t.get("id")])
     # And the Tests tab's third press — run the suites, then re-derive the tab — drawn in
@@ -1186,7 +1187,6 @@ def _main(argv=None) -> int:
                    if tab_class and badge_label else "")
                 + f'>{html.escape(SHORT_TAB_LABELS.get(tab["id"], tab["label"]))}{count}</button>'
             )
-            strip.append(tab_rerun_html(tab["id"], tab["label"], tab_reruns.get(tab["id"])))
             # `intro` is prose about the *tab*, not about any one block in it — where the
             # data behind a whole panel came from, or what it deliberately does not say. It
             # is raw HTML and carries no weight: a tab is not kept alive by its own preamble.
@@ -1194,7 +1194,13 @@ def _main(argv=None) -> int:
                 f'<section class="panel" id="{tid}" role="tabpanel" '
                 f'aria-labelledby="tabbtn-{tid}">'
                 f'<p class="paneltag">{html.escape(tab["label"])}</p>'
-                + place_prompts(tab["id"], f'{tab.get("intro", "")}{body}') + '</section>'
+                # The tab's presses, at the end of its own title rather than on the strip,
+                # placed after the prompts so the prompts' anchors read the title unchanged.
+                + place_tab_reruns(tab["id"], tab["label"],
+                                   place_prompts(tab["id"], f'{tab.get("intro", "")}{body}'),
+                                   tab_rerun_html(tab["id"], tab["label"],
+                                                  tab_reruns.get(tab["id"])))
+                + '</section>'
             )
             emitted.append(tab)
         # A diagram in the manifest that no tab claimed would vanish without a word —

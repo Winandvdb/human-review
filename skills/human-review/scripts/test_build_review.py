@@ -324,6 +324,20 @@ def test_each_voice_the_recorder_cut_is_a_radio_button_under_the_player(tmp_path
     assert out.count("data-tip=") == 1
 
 
+def test_the_film_title_heads_the_transcript_column_not_a_row_above_the_player(tmp_path):
+    """Victor, 7 Oct 2026: a row across the page for two words wasted a screenful's worth
+    of height; the title (and the tab's presses after it) head the cue list instead, and
+    the column is held to the player's height so the cues scroll inside it."""
+    s = _video_dir(tmp_path, filmed=True)
+    out = build.video_html(s, tmp_path)
+    side = out[out.index('<div class="vidside">'):]
+    assert side.index('<h2 class="tabtitle">Intro video</h2>') < side.index('<ol class="transcript"')
+    assert out.index("<video") < out.index('<div class="vidside">'), "the player first, then the column"
+    assert ".vidwrap > .vidside { display:flex;" in build.CSS and "contain:size" in build.CSS
+    placed = build.place_tab_reruns("behaviour", "Demo", out, '<span class="tabre"></span>')
+    assert 'Intro video<span class="tabre"></span></h2>' in placed
+
+
 def test_with_a_deployed_app_row_the_voices_sit_at_its_right_end(tmp_path):
     """Under the player the radios were a line of their own, height the film and its
     transcript did not get; the row above the film has an empty right half."""
@@ -6130,7 +6144,7 @@ def test_the_data_tab_shows_every_named_diagram_and_says_what_the_erd_cannot(tmp
     assert proc.returncode == 0, proc.stderr
     page = (review / "review.html").read_text(encoding="utf-8")
     panel = page.split('id="data"', 1)[1].split("</section>", 1)[0]
-    assert panel.index("<b>Domain Model</b>") < panel.index("<b>DB</b>"), "the asked order"
+    assert panel.index("<b>Domain Model</b>") < panel.index("<b>Database</b>"), "the asked order"
     # The Domain Model is UNCHANGED; the DB picture is too, over a schema that did change —
     # eval run 5's judges read UNCHANGED beside "DB.sql changed" as a contradiction, so
     # that card wears its own word.

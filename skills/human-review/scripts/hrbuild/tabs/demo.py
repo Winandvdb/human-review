@@ -336,8 +336,14 @@ def video_html(s, out_dir: Path) -> str:
     head = runtime_html(rt, switch) if rt else ""
     if switch and not rt:
         player = f'<div class="vidcol">{player}{switch}</div>'
+    # The film's title heads the transcript column, not a row of its own above the player:
+    # a row across the page held two words and left the rest of it empty (Victor, 7 Oct
+    # 2026), and the player now starts right under the Running app band. The tab's presses
+    # (`place_tab_reruns` puts them at the end of this `h2`) re-record the film, not the app.
     return (head + video_verdict_html(rel, out_dir)
-            + f'<div class="vidwrap">{player}<ol class="transcript">{items}</ol></div>')
+            + f'<div class="vidwrap">{player}<div class="vidside">'
+            f'<h2 class="tabtitle">Intro video</h2><ol class="transcript">{items}</ol>'
+            '</div></div>')
 
 
 def embed_html(s, out_dir: Path) -> str:

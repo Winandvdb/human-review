@@ -42,47 +42,44 @@ button.chip-rerun.running .rr-ring { animation:hrspin .9s linear infinite; }
    mark here already uses. A solid edge like its neighbours: it used to be dashed, and
    Victor read the dash as noise — the amber alone is what sets it apart. */
 button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
-/* The same pair, narrowed to one tab, beside the selected pill on the strip. Shown only
-   while its tab is the selected one: the strip is navigation, and thirteen glyphs on it
-   would make every pill read as a control with two halves. `[hidden]` still wins on a
-   static copy, where the probe raises nothing and the span stays empty space. */
-.tabre { display:none; gap:.2rem; align-items:center; }
-.tabstrip .tab[aria-selected="true"] + .tabre { display:inline-flex;
-            animation:tabre-in .16s ease-out .2s both; }
-/* Switching tabs: the new pill widens (its padding transitions, see frame.css) and only
-   then does its ↻ fade in, so the glyph never lands on the name while it is still moving. */
-@keyframes tabre-in { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:none; } }
-@media (prefers-reduced-motion:reduce) {
-  .tabstrip .tab[aria-selected="true"] + .tabre { animation:none; }
-  button.tab { transition:none; } }
-/* Drawn inside the selected pill, at its right end, rather than beside it: the pill makes
-   room with its own right padding and the pair is pulled back over that room. Still a
-   sibling in the markup (a button cannot hold a button); only the box moves. How much
-   room depends on which of the two the probe raised, so the width is a variable the
-   strip sets from what is actually visible — nothing raised, no room taken. The pull-back
-   includes the strip's .5rem column gap (frame.css), which sits between the two boxes. */
-/* One term per kind of button — its fixed width (below) plus the pair's gap — so the room
-   is the sum of what the probe raised: the Tests tab's third press is one more term, not a
-   hand-measured total for every combination. */
-/* `--tabre-rr` is the size of one round press on the strip, so the sum below follows it. */
-.tabstrip { --tabre-rr:1.2rem; --tabre-w1:0px; --tabre-w2:0px; --tabre-w3:0px;
-            --tabre-w:calc(var(--tabre-w1) + var(--tabre-w2) + var(--tabre-w3)); }
-.tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun__"]:not([hidden])) { --tabre-w1:var(--tabre-rr); }
-.tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun_ai__"]:not([hidden])) { --tabre-w2:calc(var(--tabre-rr) + .2rem); }
-.tabstrip:has(.tab[aria-selected="true"] + .tabre > [data-rerun="__rerun_tests__"]:not([hidden])) { --tabre-w3:calc(var(--tabre-rr) + .2rem); }
-.tabstrip .tab[aria-selected="true"]:has(+ .tabre > .tabrerun:not([hidden])) {
-            padding-right:calc(var(--tabre-w) + .175rem); }
-.tabstrip .tab[aria-selected="true"] + .tabre:has(> .tabrerun:not([hidden])) {
-            margin-left:calc(-1 * var(--tabre-w) - .7rem); margin-right:0;
-            position:relative; z-index:1; }
-/* Stretched to the row and centred in it: the strip stands its tabs on the bottom line
-   (frame.css), and a box shorter than the tab would otherwise sink to that line too and
-   sit low in the pill it is drawn over. */
-.tabstrip .tabre { align-self:stretch; }
-/* Round and all one size, so the sum above is exact. No ground: the ring sits straight on
-   the selected pill it is drawn into. */
-.tabre .tabrerun { --rr-size:var(--tabre-rr); font-size:.72rem; }
-.tabre .tabrerun[hidden] { display:none; }
+/* The same presses, narrowed to one tab, at the end of that tab's own title
+   (`place_tab_reruns`). They used to be drawn into the selected pill on the strip, and a
+   name followed by three rings read as part of the name (Victor, 7 Oct 2026); the strip
+   is navigation and carries the labels alone. Here they are the masthead's rings exactly
+   (`.titlerow .titleside`): an 18px square per button, ring and glyph one square, the
+   glyph half of it, .35rem apart, .55rem after the title's last word and centred 1.5px
+   above its line box, where a title's capitals have their middle — pinned whole, because a title row they land in may
+   style its own spans (the diagram card's head greys and monospaces every `span` in it,
+   which turned the ring grey and the emoji the wrong size). `[hidden]` still wins on a
+   static copy, and a group with nothing raised takes no room at all. */
+.tabre { display:inline-flex; gap:.35rem; align-items:center; vertical-align:middle;
+         margin-left:.55rem; position:relative; top:-4px; line-height:1;
+         font-weight:400; font-size:1rem; color:inherit; }
+.tabre:not(:has(> .tabrerun:not([hidden]))) { display:none; }
+.tabre > button.chip-rerun { --rr-size:18px; width:18px; height:18px; padding:0; border:0;
+         background:none; flex:none; }
+.tabre > button.chip-rerun[hidden] { display:none; }
+span.tabre > button.chip-rerun span.rr-ico { display:flex; width:18px; height:18px;
+         color:inherit; font:inherit; }
+span.tabre > button.chip-rerun span.rr-mark { font-size:9px; line-height:1; color:inherit;
+         font-family:inherit; }
+.diagram .head span.tabre { font-family:inherit; font-size:1rem; color:inherit; }
+/* A card-headed tab (Data): the presses follow the card's title, and push the file link
+   to the right end; the ↔ after the title already keeps its .45rem from them. Each card's
+   title is that tab's title, so it is the size every other tab's title is. */
+.diagram > .head > .tabre { margin:0 auto 0 -.45rem; top:-2px; align-self:center; }
+.diagram > .head:has(> .tabre) { align-items:center; }
+.diagram > .head:has(> .tabre) > b { font-size:1.3rem; }
+/* The API tab: after the last word of its verdict band, the line that opens the tab. */
+.apiverdict > .tabre { top:-3px; }
+/* The Tests tab: the ticket's title is a flex row in its grid cell; with the presses in
+   it, it is text again, so they follow its last word and a long title wraps under. They
+   hang in room the title keeps free at its right end (76px, three rings and their gaps),
+   so they ride the last line instead of dropping to a line of their own, and never reach
+   the filters in the next cell. */
+.reqmap h2.rm-head:has(> .tabre) { display:block; padding-right:76px; }
+.reqmap h2.rm-head > .tabre { margin-right:-76px; }
+@media (prefers-reduced-motion:reduce) { button.tab { transition:none; } }
 /* The page's own confirmation, over the page. Fixed and full-viewport because the click it
    guards costs money and a panel the reader can scroll away from is a panel they can
    answer by accident. */

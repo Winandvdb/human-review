@@ -1539,7 +1539,7 @@ def test_opening_the_served_page_only_asks_where_and_only_once(server, tmp_path)
 
 
 # --------------------------------------------------------------------------- #
-# one tab's rerun: the ↻ beside the selected pill
+# one tab's rerun: the ↻ at the end of that tab's own title
 # --------------------------------------------------------------------------- #
 
 def test_each_tab_reruns_its_own_producers_and_no_others(tmp_path):
@@ -1661,12 +1661,73 @@ def test_run_the_tests_sits_right_after_the_free_one_in_one_button():
 
 
 def test_the_tests_tab_carries_its_third_button_inside_the_pair():
-    """Inside the `.tabre` span, or the `+ .tabre` rule never shows it."""
+    """Inside the `.tabre` span, so the group moves into the tab's title as one."""
     out = build.tab_rerun_html("requirements", "Tests",
                                {"steps": ["tests"], "ai": True, "aiTip": "x",
                                 "extra": '<button data-rerun="__rerun_tests__">t</button>'})
     assert out.index('data-rerun="__rerun_tests__"') < out.rindex("</span>")
     assert out.count("<button") == 3
+
+
+# Victor, 7 Oct 2026: "Tests ⚙️⏳🤖" read as part of the tab's name. The strip carries the
+# labels alone; each tab's presses go where that tab says what it is.
+PRESSES = '<span class="tabre"><button data-rerun="__rerun__">r</button></span>'
+
+
+def test_a_titled_tab_gets_its_presses_at_the_end_of_its_title():
+    body = ('<div class="adopthead"><h2 class="tabtitle rm-head"><a href="#">Issue '
+            '#37: Link</a></h2><p class="rm-cats">f</p></div><h2>later</h2>')
+    out = build.place_tab_reruns("requirements", "Tests", body, PRESSES)
+    assert f"Link</a>{PRESSES}</h2>" in out and out.count(PRESSES) == 1
+
+
+def test_the_review_tab_gets_them_at_the_end_of_its_pile_line_not_on_a_later_h2():
+    body = ('<p class="sub counts pilelede"><a>6 assumptions</a> <button>Publish'
+            '</button></p><h2 id="assumed">Implementation assumptions</h2>')
+    out = build.place_tab_reruns("review", "Review", body, PRESSES)
+    assert f"Publish</button>{PRESSES}</p>" in out
+
+
+def test_the_api_tab_gets_them_after_the_last_word_of_its_verdict_band():
+    body = '<div class="adopthead"><div class="apiverdict green"><span class="v">ok</span></div></div>'
+    out = build.place_tab_reruns("api", "API", body, PRESSES)
+    assert f'<span class="v">ok</span>{PRESSES}</div></div>' in out
+
+
+def test_the_data_tab_gets_one_set_per_card_after_each_title():
+    card = ('<div class="diagram dgm-toggles"><div class="head"><b>{}</b>'
+            '<a class="dgm-src">x.puml</a></div></div>')
+    body = card.format("Domain Model") + card.format("Database") + card.format("Conceptual")
+    out = build.place_tab_reruns("data", "Data", body, PRESSES)
+    assert out.count(PRESSES) == 3
+    assert f"<b>Database</b>{PRESSES}<a" in out
+
+
+def test_structure_is_given_a_title_and_its_presses_end_it():
+    body = '<div class="diagram"><div class="head"><b>Java packages</b></div></div>'
+    out = build.place_tab_reruns("packages", "Structure", body, PRESSES)
+    assert out.startswith(f'<div class="adopthead"><h2 class="tabtitle">Structure diagrams'
+                          f'{PRESSES}</h2></div>')
+    # The title is there on a static copy too, where there is nothing to press.
+    assert build.place_tab_reruns("packages", "Structure", body, "").startswith(
+        '<div class="adopthead"><h2 class="tabtitle">Structure diagrams</h2></div>')
+
+
+def test_an_untitled_tab_with_presses_is_given_its_label_and_one_without_is_left_alone():
+    assert build.place_tab_reruns("x", "Odd", "<p>a</p>", PRESSES) == (
+        f'<div class="adopthead"><h2 class="tabtitle">Odd{PRESSES}</h2></div><p>a</p>')
+    assert build.place_tab_reruns("x", "Odd", "<p>a</p>", "") == "<p>a</p>"
+
+
+def test_the_db_diagram_is_titled_database():
+    assert build._pretty("DB") == "Database" and build._pretty("DomainModel") == "Domain Model"
+
+
+def test_the_strip_styles_and_the_progress_bar_no_longer_look_for_presses_on_the_strip():
+    assert '.tab[aria-selected="true"] + .tabre' not in build.CSS
+    assert ".tabstrip .tabre" not in build.RERUN_JS
+    assert "getElementById('tabbtn-' + id)" in build.RERUN_JS
+    assert "strip.append(tab_rerun_html" not in (HERE / "build-review-html.py").read_text()
 
 
 # --------------------------------------------------------------------------- #

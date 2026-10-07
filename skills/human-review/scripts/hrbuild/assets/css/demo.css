@@ -27,6 +27,18 @@
 .vidwrap video { width:100%; display:block; border:1px solid var(--line);
                   border-radius:8px; background:#000; }
 .vidcol { min-width:0; }
+/* The transcript column: the film's title over its cues, and the column exactly as tall as
+   the player — `contain:size` keeps the column out of the row's height, so the player
+   alone sets it and the cues scroll inside what is left under the title; the prompt pill
+   (`.adoptcol`) stays at the column's foot. Stacked under the player, it is its own
+   height again. */
+.vidwrap > .vidside { display:flex; flex-direction:column; min-width:0; min-height:0;
+                      contain:size; align-self:stretch; }
+.vidside > h2.tabtitle { flex:none; margin:0 0 .5rem; }
+.vidside > .adoptcol { flex:1 1 auto; min-height:0; overflow:hidden; }
+.vidside > .adoptcol > .transcript { flex:1 1 auto; min-height:0; max-height:none; }
+.vidside > .transcript { flex:1 1 auto; min-height:0; max-height:none; }
+@media (max-width:820px) { .vidwrap > .vidside { contain:none; } }
 .voice-switch { display:flex; flex-wrap:wrap; gap:.3rem 1.1rem; margin:.5rem 0 0;
                 font-size:.85rem; color:var(--muted); }
 .voice-switch label { display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;

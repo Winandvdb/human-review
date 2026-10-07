@@ -22,10 +22,16 @@ TESTCHANGES = HERE / "test-changes.py"
 PENCIL = "\u270d\ufe0f"
 
 
+#: A diagram whose file name is an abbreviation a heading should spell out: the card
+#: drawn from `DB.puml` is titled "Database" (Victor, 7 Oct 2026). The file link beside
+#: the title keeps the file's own name.
+SPELLED_OUT = {"DB": "Database"}
+
+
 def _pretty(name: str) -> str:
     """`DomainModel` is a filename; `Domain Model` is a heading. Split the camel hump,
-    which leaves acronyms (DB) and already-spaced names untouched."""
-    return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", name)
+    which leaves other acronyms and already-spaced names untouched."""
+    return SPELLED_OUT.get(name) or re.sub(r"(?<=[a-z])(?=[A-Z])", " ", name)
 
 
 def _git(root: Path, *args: str) -> str | None:

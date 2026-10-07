@@ -928,10 +928,10 @@ def test_the_command_says_what_it_is_for(tmp_path):
     acts = re.search(r'<div class="rerun-acts">(.*?)</div>', out, re.S).group(1)
     # One control, not a pill and a mark beside it: the words and the glyph are the same
     # button, which is the rule every command on this page follows.
-    assert '<span class="cmd-word">Update report</span>' in acts
+    assert '<span class="cmd-word">Load changes</span>' in acts
     assert '<span class="cmd-lead">\u21ba</span>' in acts
     assert "offer-pill" not in acts
-    assert acts.index("Edit on desktop") < acts.index("Update report")
+    assert acts.index("Edit on desktop") < acts.index("Load changes")
     assert "cmd-copy" in acts and "cmd-run" in acts
     assert "<code>" not in out, "the command is in a hover, not on the page"
 
@@ -1214,7 +1214,7 @@ def test_a_verdict_that_still_records_a_revert_builds_and_ignores_it(tmp_path):
     offers. A page that refused to build on one would make a tool upgrade a migration."""
     out = _widget_with(tmp_path, rerun=RERUN, revert=REVERT)
     assert "drawio-undo" not in out
-    assert "Update report" in out
+    assert "Load changes" in out
 
 
 def test_the_one_way_back_runs_every_stage_and_banks_the_layout(tmp_path):
@@ -1292,7 +1292,7 @@ def test_no_way_back_is_offered_for_a_repository_that_declared_no_script(tmp_pat
     diagram with no `redraw` gets the sentence and one offer."""
     out = _widget_with(tmp_path, rerun=RERUN)
     assert "Revert changes" not in out and "drawio-redraw" not in out
-    assert '<span class="cmd-word">Update report</span>' in out
+    assert '<span class="cmd-word">Load changes</span>' in out
 
 
 def test_the_play_glyph_is_hidden_by_the_attribute_and_not_by_a_class(tmp_path):
@@ -1391,7 +1391,7 @@ def test_an_unchanged_drawing_is_the_plain_card(tmp_path):
         "diagram": "docs/ConceptualModel.drawio.png"}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
     assert "<b>Conceptual Model</b>" in out
-    assert "Update report" not in out
+    assert "Load changes" not in out
     assert "Revert" not in out and "Edit on" not in out
 
 
@@ -1649,6 +1649,6 @@ def test_a_traced_diagram_with_undrawn_calls_is_not_the_unchanged_card(tmp_path)
     out = _widget_with(tmp_path, **base, traces={"undrawn": ["A → B"]},
                        drawio_url="drawio:///repo/d.png")
     assert "Unit-tested against the traced sequence diagrams." in out
-    for word in ("Edit on desktop", "Update report", "Revert changes"):
+    for word in ("Edit on desktop", "Load changes", "Revert changes"):
         assert word in out
     assert "drawio-redraw:conceptual" in build.ACTIONS

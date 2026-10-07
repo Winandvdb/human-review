@@ -1098,8 +1098,35 @@ def ticket_head(ref: dict | None) -> str:
     return f'<h2 class="tabtitle rm-head">{title}</h2>'
 
 
+#: The three levels as the page names them. A fragment a model drew says `UI` for the
+#: end-to-end level (and `unit` in lower case); the builder says it its own way at build
+#: time, so a stale artefact is never regenerated for a word.
+CAT_LABELS = {"e2e": "E2E", "api": "API", "unit": "Unit"}
+
+
+def relabel_cats(frag: str) -> str:
+    """Rename the level labels in a matrix fragment: the legend chips and the `cats` map of
+    its `rm-data` blob, which the row pills are drawn from."""
+    def chip(m: re.Match) -> str:
+        return m.group(1) + CAT_LABELS.get(m.group(2), m.group(3)) + "</span>"
+    frag = re.sub(r'(<span class="rm-cat" data-cat="([^"]+)"[^>]*>)([^<]*)</span>', chip, frag)
+    frag = frag.replace("end to end: clicks the screen", "clicks the screen").replace(
+        "clicks the screen", "end to end: clicks the screen")
+
+    def blob(m: re.Match) -> str:
+        try:
+            data = json.loads(m.group(2).replace("<\\/", "</"))
+        except ValueError:
+            return m.group(0)
+        if isinstance(data.get("cats"), dict):
+            data["cats"] = {k: CAT_LABELS.get(k, v) for k, v in data["cats"].items()}
+        return m.group(1) + json.dumps(data, ensure_ascii=False).replace("</", "<\\/") + m.group(3)
+    return re.sub(r'(<script type="application/json" class="rm-data">)(.*?)(</script>)', blob, frag,
+                  flags=re.S)
+
+
 def cats_filter(cats: str) -> str:
-    """The UI/API/unit key, each entry wrapped in a checked checkbox that filters the card.
+    """The Unit/API/E2E key, each entry wrapped in a checked checkbox that filters the card.
 
     The key already named every kind the card lists, one chip and a few words each, so the
     filter is the key itself rather than a second row of the same three words. The few
@@ -1161,7 +1188,7 @@ REQMAP_CSS = """
    to the other side. The shared `--rm-key-h` band goes with them: above the frames it
    kept two unequal rows on one line, and under them there is nothing to keep level. */
 .reqmap .rm-legend{min-height:0;margin:10px 2px 0}
-/* The UI/API/unit key sits on the title row, over the card, in the stretch the title left
+/* The Unit/API/E2E key sits on the title row, over the card, in the stretch the title left
    empty; its margins are the title's, so the two read as one line. */
 .reqmap .rm-cats{grid-column:2;grid-row:1;align-self:center;min-height:0;margin:.2rem 2px .15rem}
 .reqmap .rm-cats .rm-catf{display:inline-flex;align-items:center;gap:3px;cursor:pointer;
@@ -1409,6 +1436,7 @@ def reqmap_layout(frag: str, spec: dict, out_dir: Path, root: Path | None = None
     if doc is not None:
         out = coverage_tests(out, doc, _load_test_changes(spec, out_dir),
                              root if root is not None else out_dir.resolve().parent)
+    out = relabel_cats(out)
     return out + REQMAP_CSS + REQMAP_TIP_JS + REQMAP_SEMCOV_JS + REQMAP_CATS_JS + REQMAP_LEDGER_JS
 
 

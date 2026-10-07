@@ -12,7 +12,7 @@ derived, so it now is:
    (`s` + 6 hex of a hash), so an edit elsewhere in the ticket does not re-key it.
 2. **The tests, right.** The tests whose per-test coverage (`testcov.py` →
    `assets/test-coverage.json`: JaCoCo, Karma/Istanbul, V8) runs a line this PR changed,
-   with their kind (UI/API/unit), name, file and what the branch did to them
+   with their kind (Unit/API/E2E), name, file and what the branch did to them
    (`test-changes.py`). Without a coverage run, the tests the branch added or changed.
 3. **The pairing.** Mostly scripted (`match`): a sentence and a test are paired on shared
    evidence — words of the test's name and body, normalised and stemmed, a small table of
@@ -70,10 +70,10 @@ TICKET_BODY_CACHE = "ticket-body.json"
 GENERATED = 'data-generated="semcov"'
 ASSETS = HERE / "reqmap"
 
-CATS = {"e2e": "UI", "api": "API", "unit": "unit"}
-CAT_KEY = ('<p class="rm-cats"><span><span class="rm-cat" data-cat="e2e">UI</span>clicks the '
-           'screen</span><span><span class="rm-cat" data-cat="api">API</span>REST/MCP</span>'
-           '<span><span class="rm-cat" data-cat="unit">unit</span>one isolated component'
+CATS = {"e2e": "E2E", "api": "API", "unit": "Unit"}
+CAT_KEY = ('<p class="rm-cats"><span><span class="rm-cat" data-cat="e2e">E2E</span>end to end: clicks '
+           'the screen</span><span><span class="rm-cat" data-cat="api">API</span>REST/MCP</span>'
+           '<span><span class="rm-cat" data-cat="unit">Unit</span>one isolated component'
            '</span></p>')
 # Copy pass (3 Oct 2026): only `executed` keeps a hover — "fully covered", "partially",
 # "missing" and "N/A" say themselves.

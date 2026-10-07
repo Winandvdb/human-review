@@ -439,3 +439,17 @@ def test_the_legend_holds_every_state_inside_its_column(width, scheme, tmp_path)
         assert right <= got["right"] + 1, f"{name!r} runs past its column"
         assert right <= got["sideLeft"], f"{name!r} sits under the tests card"
     assert {p[0] for p in got["pills"]} >= {"unconfirmed", "narrowed"}
+
+
+def test_a_models_ui_label_is_renamed_e2e_at_build_time():
+    """The end-to-end level is `E2E` everywhere; a fragment a model drew says `UI` and is
+    relabelled by the builder, never regenerated."""
+    frag = ('<p class="rm-cats"><span><span class="rm-cat" data-cat="e2e">UI</span>clicks the '
+            'screen</span><span><span class="rm-cat" data-cat="unit">unit</span>x</span></p>'
+            '<script type="application/json" class="rm-data">'
+            '{"cats": {"e2e": "UI", "api": "API", "unit": "unit"}}</script>')
+    out = T.relabel_cats(frag)
+    assert 'data-cat="e2e">E2E</span>end to end: clicks the screen' in out
+    assert 'data-cat="unit">Unit</span>' in out
+    assert '"cats": {"e2e": "E2E", "api": "API", "unit": "Unit"}' in out
+    assert ">UI<" not in out and T.relabel_cats(out) == out

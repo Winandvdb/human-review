@@ -163,7 +163,10 @@ def drawio_unchanged(verdict: dict) -> bool:
     """Did `drawio-diff.py` find nothing — no box or line added, removed, changed or
     moved, and nothing left red for a re-layout? An absent verdict is not "unchanged":
     it is a step that has not run, and the widget says that instead."""
-    return bool(verdict) and not any(
+    # Calls the traces made that no arrow carries are drawn in red by the overlay: a
+    # to-do for whoever owns the picture, so the card keeps its editing row.
+    undrawn = (verdict.get("traces") or {}).get("undrawn")
+    return bool(verdict) and not undrawn and not any(
         verdict.get(k) for k in ("added", "removed", "changed", "moved", "red"))
 
 
@@ -254,7 +257,8 @@ def drawio_widget_html(name: str, assets: Path, root: Path, rebuild: str = "") -
                          verdict.get("drawio_url") or "",
                          verdict.get("drawio_web_url") or "",
                          verdict.get("redraw"), verdict.get("revert"),
-                         verdict.get("reveal"), verdict.get("tested_against") or "")
+                         verdict.get("reveal"), verdict.get("tested_against") or "",
+                         verdict.get("tested_against_path") or "")
             + dgm_views_html(panes, initial="new" if red else "diff")
             + '</div>')
 

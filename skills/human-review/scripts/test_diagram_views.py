@@ -576,7 +576,7 @@ def test_the_whole_pair_folds_away_and_starts_open(tmp_path):
     html_out = _pairs_fixture(tmp_path)
     assert '<details class="testpair" open id=' in html_out
     # Both inside the fold: to the pair's own closing tag, which is the last one on the
-    # block — only the registry the tab writes for the 🕵️ comes after it.
+    # block — only the registry the tab writes for the 🎭 comes after it.
     pair = html_out[html_out.index('<details class="testpair"'):html_out.rindex("</details>")]
     assert "snippet" in pair and 'class="diagram' in pair
 
@@ -924,17 +924,15 @@ def test_the_command_says_what_it_is_for(tmp_path):
         "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [], "rerun": RERUN,
         "drawio_url": "drawio:///repo/C.drawio.png"}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
-    line = re.search(r'<p class="dgm-open">(.*?)</p>', out, re.S).group(1)
-    # The sentence says where to edit, and that is all it says. The offer is a pill under
-    # it — the line used to carry both, and by the time each offer had grown its glyphs it
-    # was seven underlined runs of text with no rank between them.
-    assert "Update " in line and "in draw.io" in line
-    assert "offer-pill" not in line and "cmd-copy" not in line
+    # No sentence: the editors and the two commands are four buttons in one row.
+    assert 'class="dgm-open"' not in out
     acts = re.search(r'<div class="rerun-acts">(.*?)</div>', out, re.S).group(1)
     # One control, not a pill and a mark beside it: the words and the glyph are the same
     # button, which is the rule every command on this page follows.
-    assert '<span class="cmd-word">Update the report</span>' in acts
+    assert '<span class="cmd-word">Update report</span>' in acts
+    assert '<span class="cmd-lead">\u21ba</span>' in acts
     assert "offer-pill" not in acts
+    assert acts.index("Edit on desktop") < acts.index("Update report")
     assert "cmd-copy" in acts and "cmd-run" in acts
     assert "<code>" not in out, "the command is in a hover, not on the page"
 
@@ -988,9 +986,12 @@ def test_both_editors_are_offered_and_named(tmp_path):
         "drawio_url": "drawio:///repo/C.drawio.png",
         "drawio_web_url": "https://app.diagrams.net/?splash=0&title=C#R%3Cmx%3E"}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
-    assert "in draw.io " in out
-    assert ">Desktop App ↗</a>" in out and ">Web ↗</a>" in out
-    assert out.count("draw.io ") == 1, "the brand is named once, the two editors after it"
+    assert '<span class="cmd-word">Edit on desktop</span><span class="cmd-ico">\u2197</span></a>' in out
+    assert '<span class="cmd-word">Edit on web</span><span class="cmd-ico">\u2197</span></a>' in out
+    # Links, not commands: the run script must neither disable nor pair them.
+    for a in re.findall(r'<a class="dgm-edit".*?</a>', out):
+        assert "cmd-copy" not in a and "cmd-run" not in a
+    assert 'class="cmd"' not in re.search(r'<a class="dgm-edit".*?</a>', out).group(0)
     assert "drawio:///repo/C.drawio.png" in out and "app.diagrams.net" in out
 
 
@@ -1010,25 +1011,8 @@ def test_the_edit_offer_sits_where_the_caption_sentence_used_to(tmp_path):
 REVEAL = {"command": "open -R /repo/docs/C.drawio.png", "in": "the Finder"}
 
 
-def test_the_subject_of_the_sentence_shows_the_file_on_disk(tmp_path):
-    """The line says how to edit the drawing and how to pick the edit up, and said nothing
-    about where the file is — while the two words naming it sat unclickable at the front."""
-    out = _widget_with(tmp_path, rerun=RERUN, reveal=REVEAL,
-                       drawio_url="drawio:///repo/docs/C.drawio.png")
-    assert '>this diagram</button>' in out
-    assert build.ACTIONS["drawio-reveal:conceptual"]["command"] == REVEAL["command"]
-    assert not build.ACTIONS["drawio-reveal:conceptual"]["reload"], \
-        "revealing a file changes nothing on the page"
-    tip = re.search(r'data-action="drawio-reveal:conceptual"[^>]*'
-                    r'data-tip-served="([^"]*)"', out).group(1)
-    assert "the Finder" in tip
 
 
-def test_a_verdict_with_no_reveal_leaves_the_words_as_words(tmp_path):
-    """An older verdict, or a run from before the command was recorded: the sentence reads
-    exactly as it did, with nothing half-rendered where the control would have been."""
-    out = _widget_with(tmp_path, rerun=RERUN, drawio_url="drawio:///repo/docs/C.drawio.png")
-    assert "Update this diagram in" in out and "drawio-reveal" not in out
 
 
 def test_a_named_guardrail_leads_the_sentence(tmp_path):
@@ -1038,12 +1022,12 @@ def test_a_named_guardrail_leads_the_sentence(tmp_path):
                        drawio_url="drawio:///repo/docs/C.drawio.png",
                        tested_against="Java Domain Model")
     line = re.search(r'<p class="dgm-open">(.*?)</p>', out, re.S).group(1)
-    assert '>This diagram</button>' in line
-    assert " is unit-tested against the Java Domain Model.<br>Relayout it in draw.io" in line
-    plain = _widget_with(tmp_path, rerun=RERUN, drawio_url="drawio:///repo/docs/C.drawio.png",
-                         tested_against="Java Domain Model")
-    assert ("This diagram is unit-tested against the Java Domain Model.<br>Relayout it in "
-            "draw.io" in plain)
+    assert line == "Unit-tested against the Java Domain Model."
+    linked = _widget_with(tmp_path, rerun=RERUN, tested_against="Java Domain Model",
+                          tested_against_path="/repo/src/domain")
+    assert ('Unit-tested against the <a href="vscode://file//repo/src/domain">'
+            'Java Domain Model</a>.') in linked
+    assert 'class="dgm-open"' not in _widget_with(tmp_path, rerun=RERUN)
 
 
 def test_the_web_link_is_dropped_when_the_verdict_has_none(tmp_path):
@@ -1054,8 +1038,8 @@ def test_the_web_link_is_dropped_when_the_verdict_has_none(tmp_path):
         "added": [], "removed": [], "changed": [], "moved": MOVED, "red": [],
         "drawio_url": "drawio:///repo/C.drawio.png"}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
-    assert ">Desktop App ↗</a>" in out
-    assert ">Web ↗</a>" not in out and " or " not in out
+    assert "Edit on desktop" in out
+    assert "Edit on web" not in out
 
 
 def test_the_copy_button_reuses_the_one_clipboard_and_the_one_toast():
@@ -1218,7 +1202,7 @@ def test_a_repository_that_declared_no_redraw_is_offered_none(tmp_path):
 
 def test_there_is_one_way_back_and_it_is_the_generated_drawing(tmp_path):
     out = _widget_with(tmp_path, rerun=RERUN, revert=REVERT, redraw=REDRAW)
-    assert '<span class="cmd-word">Revert the diagram</span>' in out
+    assert '<span class="cmd-lead">\u21e4</span><span class="cmd-word">Revert changes</span>' in out
     # Named after what it produces, not after the gesture that gets you there: "start over"
     # is a direction and not a destination, and "undo your edits" is gone entirely.
     assert "start over" not in out and "undo your edits" not in out
@@ -1231,7 +1215,7 @@ def test_a_verdict_that_still_records_a_revert_builds_and_ignores_it(tmp_path):
     offers. A page that refused to build on one would make a tool upgrade a migration."""
     out = _widget_with(tmp_path, rerun=RERUN, revert=REVERT)
     assert "drawio-undo" not in out
-    assert "Update the report" in out
+    assert "Update report" in out
 
 
 def test_the_one_way_back_runs_every_stage_and_banks_the_layout(tmp_path):
@@ -1308,8 +1292,8 @@ def test_no_way_back_is_offered_for_a_repository_that_declared_no_script(tmp_pat
     naming convention and running it on a reader's click is not a trade worth making, so a
     diagram with no `redraw` gets the sentence and one offer."""
     out = _widget_with(tmp_path, rerun=RERUN)
-    assert "Revert the diagram" not in out and "drawio-redraw" not in out
-    assert '<span class="cmd-word">Update the report</span>' in out
+    assert "Revert changes" not in out and "drawio-redraw" not in out
+    assert '<span class="cmd-word">Update report</span>' in out
 
 
 def test_the_play_glyph_is_hidden_by_the_attribute_and_not_by_a_class(tmp_path):
@@ -1408,8 +1392,8 @@ def test_an_unchanged_drawing_is_the_plain_card(tmp_path):
         "diagram": "docs/ConceptualModel.drawio.png"}))
     out = build.drawio_widget_html("conceptual", assets, tmp_path, REBUILD)
     assert "<b>Conceptual Model</b>" in out
-    assert "Update the report" not in out
-    assert "Revert" not in out and "Relayout" not in out
+    assert "Update report" not in out
+    assert "Revert" not in out and "Edit on" not in out
 
 
 def test_a_drawing_with_a_layout_still_owed_is_not_unchanged(tmp_path):
@@ -1645,3 +1629,27 @@ def test_genseq_panel_head_is_a_drag_handle():
     assert "closest('button, a')" in js, "buttons in the head must keep working"
     css = (Path(build.__file__).parent / "hrbuild/assets/css/genseq.css").read_text()
     assert "cursor:move" in css and "user-select:none" in css
+
+
+def test_the_inline_drawio_lines_are_thickened_but_only_default_ones():
+    css = build.CSS
+    assert ('[data-cell-id] :is(path,rect,ellipse,polygon):not([stroke-width])'
+            ':not([stroke="none"])') in css
+    assert '[stroke-width="1"] { stroke-width:2px; }' in css
+    assert "a.dgm-edit { border:1.5px solid #b26a00; color:#b26a00; }" in css
+
+
+def test_a_traced_diagram_with_undrawn_calls_is_not_the_unchanged_card(tmp_path):
+    """The Deployment drawing is untouched by the branch, yet the overlay adds the calls the
+    traces made in red — a to-do — so the card carries the four-button row."""
+    base = {"added": [], "removed": [], "changed": [], "moved": [], "red": [],
+            "rerun": RERUN, "tested_against": "traced sequence diagrams",
+            "redraw": {"cwd": "/repo", "command": "git checkout b -- d.png", "diagram": "d.png"}}
+    quiet = _widget_with(tmp_path, **base, traces={"undrawn": []})
+    assert "Edit on" not in quiet and "unchanged" in quiet
+    out = _widget_with(tmp_path, **base, traces={"undrawn": ["A → B"]},
+                       drawio_url="drawio:///repo/d.png")
+    assert "Unit-tested against the traced sequence diagrams." in out
+    for word in ("Edit on desktop", "Update report", "Revert changes"):
+        assert word in out
+    assert "drawio-redraw:conceptual" in build.ACTIONS

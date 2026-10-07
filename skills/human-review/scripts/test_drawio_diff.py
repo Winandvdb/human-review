@@ -950,6 +950,15 @@ def test_a_call_no_arrow_carries_is_added_in_red_beside_its_caller():
     assert float(ghost.geometry["x"]) > 600 and ghost.geometry["y"] == "280"
 
 
+def test_a_multiline_lifeline_name_breaks_the_line_in_the_red_box():
+    """`«module»\\nCommons` is one lifeline name with a newline in it; drawn as an html
+    label it must break the line, not print a backslash-n."""
+    xml, _ = dd.overlay_traces(DEPLOYMENT, {("Backend", "\u00abmodule\u00bb\\nCommons")})
+    label = dd.parse_model(xml)["hr-undrawn-box-0"].label
+    assert "<br>" in label and "\\n" not in label
+    assert "\u00abmodule\u00bb" in label and "Commons" in label
+
+
 def test_an_added_arrow_no_test_walks_keeps_its_green_faded():
     """Green is "added by this branch" and the overlay never spends it — nor paints over it."""
     painted = DEPLOYMENT.replace(arrow("e-be-ns", "be", "ns"), arrow("e-be-ns", "be", "ns")

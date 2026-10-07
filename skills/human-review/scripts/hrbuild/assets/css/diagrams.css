@@ -11,6 +11,10 @@
 .diagram .svgbox { overflow-x:auto; margin-top:.7rem; background:var(--dgm-bg); border-radius:6px; padding:.6rem; }
 .diagram .svgbox svg { max-width:100%; height:auto; display:block; margin:0 auto; }
 .diagram .svgbox[hidden] { display:none; }
+/* draw.io's own 1px box borders and edges look thin at page scale: thicken only the
+   default-width strokes, never one the drawing set on purpose (the traced arrows are 2-3). */
+.diagram .svgbox svg [data-cell-id] :is(path,rect,ellipse,polygon):not([stroke-width]):not([stroke="none"]),
+.diagram .svgbox svg [data-cell-id] :is(path,rect,ellipse,polygon)[stroke-width="1"] { stroke-width:2px; }
 /* A class name that opens the source looks exactly like one that does not. PlantUML's
     tooltip says so, but only after a second of hovering and only if you were already
     suspicious — so the name underlines the moment the pointer is over it. PlantUML draws

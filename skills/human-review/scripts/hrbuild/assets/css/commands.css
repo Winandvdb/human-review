@@ -239,8 +239,23 @@ button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
               background:none; border:0; padding:0; text-decoration:none; }
 .rerun a:hover, .rerun .offer .runhere:hover {
               text-decoration:underline; text-underline-offset:2px; }
-/* The actions, on their own row under the sentence. Two of them, and each wears the pair
-   of glyphs every command on this page wears. */
+/* Edit on desktop / Edit on web: links that look like the labelled commands beside them
+   (`.cmd .cmd-copy.has-word`) without being one — no `.cmd`, no `.cmd-copy`, so the run
+   script neither disables them mid-run nor pairs them. */
+.rerun a.dgm-edit { display:inline-flex; align-items:center; font:inherit; font-size:.92em;
+            line-height:1.15; font-weight:500; color:var(--muted); background:var(--card);
+            border:1px solid var(--line); border-radius:999px; padding:.1rem .45rem;
+            text-decoration:none; cursor:pointer; }
+.rerun a.dgm-edit:hover { color:var(--fg); border-color:var(--muted);
+            background:var(--accent-soft); text-decoration:none; }
+.rerun a.dgm-edit { border:1.5px solid #b26a00; color:#b26a00; }
+.rerun a.dgm-edit:hover { color:#b26a00; border-color:#b26a00; }
+@media (prefers-color-scheme: dark) {
+  .rerun a.dgm-edit, .rerun a.dgm-edit:hover { border-color:#e0a458; color:#e0a458; } }
+.cmd-lead { margin-right:.3rem; }
+.rerun a.dgm-edit .cmd-ico { font-size:1.1em; line-height:1; margin-left:.35rem; }
+/* The actions, on their own row under the sentence. Up to four: two editors and the
+   two commands, each with its mark. */
 .rerun .rerun-acts { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .9rem;
               margin:.45rem 0 0; }
 /* Was `margin-left:-.55rem`, pulling the mark back against the pill it belonged to. There
@@ -320,6 +335,8 @@ button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
 .chip-vsc { font-weight:600; letter-spacing:.04em; cursor:pointer; }
 .chip-vsc.vsc-on { color:#2e7d32; border-color:#2e7d32; }
 .chip-vsc.vsc-near { color:#b26a00; border-color:#b26a00; }
+/* Why it is green, at a glance: a link glyph in front of the word while connected. */
+.chip-vsc.vsc-on::before { content:"🔗"; margin-right:.3rem; }
 .chip-vsc.vsc-off { color:#c62828; border-color:#c62828; }
 @media (prefers-color-scheme:dark) {
   .chip-vsc.vsc-on { color:#6bd48a; border-color:#3f7f52; }

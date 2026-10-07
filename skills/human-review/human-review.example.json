@@ -151,7 +151,9 @@
       "//drawio4": "attribute); an arrow a test walked is drawn at double weight, one no test",
       "//drawio5": "walked is greyed, and a call the traces made that no arrow carries is",
       "//drawio6": "added in dashed red. `tested_against` names the guardrail's evidence for",
-      "//drawio7": "the sentence under the picture.",
+      "//drawio7": "the sentence under the picture; the optional `tested_against_path` (a",
+      "//drawio8": "source folder, relative to the repo root) makes that label a VS Code link",
+      "//drawio9": "to the package the guardrail scans, e.g. \"petclinic-backend/src/main/java/victor/training/petclinic/domain\".",
       "drawio": {
         "diagram": "petclinic-backend/docs/Deployment.drawio.png",
         "tested_against": "traced sequence diagrams"

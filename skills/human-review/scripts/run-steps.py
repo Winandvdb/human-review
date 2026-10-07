@@ -470,6 +470,8 @@ def _diagrams(ctx: Ctx):
     # What a unit test checks the drawing against, for the sentence under the picture.
     if d.get("tested_against"):
         redraw += f" --tested-against {shlex.quote(d['tested_against'])}"
+        if d.get("tested_against_path"):
+            redraw += f" --tested-against-path {shlex.quote(d['tested_against_path'])}"
     sh(f"{HERE}/drawio-diff.py --base {ctx.base} --diagram {d['diagram']} "
        f"--concepts {d['concepts']} --out-dir {ART} --name {d.get('name', 'conceptual')}"
        + redraw, ctx)
@@ -1198,6 +1200,8 @@ def _c2(ctx: Ctx):
         graph = f"{ART}/c2/{cfg.get('name') or 'C2-Containers'}.json"
         extra = (f" --tested-against {shlex.quote(d['tested_against'])}"
                  if d.get("tested_against") else "")
+        if d.get("tested_against") and d.get("tested_against_path"):
+            extra += f" --tested-against-path {shlex.quote(d['tested_against_path'])}"
         if d.get("participant"):
             extra += f" --trace-attr {shlex.quote(d['participant'])}"
         sh(f"{HERE}/drawio-diff.py --base {ctx.base} --diagram {shlex.quote(d['diagram'])} "

@@ -327,31 +327,31 @@ def rerun_progress_html(expected: dict) -> str:
 
 
 def drawio_open_html(app_url: str, web_url: str = "") -> str:
-    """The two ways to edit the drawing, as links.
+    """The two ways to edit the drawing, as buttons of the same look as the commands.
 
     Under the picture and not inside it: a rendered diagram cannot show a cursor, so an
-    invitation painted onto the map has to spell out in words that it is clickable — and
-    then it is a sentence about tooling sitting on the drawing, re-read every time the
-    reader looks at the boxes. In HTML it is just a link, and it can afford to be two.
+    invitation painted onto the map has to spell out in words that it is clickable.
 
-    They are not the same offer, which is why both are named rather than one being "the"
-    link. The **Desktop App** opens the file on disk, so an edit lands where the rerun command
-    can pick it up. The **Web** editor opens a copy carried in the URL — nothing is
-    uploaded, and nothing it saves reaches the repository either. It is the answer when
-    draw.io is not installed on this machine, and the reader can tell which is which
-    before clicking rather than after.
+    They are not the same offer, which is why both are named. **Edit on desktop** opens the
+    file on disk, so an edit lands where the rerun command can pick it up. **Edit on web**
+    opens a copy carried in the URL — nothing is uploaded, and nothing it saves reaches the
+    repository either. It is the answer when draw.io is not installed on this machine.
+
+    They are links (`a.dgm-edit`), wearing the look of a labelled command, and deliberately
+    **not** `.cmd-copy` / `.cmd-run` inside a `.cmd`: the run script disables those inside
+    `.rerun` while a command is going and pairs them by `.cmd`, and a link that only opens
+    an editor is neither a copy nor a run.
     """
-    links = []
+    def btn(href: str, word: str, extra: str = "") -> str:
+        return (f'<a class="dgm-edit" href="{html.escape(href, quote=True)}"{extra}>'
+                f'<span class="cmd-lead">\u270f\ufe0f</span><span class="cmd-word">{word}</span><span class="cmd-ico">\u2197</span></a>')
+
+    out = []
     if app_url:
-        links.append(f'<a href="{html.escape(app_url, quote=True)}">Desktop App ↗</a>')
+        out.append(btn(app_url, "Edit on desktop"))
     if web_url:
-        links.append(f'<a href="{html.escape(web_url, quote=True)}" '
-                     'target="_blank" rel="noopener">Web ↗</a>')
-    # The product is named once and the two editors are named after it — `draw.io App or
-    # draw.io Web` said the brand twice in six words, which is the half of the phrase that
-    # carries no information: the choice the reader is making is App or Web. *Desktop* App,
-    # because a bare "App" beside "Web" did not say which one was installed on this machine.
-    return "draw.io " + " or ".join(links) if links else ""
+        out.append(btn(web_url, "Edit on web", ' target="_blank" rel="noopener"'))
+    return "".join(out)
 
 
 # What a click-to-run offer says on a static page — where it stays visible and explains
@@ -402,7 +402,8 @@ COPY_TIP = "Copy command to paste in terminal"
 
 
 def command_html(cmd: str, action_id: str | None = None, *, tip: str = "",
-                 running: str = "", label: str = "", run_face: str = "") -> str:
+                 running: str = "", label: str = "", run_face: str = "",
+                 icon: str = "") -> str:
     """The affordances of one shell command, beside the control that describes it.
 
     **The command itself is not printed.** It used to be, in a parenthesis, and it was the
@@ -472,7 +473,8 @@ def command_html(cmd: str, action_id: str | None = None, *, tip: str = "",
     # the reader is looking for and the mark is the footnote saying what a press will do —
     # and the row this replaced already read that way, so nothing about where to look
     # changed when the second control went away.
-    word = f'<span class="cmd-word">{html.escape(label)}</span>' if label else ""
+    lead = f'<span class="cmd-lead">{icon}</span>' if icon and label else ""
+    word = f'{lead}<span class="cmd-word">{html.escape(label)}</span>' if label else ""
     wordy = " has-word" if label else ""
 
     def face(glyph: str) -> str:
@@ -570,14 +572,14 @@ def regenerate_html(redraw: dict | None, rerun: dict, rebuild: str,
     # script draws — is what the *command* says, and the command is one hover away on the
     # clipboard face of the same control.
     served = "Your layout is saved in git stash"
-    return (command_html(line, aid, label="Revert the diagram", tip=served,
+    return (command_html(line, aid, label="Revert changes", icon="\u21e4", tip=served,
                          running="Putting automation's drawing back…"), aid)
 
 
 def rerun_html(rerun: dict | None, rebuild: str, name: str = "",
                app_url: str = "", web_url: str = "", redraw: dict | None = None,
                revert: dict | None = None, reveal: dict | None = None,
-               tested_against: str = "") -> str:
+               tested_against: str = "", tested_against_path: str = "") -> str:
     """Under the drawing: where to edit it, and the two things to do about it afterwards.
 
     The command is not a convenience. The picture above is inlined into the HTML, and it
@@ -603,22 +605,20 @@ def rerun_html(rerun: dict | None, rebuild: str, name: str = "",
     not work is worse than no command, because it is tried first.
     """
     edit = drawio_open_html(app_url, web_url)
-    # With a guardrail named (`tested_against`), the sentence leads with it — "This diagram
-    # is unit-tested against the Java Domain Model.⏎Relayout it in draw.io Desktop App ↗ or
-    # Web ↗." — on two lines, the fact and then the offer, so the reader learns the drawing is checked before being told what is left to
-    # them. *Relayout*, not *update*: with a test holding the boxes and lines to the code,
-    # what a reader does in draw.io is move them around; what they mean is the test's.
-    # Without one, the plain offer.
+    # One fact, and only when the project named a guardrail: the file's own name is the
+    # card's title right above, so the sentence does not repeat it ("This diagram is…").
+    # With `tested_against_path` the label is the way into the scanned package in VS Code.
+    sentence = ""
     if tested_against:
-        it = reveal_html(reveal, name, capital=True)
-        lead = f'{it} is unit-tested against the {html.escape(tested_against)}.'
-        sentence = (f'{lead}<br>Relayout it in {edit}.' if edit else lead)
-    else:
-        it = reveal_html(reveal, name)
-        sentence = (f'Update {it} in {edit}.' if edit
-                    else (f'Update {it}.' if reveal else ""))
+        label = html.escape(tested_against)
+        if tested_against_path:
+            label = (f'<a href="vscode://file/{html.escape(tested_against_path, quote=True)}">'
+                     f'{label}</a>')
+        sentence = f"Unit-tested against the {label}."
+    where = f'<p class="dgm-open">{sentence}</p>' if sentence else ""
     if not rerun or not rerun.get("command"):
-        return f'<p class="dgm-open">{sentence}</p>' if edit else ""
+        return (f'<div class="rerun">{where}<div class="rerun-acts">{edit}</div></div>'
+                if edit else where)
     line = f'cd {shlex.quote(rerun["cwd"])} \\\n  && {rerun["command"]} \\\n  && {rebuild}'
     # Per diagram, because a page can carry several and each one reruns its own. The id
     # is the diagram's name for the same reason every other handle on this page is: so a
@@ -644,14 +644,10 @@ def rerun_html(rerun: dict | None, rebuild: str, name: str = "",
     #
     # In the markup of both copies of the report. Off disk nothing fills it, which costs
     # a hidden empty paragraph.
-    # The sentence, when there is somewhere to send them. With no editor link declared
-    # there is no "in draw.io App ↗" to write, and `Edit this diagram in .` is worse than
-    # silence — but the file itself is still worth naming if the verdict recorded how to
-    # reveal it.
-    where = f'<p class="dgm-open">{sentence}</p>' if sentence else ""
     return ('<div class="rerun">' + where
             + '<div class="rerun-acts">'
-            + command_html(line, aid, label="Update the report", tip=served,
+            + edit
+            + command_html(line, aid, label="Update report", icon="\u21ba", tip=served,
                            running="Re-rendering the diagram…")
             + again
             + '</div>'

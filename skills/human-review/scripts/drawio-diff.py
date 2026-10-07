@@ -571,7 +571,10 @@ def overlay_traces(xml: str, observed: set, attr: str = TRACE_ATTR) -> tuple[str
                 geo[cid] = (gx, gy, W, H)
                 cell = ET.SubElement(holder, "mxCell", {
                     "id": cid, "parent": "1", "vertex": "1",
-                    "value": f"<b>{_esc(end)}</b>",  # HTML, as a label is
+                    # HTML, as a label is: a lifeline name like "«module»\nCommons" carries a
+                    # literal backslash-n (or a real newline), which HTML would show as text
+                    "value": "<b>" + _esc(end).replace("\\n", "<br>").replace("\n", "<br>")
+                             + "</b>",
                     "style": ("rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=none;"
                               f"strokeColor={UNDRAWN_COLOR};fontColor={UNDRAWN_COLOR};"
                               "strokeWidth=2;fontSize=13;")})
@@ -1106,6 +1109,10 @@ def main():
                          "automation draw this diagram again. Not guessed from --base: a "
                          "script that rewrites a checked-in file is not something to "
                          "derive from a naming convention and run on a reader's click")
+    ap.add_argument("--tested-against-path", metavar="DIR",
+                    help="the source package that test scans (relative to --repo-root); the "
+                         "`--tested-against` label links to it in VS Code. Without it the "
+                         "label is plain text")
     ap.add_argument("--tested-against", metavar="WHAT",
                     help="what a unit test checks this drawing against (e.g. `Java Domain "
                          "Model`), for the sentence under the picture. Recorded, not "
@@ -1178,6 +1185,9 @@ def main():
     verdict["reveal"] = reveal_in_file_manager(source)
     if args.tested_against:
         verdict["tested_against"] = args.tested_against
+        if args.tested_against_path:
+            verdict["tested_against_path"] = str(
+                (Path(args.repo_root) / args.tested_against_path).resolve())
     # How to run this again, recorded by the run itself. The report inlines these SVGs at
     # build time — it has to, or the links drawn inside them go inert — so a reader who
     # has just re-laid the diagram out by hand needs a command, and the reader is not the
@@ -1195,11 +1205,13 @@ def main():
     # revision by hand. Two halves, and only one of them is ours: restoring the diagram to
     # its base state is derivable from the flags this run already has, and redrawing it is
     # the repository's own script, which is why it has to be passed in.
-    if args.redraw and args.base:
+    # A traced diagram needs no script: restoring the base is enough, the rerun lays the
+    # traces' red to-dos over it again.
+    if args.base and (args.redraw or args.traces):
         restore = f"git checkout {shlex.quote(args.base)} -- {shlex.quote(str(source))}"
         verdict["redraw"] = {
             "cwd": str(Path.cwd()),
-            "command": f"{restore} && {args.redraw}",
+            "command": f"{restore} && {args.redraw}" if args.redraw else restore,
             "diagram": str(source),
             "base": args.base,
         }

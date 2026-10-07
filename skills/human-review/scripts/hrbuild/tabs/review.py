@@ -1044,28 +1044,31 @@ def _base_ref(spec, root: Path | None) -> str | None:
     return None
 
 
-def _after_review_signal(out_dir: Path, root: Path | None, base_ref: str | None) -> dict | None:
-    """Commits that moved code after the review was recorded — the aftermath band's
-    count, minus what that band folds away as tooling from the base and merge seams."""
+def commits_after_review(out_dir: Path, root: Path | None) -> dict | None:
+    """What was added to the branch after the reviewed commit, for the masthead's `N↑`.
+
+    `{"review": <short>, "commits": [{"short", "when", "subject"}, …]}`, newest first, read
+    off git as `git log --first-parent --no-merges <review>..HEAD` — no judgement of what
+    changed, no generated/tooling split. None when there is no recorded review commit or
+    nothing came after it."""
     doc = _read_json(Path(out_dir) / AFTERMATH_JSON)
-    if not isinstance(doc, dict):
+    review = doc.get("review") if isinstance(doc, dict) else None
+    if not review or root is None:
         return None
-    commits = [c for c in doc.get("commits") or []
-               if isinstance(c, dict) and not c.get("takeover") and not c.get("taken_over")
-               and any(not f.get("generated") for f in c.get("files") or [])]
-    shas = [c["sha"] for c in commits if c.get("sha")]
-    drop = _merge_seam_shas(root, shas) if root else set()
-    drop |= _tooling_commit_shas(root, base_ref, [s for s in shas if s not in drop]) \
-        if root else set()
-    commits = [c for c in commits if c.get("sha") not in drop]
-    if not commits:
+    out = _git_out(root, "log", "--first-parent", "--no-merges", "--date=format:%d %b %H:%M",
+                   "--format=%h%x09%ad%x09%s", f"{review}..HEAD")
+    rows = [ln.split("\t", 2) for ln in (out or "").splitlines() if ln.count("\t") >= 2]
+    if not rows:
         return None
-    n = len(commits)
-    return _signal("after-review",
-                   f"{n} commit{'' if n == 1 else 's'} landed after the review",
-                   "Not reviewed: " + "; ".join(f"{c.get('short', '')} {c.get('subject', '')}"
-                                           for c in commits[:4]),
-                   GRADE_CAPS["after-review"])
+    return {"review": review[:8],
+            "commits": [{"short": a, "when": b, "subject": c} for a, b, c in rows]}
+
+
+def _after_review_signal(out_dir: Path, root: Path | None, base_ref: str | None) -> dict | None:
+    """Retired: the grade panel no longer says `N commits landed after the review` (Victor,
+    7 Oct 2026) — the count is the masthead branch chip's `N↑`. Kept as a no-op so the
+    signal list and its `after-review` ranking stay as they were."""
+    return None
 
 
 def _out_of_range_signal(spec, root: Path | None, base_ref: str | None,

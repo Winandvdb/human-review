@@ -225,9 +225,26 @@ def ref_badges(spec: dict, state: dict | None = None) -> str:
     # One chip, one sentence: `branch test-pr from main`. Each ref is its own link, so
     # the chip is a span holding two anchors rather than one anchor around both.
     parts = []
-    if branch:
-        parts.append(f"branch {ref_html(branch, 'head')}")
     cls_extra = ""
+    after = spec.get("_afterReview")
+    ahead_mark = ""
+    if branch and after and after.get("commits"):
+        # `7↑test-pr`: commits added to the branch after the reviewed one, same style as
+        # the `5↓main` mark. Their list is the hover, one per line.
+        n = len(after["commits"])
+        items = "".join(
+            f'<li><code>{html.escape(c["short"])}</code> {html.escape(c["subject"])} '
+            f'<span class="tipwhen">{html.escape(c["when"])}</span></li>'
+            for c in after["commits"])
+        tip = (f'<p class="tipfoot">{n} commit{"" if n == 1 else "s"} added to this PR after '
+               f'the review (at {html.escape(after["review"])}):</p>'
+               f'<ul class="tiplist prose">{items}</ul>')
+        ahead_mark = (f'<span class="drift drift-ahead" role="img" '
+                      f'aria-label="{n} commits after the review" '
+                      f'data-tip-html="{html.escape(tip, quote=True)}">{n}\u2191</span>')
+        cls_extra = " drifted"
+    if branch:
+        parts.append(f"branch {ahead_mark}{ref_html(branch, 'head')}")
     mark = ""
     if base and warning:
         # `5↓main`: five commits behind main, the number sitting on the ref it measures.

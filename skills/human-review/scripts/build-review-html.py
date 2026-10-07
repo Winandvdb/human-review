@@ -153,7 +153,7 @@ from hrbuild.shared.layout import (
     _own_diagram_title, LAYOUT_WHEN_WRITTEN
 )
 from hrbuild.tabs.review import (
-    AFTERMATH_FILES, aftermath_html, aftermath_reads_takeover, AFTERMATH_JSON, CONFIDENCE_TIP,
+    AFTERMATH_FILES, aftermath_html, aftermath_reads_takeover, AFTERMATH_JSON, commits_after_review, CONFIDENCE_TIP,
     opening_lede, PASS_DOCS,
     PILE_BLOCKS, pile_numbers, is_refuted, refuted_number, PILELEDE_SPY_JS, points_empty_html, POINTS_MISSING_BAND, points_note_band,
     POINTS_PILES, render_assumptions, render_autofixes, render_findings, render_pile_block,
@@ -187,7 +187,7 @@ from hrbuild.tabs.review import (
     _cited_quote, _find_line, _resolve_citation, link_spec_citations, urllib_quote,
     _before_range_commits, _spec_commit_signals, _PILE_COUNT, _Q_REF, model_line_conflict,
     _drop_model_line, SNIPPET_LINES, STATEMENT_LINES, _STATEMENT_SUFFIXES, _CONT_START,
-    _OPEN_END, widen_anchor, _snapped_spans, _spans_ref, _first_lines, snippet_card,
+    _OPEN_END, widen_anchor, _snapped_spans, _spans_ref, _first_lines, snippet_card, _snippet_card_open,
     GRADE_LINES_MAX, SPARE_SIGNALS, _REPEATS, _PILE_WORD, _PILE_OF_WORD, _PILE_SAID,
     _plain_words, named_items, hunk_bodies, _layout_free, format_only_hunk, _OBS_LABELS,
     _obs_label, _STOPWORDS, _words, restates_title,
@@ -404,6 +404,7 @@ def _main(argv=None) -> int:
     # counted the branch's drift against a local `main` hours behind origin.
     fetch_base(root, (spec.get("pr") or {}).get("base") or "origin/main")
     base_st = page_base(root, out_dir, (spec.get("pr") or {}).get("base") or "origin/main")
+    spec["_afterReview"] = commits_after_review(out_dir, root)
     page_rev = (base_st or {}).get("diffBase")
     if page_rev:
         set_diff_base(page_rev)
@@ -863,11 +864,12 @@ def _main(argv=None) -> int:
     # The takeover note goes above the counts line itself: it says at which commit every
     # number on that line was counted — unless the aftermath band already lists the commits
     # it took over, read off git, which is the list the note was a frozen copy of.
-    set_bands([aftermath_html(out_dir, root, base_ref=base_st["ref"] if base_st else None),
-               POINTS_MISSING_BAND if (spec.get("_reviewPoints") or {}).get("missing")
+    # No aftermath band any more (Victor, 7 Oct 2026): no judgement of what changed after
+    # the review. The count rides on the masthead's branch chip (`7↑test-pr`); the
+    # takeover note, which the band used to carry, is always drawn here now.
+    set_bands([POINTS_MISSING_BAND if (spec.get("_reviewPoints") or {}).get("missing")
                else ""],
-              top=[] if aftermath_reads_takeover(out_dir)
-              else [points_note_band(spec.get("_reviewPoints"), github_blob_base(root))])
+              top=[points_note_band(spec.get("_reviewPoints"), github_blob_base(root))])
 
     def render_block(block):
         """One block of a tab, as (html, weight, changes).

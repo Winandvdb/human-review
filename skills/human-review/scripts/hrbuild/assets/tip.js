@@ -36,6 +36,12 @@
     '.tip ul.tiplist{margin:0;padding-left:1.1rem;list-style:disc;' +
     'font:400 13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}' +
     '.tip ul.tiplist li{margin:0}' +
+    // A list of prose items (commit subjects): the page's own sans, only the `<code>` in
+    // monospace, and the time dimmed after the subject.
+    '.tip ul.tiplist.prose{font:400 13px/1.5 -apple-system,system-ui,"Segoe UI",sans-serif}' +
+    '.tip ul.tiplist.prose li{margin:.15rem 0}' +
+    '.tip ul.tiplist.prose code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}' +
+    '.tip .tipwhen{opacity:.6;font-size:.9em;white-space:nowrap}' +
     '.tip p.tipfoot{margin:.5rem 0 0;font-size:13px;opacity:.72}' +
     '.tip p.tipfoot:first-child{margin:0;opacity:1}' +
     // One convention for the pointer: a mark that only explains itself gets the question

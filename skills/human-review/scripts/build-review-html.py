@@ -250,7 +250,8 @@ from hrbuild.tabs.cost import (
     _cost_env, _cost_inputs, _cost_money, cost_session,
     _cost_tab_rows, _cost_tokens, _when, components_html, cost_pill_label, cost_pill_title,
     _legacy_ledger_html, _HARNESS, _aic, _component_money, _minutes, _entry_line,
-    guide_breakdown_html, _extension_line, _instants, _stamp_s, _span, _cost_cell
+    guide_breakdown_html, _extension_line, _instants, _stamp_s, _span, _cost_cell,
+    BUSY_TIP, _duration, _time_cell
 )
 
 

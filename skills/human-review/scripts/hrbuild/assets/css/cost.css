@@ -62,3 +62,7 @@ table.costtab .costexp[aria-expanded="true"]::after { content:" \25BE"; }
 table.costtab .costexp:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 table.costtab tr.costfold > td { padding:.2rem 0 .8rem 1.2rem; }
 table.costtab tr.costfold table.costtab { font-size:.9em; }
+/* The four components' time column, between the name and the cost: plain, its model
+   share on hover; the cost stays the last, bold column. */
+table.costfour > tbody > tr > td:nth-child(2):not(:last-child) { font-weight:400; }
+table.costfour th span[data-tip], table.costtab .costtime[data-tip] { cursor:help; }

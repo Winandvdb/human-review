@@ -841,6 +841,31 @@ def _minutes(secs) -> str:
     return f"{m:.0f} min" if m >= 1 else f"{secs:.0f} s"
 
 
+#: The time column's header hover: which time it is, since two honest ones exist.
+BUSY_TIP = ("Agent busy time: each prompt to its last reply, summed. "
+            "Waiting for the next prompt is left out.")
+
+
+def _duration(secs) -> str:
+    """`45 s`, `12 min`, `3 h 05 min` — or `—` when nothing could time it."""
+    if secs is None:
+        return "—"
+    secs = round(secs)
+    if secs < 60:
+        return f"{secs} s"
+    m = round(secs / 60)
+    return f"{m} min" if m < 60 else f"{m // 60} h {m % 60:02d} min"
+
+
+def _time_cell(secs, model_secs=None) -> str:
+    """The time column: busy time, and how much of it the model was working on its hover."""
+    if secs is None:
+        return "<td>—</td>"
+    tip = (f' data-tip="model {html.escape(_minutes(model_secs))} of it"'
+           if model_secs else "")
+    return f'<td><span class="costtime"{tip}>{_duration(secs)}</span></td>'
+
+
 def _entry_line(e: dict, alone: bool = False) -> str:
     who = _HARNESS.get(e.get("harness"), e.get("harness") or "?")
     sid = str(e.get("session") or "")
@@ -913,16 +938,21 @@ def components_html(comp: dict | None, fold: str = "") -> str:
             why = html.escape(str(r.get("reason") or "not measured"))
             out.append(f'<tr class="costquiet" data-component="{html.escape(r["key"])}">'
                        f'<td>{label}<span class="costsub">unmeasured — {why}</span></td>'
-                       '<td>—</td></tr>')
+                       '<td>—</td><td>—</td></tr>')
             continue
         entries = r.get("entries") or []
         lines = [_entry_line(e, alone=len(entries) == 1) for e in entries]
         if r.get("key") == "guide":
             wall = (comp or {}).get("wallclock") or {}
             took = _minutes(wall.get("seconds"))
-            if took:
+            extra = (comp or {}).get("refreshSeconds") or 0
+            if r.get("busySeconds") is not None:
+                # The run's time is in the time column now; only the refreshes after it,
+                # which are not, still need words.
+                if extra:
+                    lines.append(f"plus {_minutes(extra)} of later refreshes, no model")
+            elif took:
                 model = wall.get("modelSeconds")
-                extra = (comp or {}).get("refreshSeconds") or 0
                 lines.append(f"took {took}" + (f", of which model {_minutes(model)}"
                                                 if model else "")
                              + (f"; plus {_minutes(extra)} of refreshes, no model"
@@ -947,11 +977,14 @@ def components_html(comp: dict | None, fold: str = "") -> str:
                      'onclick="var t=this.closest(\'tr\').nextElementSibling;'
                      't.hidden=!t.hidden;this.setAttribute(\'aria-expanded\',!t.hidden)">'
                      f'{label}</button>')
+        # Time before the cost: the money stays the last column, where the page's
+        # "Prompt to get this" button sits in the header, beside `cost`.
         out.append(f'<tr data-component="{html.escape(r["key"])}"><td>{label}{sub}</td>'
-                   f'<td>{_cost_cell(_component_money(r, rate), r.get("tokens") or 0, models)}'
+                   + _time_cell(r.get("busySeconds"), r.get("modelSeconds"))
+                   + f'<td>{_cost_cell(_component_money(r, rate), r.get("tokens") or 0, models)}'
                    '</td></tr>')
         if folds:
-            out.append(f'<tr class="costfold" hidden><td colspan="2">{fold}</td></tr>')
+            out.append(f'<tr class="costfold" hidden><td colspan="3">{fold}</td></tr>')
     usd, aic = comp.get("usd") or 0.0, comp.get("aic") or 0.0
     total = usd + aic * rate
     # Under the total, only what the column cannot say by itself: two kinds of price.
@@ -965,7 +998,10 @@ def components_html(comp: dict | None, fold: str = "") -> str:
     tokens = sum(r.get("tokens") or 0 for r in rows if r.get("measured"))
     foot = (f'<tr class="costtotal"><td>Total'
             + (f'<span class="costsub">{html.escape(sub)}</span>' if sub else "")
-            + f'</td><td>{_cost_cell(_cost_money(total), tokens)}</td></tr>')
+            + '</td>'
+            + _time_cell(comp.get("busySeconds"),
+                         sum(r.get("modelSeconds") or 0 for r in rows if r.get("measured")))
+            + f'<td>{_cost_cell(_cost_money(total), tokens)}</td></tr>')
     priced = [r for r in rows if r.get("measured")]
     has_copilot = any(r.get("aic") is not None for r in priced)
     caption = "Copilot in AI credits, at what GitHub bills for them." if has_copilot else ""
@@ -979,7 +1015,9 @@ def components_html(comp: dict | None, fold: str = "") -> str:
             'below).</p>' if missing else "")
     return (warn + '<table class="costtab costledger costfour">'
             + (f'<caption>{caption}</caption>' if caption else '') +
-            '<thead><tr><th scope="col">component</th><th scope="col">cost</th></tr></thead>'
+            '<thead><tr><th scope="col">component</th>'
+            f'<th scope="col" data-adopt><span data-tip="{html.escape(BUSY_TIP, quote=True)}">time</span>'
+            '</th><th scope="col">cost</th></tr></thead>'
             f'<tbody>{"".join(out)}</tbody><tfoot>{foot}</tfoot></table>')
 
 

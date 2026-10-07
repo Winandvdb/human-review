@@ -777,3 +777,54 @@ def test_a_step_run_twice_is_one_row_of_wallclock_the_last_run(tmp_path):
     assert film == [{"label": "feature recording", "tabs": ["behaviour"], "seconds": 234}]
     assert wall["stepSeconds"] == 234 + 40 + 123
     assert wall["stepSeconds"] <= wall["seconds"]
+
+
+# --------------------------------------------------------------------------- time per phase
+
+def test_a_phase_takes_its_turns_not_the_pauses_between_them(claude_world):
+    """Busy time: each prompt to the last record before the next one. The 20 minutes nobody
+    typed (10:20 → 10:40) are not in it; the CI wait the agent itself sat through, woken by
+    a task-notification, is (10:55:30 → 11:05:10)."""
+    w = claude_world
+    e = hc.entry(hc.CLAUDE, w["sid"], "x", ("2026-10-02T10:00:00Z", "2026-10-02T11:20:00Z"))
+    assert hc.busy_seconds([e]) == 20 * 60 + (25 * 60 + 10)
+    step = hc.entry(hc.CLAUDE, "claude -p (.model-runs.json)", "mapping",
+                    ("2026-10-02T11:10:00Z", "2026-10-02T11:11:30Z"))
+    assert hc.busy_seconds([e, step]) == 20 * 60 + (25 * 60 + 10) + 90, \
+        "a model step outside the turns adds its own window"
+    inside = hc.entry(hc.CLAUDE, "claude -p (.model-runs.json)", "mapping",
+                      ("2026-10-02T10:45:00Z", "2026-10-02T10:46:00Z"))
+    assert hc.busy_seconds([e, inside]) == 20 * 60 + (25 * 60 + 10), \
+        "one that ran inside a turn is not counted twice"
+    gone = hc.entry(hc.CLAUDE, "no-such-session", "x",
+                    ("2026-10-02T10:00:00Z", "2026-10-02T11:20:00Z"))
+    assert hc.busy_seconds([e, gone]) is None, "a phase partly untimed is untimed, not less"
+
+
+def test_the_four_rows_carry_a_time_column_and_a_dash_when_untimed():
+    sys.path.insert(0, str(HERE))
+    from hrbuild.tabs import cost
+    impl = hc.component("implementation", [hc.entry(hc.CLAUDE, "c1abcdef", "w", usd=20.0)])
+    impl["busySeconds"], impl["modelSeconds"] = 2 * 3600 + 5 * 60, 1800
+    review = hc.component("review", [hc.entry(hc.CLAUDE, "c1abcdef", "r", usd=1.5)])
+    review["busySeconds"] = 67
+    fixes = hc.component("autofix", [hc.entry(hc.CLAUDE, "c1abcdef", "f", usd=2.0)])
+    fixes["busySeconds"] = None
+    guide = hc.component("guide", [hc.entry(hc.CLAUDE, "g1", "run", usd=2.4)])
+    guide["busySeconds"] = 600
+    comp = {"rows": [impl, review, fixes, guide], "usd": 25.9, "aic": 0.0,
+            "busySeconds": None, "wallclock": {"seconds": 720, "modelSeconds": 240},
+            "refreshSeconds": 240}
+    out = cost.components_html(comp)
+    assert '<th scope="col" data-adopt><span data-tip="Agent busy time' in out
+    cells = re.findall(r'<td>(?:<span class="costtime"[^>]*>)?([^<]*)(?:</span>)?</td>'
+                       r'<td><span class="costmoney"', out)
+    assert cells == ["2 h 05 min", "1 min", "—", "10 min", "—"], cells
+    assert 'data-tip="model 30 min of it"' in out
+    assert "took 12 min" not in out, "the run's time is in the column, not twice"
+    assert "plus 4 min of later refreshes, no model" in out
+    comp["busySeconds"] = 2 * 3600 + 5 * 60 + 67 + 600
+    fixes["busySeconds"] = 0
+    assert "data-adopt><span" in out, "the prompt pill goes before time, not over it"
+    assert re.search(r'costtotal.*>2 h 16 min</span></td><td><span class="costmoney"',
+                     cost.components_html(comp))

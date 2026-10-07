@@ -236,7 +236,10 @@ def place_prompts(tid: str, body: str) -> str:
                 cells = list(re.compile(r"<th\b[^>]*>").finditer(body, hit.end(),
                                                                   max(row_end, 0)))
                 if cells:
-                    at = cells[-1].end()
+                    # The last cell, unless one asks for it: the cost tab's `time` column
+                    # stands left of `cost`, and a pill hung before `cost` covered it.
+                    at = next((c for c in cells if "data-adopt" in c.group(0)),
+                              cells[-1]).end()
                     edits.append((at, at, adopt_html(piece, how="th")))
                 continue
             span = _close(body, hit.start())

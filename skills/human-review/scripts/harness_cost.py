@@ -327,6 +327,90 @@ def claude_entry(session: str | None, lo, hi, what: str) -> dict | None:
     return out
 
 
+def claude_busy_spans(path: Path, lo, hi) -> list[tuple]:
+    """When the agent was busy: each turn, from the prompt that opened it to the last
+    record of it before the next prompt — the model, its tools, a CI round it waited on.
+    The gap between a turn's end and the next prompt is somebody not having typed yet, and
+    is not in it: the implementing conversation of the reference page ran from 17 Sep 21:29
+    to 19 Sep 00:49, and "27 hours" is not how long the implementation took.
+
+    A window that opens mid-turn starts at its first record. Only `user` and `assistant`
+    records count, so a bookkeeping record stamped later does not stretch a turn."""
+    spans, start, last = [], None, None
+    for rec in rc()._rows(path):
+        if rec.get("type") not in ("user", "assistant"):
+            continue
+        t = parse(rec.get("timestamp"))
+        if t is None or not _within(t, lo, hi):
+            continue
+        if _real_prompt(rec):
+            if start and last:
+                spans.append((start, last))
+            start = last = t
+        else:
+            start = start or t
+            last = t
+    if start and last:
+        spans.append((start, last))
+    return spans
+
+
+#: Copilot CLI keeps model calls, not turns: two calls further apart than this are a
+#: person's pause, closer ones are the agent running a tool in between.
+COPILOT_IDLE = dt.timedelta(minutes=5)
+
+
+def busy_spans(e: dict, root: Path | None = None) -> list[tuple] | None:
+    """The stretches one entry's agent was busy inside its window, or None when the store
+    that would say is not on this machine — "—" on the page, never a guess."""
+    win = (e.get("window") or []) + [None, None]
+    lo, hi = parse(win[0]), parse(win[1])
+    harness, sid = e.get("harness"), str(e.get("session") or "")
+    if not sid or not lo or not hi:
+        return None
+    if harness == CLAUDE and sid.startswith("claude -p"):
+        # A model step's ledger row: its window is the step itself, start to reply.
+        return [(lo, hi)]
+    if harness == CLAUDE:
+        path = rc().transcript(sid)
+        if path is None:
+            return None
+        spans = claude_busy_spans(path, lo, hi)
+        for agent in rc().subagent_transcripts(path):
+            first, _last = rc().agent_span([agent])
+            if first is not None and _within(first, lo, hi):
+                spans += claude_busy_spans(Path(agent), lo, hi)
+        return spans or None
+    if harness == COPILOT_CLI:
+        calls = sorted((ev["when"] - dt.timedelta(milliseconds=int(ev.get("duration_ms") or 0)),
+                        ev["when"]) for ev in copilot_events(sid, lo, hi) if ev.get("when"))
+        spans: list[list] = []
+        for a, b in calls:
+            if spans and a - spans[-1][1] <= COPILOT_IDLE:
+                spans[-1][1] = max(spans[-1][1], b)
+            else:
+                spans.append([a, b])
+        return [tuple(s) for s in spans] or None
+    if harness == VSCODE and root is not None:
+        chat = next((c for c in vscode_chats(root) if c["id"] == sid), None)
+        reqs = [(r["start"] or r["end"], r["end"]) for r in (chat or {}).get("requests") or []
+                if _within(r["end"], lo, hi)]
+        return reqs or None
+    return None
+
+
+def busy_seconds(entries: list[dict], root: Path | None = None) -> float | None:
+    """A component's time: the union of its entries' busy stretches — a model step that ran
+    inside the run's own turn is not counted twice. None when any entry cannot say."""
+    spans: list[tuple] = []
+    for e in entries or []:
+        got = busy_spans(e, root)
+        if got is None:
+            return None
+        spans += got
+    return round(_intervals_union(spans)) if spans else None
+
+
 #: What the harness types into a conversation on its own, never a person: a background
 #: task finishing, a skill's body loaded under its slash command, a hook's reminder.
 _HARNESS_PROMPTS = ("<task-notification>", "<system-reminder>", "<local-command-",
@@ -1615,6 +1699,13 @@ def components(root: Path, base: str, review: Path, phases: dict | None = None,
     guide = kept
     refreshes = (report or {}).get("refreshes") or []
     rows = [relabel(c) for c in list(first3) + [guide]]
+    for c in rows:
+        # Re-read at every build, never trusted from a record: `review-cost.json` predates
+        # the field, and the store is what the window's turns are read from anyway.
+        c["busySeconds"] = busy_seconds(c.get("entries"), root) if c.get("measured") else None
+    timed = [c for c in rows if c.get("measured")]
+    busy = (sum(c["busySeconds"] for c in timed)
+            if timed and all(c["busySeconds"] is not None for c in timed) else None)
     usd = sum(c.get("usd") or 0.0 for c in rows if c.get("measured"))
     aic = sum(c.get("aic") or 0.0 for c in rows if c.get("measured"))
     return {"rows": rows, "recorded": not rec.get("derived"),
@@ -1623,5 +1714,5 @@ def components(root: Path, base: str, review: Path, phases: dict | None = None,
             "usdEquivalent": round(usd + aic * AIC_USD, 2), "aicUsd": AIC_USD,
             "mixed": bool(usd and aic), "rateNote": AIC_RATE_NOTE,
             "unmeasured": [c["key"] for c in rows if not c.get("measured")],
-            "wallclock": wall, "refreshes": refreshes,
+            "wallclock": wall, "refreshes": refreshes, "busySeconds": busy,
             "refreshSeconds": round(sum(r.get("seconds") or 0 for r in refreshes))}

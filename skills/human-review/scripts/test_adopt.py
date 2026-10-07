@@ -197,3 +197,14 @@ def test_every_tab_is_either_per_card_or_whole_tab_or_one_of_the_agreed_exceptio
     assert set(PLACES) == per_card | set(WHOLE_TAB) | set(agreed)
     for tid, how in agreed.items():
         assert [h for _, h, _, _ in PLACES[tid]] == [how]
+
+
+def test_a_header_cell_marked_data_adopt_takes_the_button_instead_of_the_last():
+    """The cost tab's `time` column stands left of `cost`: the pill, hung before `cost`,
+    covered `time` and its hover. The cell that asks for it gets it."""
+    body = ('<table class="costtab costledger costfour"><thead><tr><th scope="col">component'
+            '</th><th scope="col" data-adopt>time</th><th scope="col">cost</th></tr></thead>'
+            '<tbody><tr><th>x</th></tr></tbody></table>')
+    out = place_prompts("cost", body)
+    assert re.search(r'<th scope="col" data-adopt><div class="adoptline adopt-th">.*?</button>'
+                     r'</div>time</th><th scope="col">cost</th>', out)

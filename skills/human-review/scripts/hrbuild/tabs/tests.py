@@ -647,28 +647,17 @@ COVERAGE_JSON = "assets/test-coverage.json"
 #: asking "covering what?".
 COVCARD_WHO = "Tests covering the change set"
 COVCARD_WHO_PR = "Tests covering the change set"
-#: What each coverage probe is called, by the `source` a suite records in `test-coverage.json`.
-COV_PROBES = {"jacoco": "JaCoCo", "karma": "Karma", "v8": "V8"}
+COV_SHIELD = ('<svg viewBox="0 0 16 16"><path d="M8 .9 14.2 3.2v4.6c0 3.6-2.6 6.4-6.2 7.6C4.4 14.2 '
+              '1.8 11.4 1.8 7.8V3.2Z"/><path class="rm-play" d="M6.4 5.1v5.6l4.4-2.8Z"/></svg>')
 
 
 def covcard_tip(doc: dict) -> str:
-    """How the card was computed, said from the measurement itself: how many tests were run,
-    and with which probe each suite — nothing here is a fixed list, so a build with another
-    suite says another thing. (Wired on the card title; `COVCARD_TIP` was defined once and
-    never emitted, so the title had no hover at all.)"""
-    suites = [x for x in doc.get("suites") or [] if isinstance(x, dict)]
-    total = sum(int(x.get("tests") or 0) for x in suites)
-    by_probe: dict[str, list[str]] = {}
-    for x in suites:
-        src = str(x.get("source") or "")
-        if not src or not x.get("tests"):
-            continue
-        probe = " + ".join(COV_PROBES.get(k, k) for k in src.split("+"))
-        by_probe.setdefault(probe, []).append(str(x.get("name") or "").strip())
-    probes = "; ".join(f"{p} for {', '.join(n)}" for p, n in by_probe.items())
-    return (f"All {total} tests were run one at a time with a coverage probe"
-            + (f" ({probes})" if probes else "")
-            + ". Listed here: every test that executed at least one line this branch changed.")
+    """How the card was computed, in one line, the count taken from the measurement (the
+    sum of the suites' tests). `COVCARD_TIP` was defined once and never emitted, so the
+    title had no hover at all."""
+    total = sum(int(x.get("tests") or 0) for x in doc.get("suites") or [] if isinstance(x, dict))
+    return (f"Each of the {total} tests ran alone under a coverage probe. "
+            "Listed: those that ran a changed line.")
 
 
 #: A changed line counts as "passed through" when more than this share of a suite's
@@ -1012,7 +1001,7 @@ def coverage_side(side: str, frag: str, spec: dict, out_dir: Path, root: Path,
             return side
         note = COV_NOT_MEASURED_SCRIPTED if generated else COV_NOT_MEASURED
         return side[:span[1]] + f'<p class="cov-none">{note}</p>' + side[span[1]:]
-    head = (f'<div class="rm-tkhead"><span class="rm-av cov-av" aria-hidden="true">📏</span>'
+    head = (f'<div class="rm-tkhead"><span class="rm-av cov-av" aria-hidden="true">{COV_SHIELD}</span>'
             f'<span class="rm-who" data-tip="{html.escape(covcard_tip(doc), quote=True)}">'
             f'{covcard_who(spec, out_dir)}</span></div>')
     side = re.sub(r'<div class="rm-tkhead">.*?</div>', lambda _: head, side, count=1, flags=re.S)

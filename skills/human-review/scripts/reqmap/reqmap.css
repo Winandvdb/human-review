@@ -463,5 +463,6 @@
   cursor:help}
 .reqmap .rm-run:empty{cursor:default}
 .reqmap .rm-run svg{display:block;width:15px;height:15px;overflow:visible;fill:var(--rm-run)}
-.reqmap .rm-run .rm-route{fill:none;stroke:var(--rm-run);stroke-width:1.6;
-  stroke-linecap:round;stroke-dasharray:2.2 2}
+.reqmap .rm-run .rm-play,.reqmap .cov-av .rm-play{fill:var(--bg,#1e1e24)}
+/* Half the row's 8px gap between the shield and the stamp that follows it. */
+.reqmap .rm-run + .rm-st{margin-left:-4px}

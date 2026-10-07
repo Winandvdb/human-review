@@ -90,7 +90,8 @@ ul.req-tests li { list-style:none; }
 /* Coverage, once measured (tests.py, coverage_side / coverage_after): the model's card keeps
    its own frame and rows, with a ruler for an avatar, and the suites it is short of are
    noted under it. */
-.reqmap .cov-av { font-size:16px; line-height:1; cursor:help; }
+.reqmap .cov-av { display:flex; align-items:center; justify-content:center; cursor:help; }
+.reqmap .cov-av svg { width:20px; height:20px; fill:var(--rm-run); }
 .cov-after { margin:.5rem 2px 0; font-size:.85rem; }
 .cov-none { margin:6px 12px; font-size:.82rem; color:var(--drift); }
 /* A suite whose coverage is missing or stale (suite_chips): a few words, muted, the reason

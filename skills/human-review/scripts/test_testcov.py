@@ -343,7 +343,7 @@ def _data(page):
 
 def test_the_card_keeps_its_shape_and_is_retitled(tmp_path):
     page = _with_coverage(tmp_path)
-    assert T.COVCARD_WHO in page and "📏" in page
+    assert T.COVCARD_WHO in page and "rm-play" in page
     # The model's old title, not the semantic switch's tip, which says the same words.
     assert "Covering tests" not in page and "— as matched by AI" not in page
     # One list, drawn by the model's own renderer: no second card, no per-row counts.
@@ -412,12 +412,12 @@ def test_a_suite_whose_coverage_is_stale_or_missing_is_named_on_the_tab(tmp_path
 def test_the_card_says_pr_only_over_a_pull_request(tmp_path):
     """Eval run 10 said "…modified in this PR" on a branch with no pull request."""
     page = _with_coverage(tmp_path)
-    assert f'<span class="rm-who">{T.COVCARD_WHO}</span>' in page
+    assert f'">{T.COVCARD_WHO}</span>' in page and 'class="rm-who" data-tip="Each of the' in page
     assert "in this PR" not in page
     (tmp_path / "assets" / "test-coverage.json").write_text(json.dumps(_doc()))
     with_pr = T.reqmap_layout(FRAG, {"testChanges": "assets/test-changes.json",
                                      "pr": {"number": 7}}, tmp_path, root=tmp_path)
-    assert f'<span class="rm-who">{T.COVCARD_WHO_PR}</span>' in with_pr
+    assert f'">{T.COVCARD_WHO_PR}</span>' in with_pr
 
 
 def test_without_a_measurement_the_old_card_says_it_is_not_one(tmp_path):

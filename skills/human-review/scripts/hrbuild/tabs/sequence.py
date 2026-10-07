@@ -397,7 +397,7 @@ def _scenarios_drawn(puml_rel: str, test_rel: str, root: Path) -> list[tuple[int
     Read from the committed `.puml` rather than by looking for `@generate_sequence` in the
     test: the tag is a request, the chapter is the record that the request was granted and
     that there is a picture on this page to link to. A scenario the generator skipped has
-    no chapter and gets no 🕵️. One per file since the generator started drawing a picture
+    no chapter and gets no 🎭. One per file since the generator started drawing a picture
     per scenario — the list survives because a diagram this page was built before that
     still has several, and reading it is how this page keeps working on both.
 
@@ -1023,7 +1023,7 @@ def render_testpairs(block, dspec, manifest_rows, root: Path, out_dir: Path,
     else:
         snippets = list(block.get("snippets", []))
     parts, used = [], set()
-    # The registry the 🕵️ on the covering-tests rows reads: one entry per scenario the
+    # The registry the 🎭 on the covering-tests rows reads: one entry per scenario the
     # generator drew, keyed the way that map addresses a row, so the jump is a lookup and
     # not a guess. Filled as the pairs are rendered — a pair that is not on this tab must
     # not be linkable from the other one.

@@ -1,4 +1,4 @@
-// The 🕵️ on a covering-tests row whose test drew a sequence: the way from the test to
+// The 🎭 on a covering-tests row whose test drew a sequence: the way from the test to
 // the picture of what its run actually did, over on the Sequence tab.
 //
 // The 📺 beside it opens the same run as a Playwright recording — frame by frame, from
@@ -67,7 +67,7 @@
       if (!where) return;
       var a = document.createElement('a');
       a.className = 'rm-seq';
-      a.textContent = '\uD83D\uDD75\uFE0F';
+      a.textContent = '\uD83C\uDFAD';
       a.href = '#' + entry.pair;
       a.setAttribute('aria-label', 'open the sequence this test drew');
       a.setAttribute('data-tip', 'Sequence diagram');

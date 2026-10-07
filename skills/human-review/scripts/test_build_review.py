@@ -3775,7 +3775,7 @@ def test_a_trace_row_is_addressed_by_its_test_and_the_header_says_which_page_thi
 
 
 # --------------------------------------------------------------------------- #
-# the 🕵️: from a test on the Tests tab to the sequence it drew
+# the 🎭: from a test on the Tests tab to the sequence it drew
 # --------------------------------------------------------------------------- #
 def _genseq_fixture(tmp_path: Path) -> tuple[str, str]:
     """A feature file with two scenarios, one of them tagged, and the picture the
@@ -4019,11 +4019,11 @@ def test_a_pair_is_born_open_and_folded_by_a_script_that_runs_after_the_measurin
 
 def test_the_sequences_are_a_registry_the_detective_reads(tmp_path):
     """The map addresses a row by repo-relative path and declaration line. The registry
-    carries the same key per drawn scenario, so the 🕵️ is a lookup and not a guess."""
+    carries the same key per drawn scenario, so the 🎭 is a lookup and not a guess."""
     js = build.SEQLINK_JS
     assert "document.getElementById('hr-genseq')" in js
     assert "querySelectorAll('.rm-t[data-id]')" in js
-    assert "'.rm-seq'" in js and "\\uD83D\\uDD75\\uFE0F" in js
+    assert "'.rm-seq'" in js and "\\uD83C\\uDFAD" in js
     # It must not toggle the row it sits on, and it must open a pair a reader folded away.
     assert "ev.stopPropagation()" in js and "target.open = true" in js
     assert "'seq-hit'" in js, "the pair says once that it is the one that was asked for"

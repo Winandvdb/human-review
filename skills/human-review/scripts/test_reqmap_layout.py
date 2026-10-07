@@ -456,15 +456,10 @@ def test_a_models_ui_label_is_renamed_e2e_at_build_time():
 
 
 def test_the_card_title_says_how_the_list_was_computed():
-    tip = T.covcard_tip({"suites": [
-        {"name": "Backend JUnit", "source": "jacoco", "tests": 222},
-        {"name": "Frontend Karma", "source": "karma", "tests": 136},
-        {"name": "E2E Playwright", "source": "jacoco+v8", "tests": 5},
-        {"name": "Idle", "source": "jacoco", "tests": 0}]})
-    assert tip.startswith("All 363 tests were run one at a time")
-    assert "JaCoCo for Backend JUnit" in tip and "Karma for Frontend Karma" in tip
-    assert "JaCoCo + V8 for E2E Playwright" in tip and "Idle" not in tip
-    assert tip.endswith("executed at least one line this branch changed.")
+    tip = T.covcard_tip({"suites": [{"name": "A", "source": "jacoco", "tests": 222},
+                                    {"name": "B", "source": "karma", "tests": 123}]})
+    assert tip == ("Each of the 345 tests ran alone under a coverage probe. "
+                   "Listed: those that ran a changed line.")
 
 
 def test_a_traced_test_is_never_folded_out_of_the_covering_card():

@@ -120,12 +120,12 @@
       +'" role="img" aria-label="'+st[2]+'" data-tip="'+tip+'">'+st[0]+'</span>';
   }
   // semcov: proven, not inferred - the test's own per-test coverage ran a line this branch
-  // changed (`t.why`: which file, which lines). A route drawn from a start dot to an end
-  // dot: the test's run passing through the change. Its slot is kept on every row, empty
+  // changed (`t.why`: which file, which lines). IntelliJ's run-with-coverage shield: the
+  // test's run covering the change. Its slot is kept on every row, empty
   // where nothing was proven, so the marks stand in one column beside the stamps.
   var ROUTE='<svg viewBox="0 0 16 16" aria-hidden="true">'
-    +'<path class="rm-route" d="M3.5 12.5C3.5 7.5 12.5 8.5 12.5 3.5"/>'
-    +'<circle cx="3.5" cy="12.5" r="2"/><circle cx="12.5" cy="3.5" r="2"/></svg>';
+    +'<path d="M8 .9 14.2 3.2v4.6c0 3.6-2.6 6.4-6.2 7.6C4.4 14.2 1.8 11.4 1.8 7.8V3.2Z"/>'
+    +'<path class="rm-play" d="M6.4 5.1v5.6l4.4-2.8Z"/></svg>';
   function ran(t){
     if(!t.why)return '<span class="rm-run" aria-hidden="true"></span>';
     return '<span class="rm-run" role="img" aria-label="runs changed code" data-tip="Runs changed code: '

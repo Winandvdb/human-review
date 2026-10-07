@@ -213,7 +213,7 @@ details.dsa-considered > summary,
 details.dsa-why > summary,
 details.fixother > summary,
 details.pp-what > summary,
-details.costdetail, details.snipmore, details.fmtonly > summary,
+details.costdetail > summary, details.snipmore > summary, details.fmtonly > summary,
 details.rband > summary,
 .rband details.toolcommits > summary,
 .rband details.takeover > summary { list-style:none; }
@@ -225,7 +225,7 @@ details.dsa-considered > summary::-webkit-details-marker,
 details.dsa-why > summary::-webkit-details-marker,
 details.fixother > summary::-webkit-details-marker,
 details.pp-what > summary::-webkit-details-marker,
-details.costdetail, details.snipmore, details.fmtonly > summary::-webkit-details-marker,
+details.costdetail > summary::-webkit-details-marker, details.snipmore > summary::-webkit-details-marker, details.fmtonly > summary::-webkit-details-marker,
 details.rband > summary::-webkit-details-marker,
 .rband details.toolcommits > summary::-webkit-details-marker,
 .rband details.takeover > summary::-webkit-details-marker { display:none; }
@@ -237,12 +237,13 @@ details.dsa-considered > summary::before,
 details.dsa-why > summary::before,
 details.fixother > summary::before,
 details.pp-what > summary::before,
-details.costdetail, details.snipmore, details.fmtonly > summary::before,
+details.costdetail > summary::before, details.snipmore > summary::before, details.fmtonly > summary::before,
 details.rband > summary::before,
 .rband details.toolcommits > summary::before,
 .rband details.takeover > summary::before {
   content:"\25B6\FE0E"; display:inline-block; flex:none; width:1.1rem; margin-right:.3rem;
-  font-size:13px; line-height:1; color:var(--muted); text-align:center; align-self:center; }
+  font-size:13px; line-height:1; color:var(--muted); text-align:center; align-self:center;
+  transition:color .12s; }
 details.ghfold[open] > summary::before,
 details.testpair[open] > summary::before,
 details.seqhow[open] > summary::before,
@@ -251,7 +252,7 @@ details.dsa-considered[open] > summary::before,
 details.dsa-why[open] > summary::before,
 details.fixother[open] > summary::before,
 details.pp-what[open] > summary::before,
-details.costdetail, details.snipmore, details.fmtonly[open] > summary::before,
+details.costdetail[open] > summary::before, details.snipmore[open] > summary::before, details.fmtonly[open] > summary::before,
 details.rband[open] > summary::before,
 .rband details.toolcommits[open] > summary::before,
 .rband details.takeover[open] > summary::before { content:"\25BC\FE0E"; }
@@ -263,7 +264,7 @@ details.dsa-considered > summary:hover::before,
 details.dsa-why > summary:hover::before,
 details.fixother > summary:hover::before,
 details.pp-what > summary:hover::before,
-details.costdetail, details.snipmore, details.fmtonly > summary:hover::before,
+details.costdetail > summary:hover::before, details.snipmore > summary:hover::before, details.fmtonly > summary:hover::before,
 details.rband > summary:hover::before,
 .rband details.toolcommits > summary:hover::before,
 .rband details.takeover > summary:hover::before,
@@ -271,6 +272,10 @@ details.rband > summary:hover::before,
 .cx-caret, .rm-chev, .cg-tog::before, .disclose { font-size:13px; line-height:1; }
 .cx-caret, .disclose { color:var(--muted); }
 details > summary:has(> .disclose)::before{display:none}
+/* The span caret follows the same hover as the ::before ones above: link-blue with its row. */
+details > summary:hover .disclose { color:var(--link); }
+/* …and keeps the ::before caret's gap before a UX screen row's verdict icon. */
+details.dsa-screen > summary .disclose { margin-right:.3rem; }
 .disclose { display:inline-block; flex:none; width:1.1rem; text-align:center; }
 details > summary .disclose::before { content:"\25B6\FE0E"; }
 details[open] > summary .disclose::before { content:"\25BC\FE0E"; }

@@ -1405,3 +1405,8 @@ def test_the_count_opens_a_box_that_names_each_side_once():
     assert "<code>d01c3776</code>" not in box and "main (d01c3776)" in box
     assert "<code>abc12345</code>" in box and "abc12345 (abc12345)" not in box
     assert 'class="disclose"' in frag
+    # As tuned live on the PR #51 page (patch 1340): headings are paragraphs, the open
+    # count's underline goes solid, the box has its own air.
+    assert "<p><b>How the screens were compared</b></p><ul>" in box
+    assert '.dsa-count[aria-expanded="true"] { text-decoration-style: solid; }' in ds.CSS
+    assert "padding: .6rem .9rem; margin: .4rem 0 .9rem;" in ds.CSS

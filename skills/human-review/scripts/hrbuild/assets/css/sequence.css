@@ -14,6 +14,9 @@
    are six things to click, which is what they are. */
 .testpair { background:var(--card); border:1px solid var(--line); border-radius:12px;
             padding:.4rem .95rem; margin:.55rem 0; }
+/* The row's caret close to the card's left edge (8px), as Victor set it live on 7 Oct 2026;
+   only the summary moves, the open exhibit keeps the card's padding. */
+details.testpair > summary { margin-left:-.45rem; }
 /* The same margin open and shut, deliberately. They used to differ — a shut pair took
    .3rem and an open one 1.5rem above it — and opening the FIRST pair therefore pushed the
    whole list down by the difference, which read as a gap appearing above a list nobody had

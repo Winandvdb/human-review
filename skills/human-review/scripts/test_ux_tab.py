@@ -133,3 +133,26 @@ def test_a_gap_the_base_already_had_leaves_the_pill_alone(tmp_path):
             '</div>')
     btn = _ux_button(_build(tmp_path, frag))
     assert 'class="tab"' in btn and "warn" not in btn
+
+
+def test_a_span_caret_goes_link_blue_with_its_row_like_the_pseudo_ones():
+    """The UX tab's screen rows moved from a `summary::before` caret to `span.disclose`;
+    the hover colour (and the gap before the verdict icon) stayed with the old one, so the
+    from-scratch rebuild of the PR #51 page lost what the live polish showed."""
+    css = (HERE / "hrbuild" / "assets" / "css" / "core.css").read_text(encoding="utf-8")
+    assert "details > summary:hover .disclose { color:var(--link); }" in css
+    assert "details.dsa-screen > summary .disclose { margin-right:.3rem; }" in css
+
+
+def test_the_caret_selector_lists_never_name_a_bare_details():
+    """`details.costdetail, details.snipmore, details.fmtonly > summary::before` reads as
+    one entry and is three: the first two styled the whole <details> (display, width,
+    colour). Every entry has to reach the summary."""
+    css = (HERE / "hrbuild" / "assets" / "css" / "core.css").read_text(encoding="utf-8")
+    import re
+    for sel in re.findall(r"([^{}]+)\{", css):
+        for part in sel.split(","):
+            part = part.strip()
+            if part.startswith("details.") and "summary" not in part and "[open]" not in part \
+                    and " " not in part and part.split(".")[1] in ("costdetail", "snipmore"):
+                raise AssertionError(f"bare details selector in a caret list: {part!r}")

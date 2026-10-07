@@ -295,7 +295,7 @@
 .reqmap .rm-t[data-shut=yes] .rm-thead{cursor:default}
 .reqmap .rm-t[data-shut=yes] .rm-thead:hover{background:none}
 .reqmap .rm-t[data-shut=yes] .rm-chev{visibility:hidden}
-.reqmap .rm-chev{flex:0 0 auto;font-size:13px;opacity:.8;transition:transform .15s ease}
+.reqmap .rm-chev{flex:0 0 auto;font-size:13px;opacity:1;transition:transform .15s ease}
 .reqmap .rm-t[data-open=yes] .rm-chev{transform:rotate(90deg)}
 .reqmap .rm-t[data-open=yes] .rm-thead{color:var(--fg,#1c1c1c);font-weight:600}
 /* A selected sentence sorts the list into "these prove it" and the rest: the covering
@@ -330,7 +330,7 @@
    stay in one column, and hidden rather than merely faded on a test that pins no sentence:
    a control that would do nothing is worse than no control. */
 .reqmap .rm-link{flex:0 0 auto;align-self:center;width:12px;height:14px;
-  margin:0 -5px 0 0;padding:0;border:0;background:none;color:var(--muted,#6b6b6b);
+  margin:0 -4px 0 0;padding:0;border:0;background:none;color:var(--muted,#6b6b6b);
   /* .8, not .5: at half strength the fan read 2.4:1 on the dark card (UX review, 7 Oct 2026) */
   opacity:.8;cursor:pointer;transition:opacity .12s ease,color .12s ease}
 /* The glyph is the picture of what pressing it draws: one trunk on the right, where the

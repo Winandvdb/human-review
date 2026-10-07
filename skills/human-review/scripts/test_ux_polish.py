@@ -74,7 +74,9 @@ def test_11_the_branch_badge_does_not_make_the_masthead_taller():
 def test_12_tests_fan_and_caret_are_readable_on_dark():
     css = _read(HERE / "reqmap" / "reqmap.css")
     assert "opacity:.8" in _rule(css, ".reqmap .rm-link")
-    assert "opacity:.8" in _rule(css, ".reqmap .rm-chev")
+    # The caret is already the muted grey: at .8 on top of that it faded out, and the
+    # live carets patch (7 Oct 2026) set it back to full strength.
+    assert "opacity:1" in _rule(css, ".reqmap .rm-chev")
 
 
 def test_12_the_api_toolbar_follows_the_scheme_and_info_reads_on_dark():

@@ -1375,7 +1375,8 @@ REQMAP_CSS = """
   user-select:none;border-bottom:1px solid var(--line,#e2e2e2);background:rgba(127,127,127,.12)}
 .reqmap .rm-chh:hover{background:rgba(127,127,127,.19)}
 .reqmap .rm-chh .rm-cat{display:inline-flex;justify-content:center;min-width:4.5em}
-.reqmap .rm-chh .rm-chev{flex:0 0 auto;font-size:12px!important;line-height:1;opacity:.8;
+.reqmap .rm-chh .rm-chev{flex:0 0 auto;font-size:13px!important;line-height:1;opacity:1;
+  color:var(--muted,#6b6b6b);
   transition:transform .15s ease}
 .reqmap .rm-chh .rm-chcaret{width:12px;text-align:center;margin-right:-4px}
 .reqmap .rm-chh .rm-chpad{visibility:hidden}

@@ -1574,10 +1574,16 @@ details.dsa-screen > summary .dsa-sumtail { font-weight: 400; }
 .dsa-fixed { color: var(--dsa-ok); }
 .dsa-pre { opacity: .7; }
 .dsa-count { text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+/* Open, the count's underline goes solid: the box under it belongs to that word. */
+.dsa-count[aria-expanded="true"] { text-decoration-style: solid; }
+/* The box as Victor tuned it live on 7 Oct 2026 (PR #51 page): a little more air inside
+   and under it, each heading a short paragraph, the bullets indented by margin. */
 .dsa-howbox { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
-  padding: .5rem .8rem; margin: .4rem 0 .6rem; font-size: .88rem; line-height: 1.45; }
+  padding: .6rem .9rem; margin: .4rem 0 .9rem; font-size: .88rem; line-height: 1.45; }
 .dsa-howbox[hidden] { display: none; }
-.dsa-howbox ul { margin: .15rem 0 .5rem; padding-left: 1.2rem; }
+.dsa-howbox p { margin: .2rem 0; }
+.dsa-howbox ul { margin: .1rem 0 .5rem 1.1rem; padding: 0; }
+.dsa-howbox li { margin: .1rem 0; }
 .dsa-howbox ul:last-child { margin-bottom: 0; }
 .dsa-gap, .dsa-comp, .dsa-fixed, .dsa-pre { cursor: help; }
 .dsa-unlisted { color: var(--dsa-bad); border: 1px solid var(--dsa-bad); border-radius: 6px;
@@ -2249,12 +2255,12 @@ def how_box(result: dict) -> str:
     c = lambda t: f"<code>{html.escape(t)}</code>"
     return (
         '<div class="dsa-howbox" id="dsa-howbox" hidden>'
-        "<b>How the screens were compared</b><ul>"
+        "<p><b>How the screens were compared</b></p><ul>"
         f"<li>All {len(screens)} screens listed in {c('human-review.json')}, each opened "
         "twice, side by side</li>"
         f"<li>base {c(old)} \u00b7 branch {c(new)}</li>"
         "<li>same seeded data, same browser, animations off</li></ul>"
-        "<b>A screen counts as changed when</b><ul>"
+        "<p><b>A screen counts as changed when</b></p><ul>"
         "<li>an element was added, removed or changed (moving alone doesn\u2019t count)</li>"
         "<li>the DOM is identical, but an element repainted more than "
         f"{RESTYLE_CHURN:.0%} of its own box</li>"

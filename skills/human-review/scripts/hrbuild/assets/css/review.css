@@ -163,7 +163,7 @@ a.f-src:hover, a.f-src:focus-visible { color:var(--link); border-color:var(--lin
 .gradewhy-n { font-size:1.35rem; font-weight:600; opacity:.85; white-space:nowrap; }
 .gradewhy-n b { font-size:3.2rem; font-weight:750; letter-spacing:-.02em; opacity:1; }
 /* The model's own number, struck, under the grade a signal capped it to. */
-.gradewhy-was { font-size:.78rem; margin-top:.3rem; opacity:.75; text-decoration:line-through; }
+.gradewhy-was { font-size:.78rem; margin-top:.3rem; opacity:.75; cursor:help; }
 /* What the fix commit changed that no Fixed card's file:line reaches — after the pile,
    in the pile's own grey, so the commit still adds up. */
 .fixother { margin:1.2rem 0 0; padding:.6rem .8rem; border:1px dashed var(--line);

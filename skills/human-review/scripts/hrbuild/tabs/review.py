@@ -1577,13 +1577,18 @@ def grade_reasons_html(spec) -> str:
             full = full[len(head):].lstrip(" .:;,—–-")
         return "" if full.rstrip(" .") == short.rstrip(" .") else full
 
+    # Good news gets a tick: green CI is the one bullet that is not a worry. Red or pending
+    # keep the plain wording.
+    good = lambda short: "\u2705 " if short.startswith("CI green") else ""
     items = "".join(
-        f'<li data-tip="{html.escape(rest(short, full), quote=True)}">{html.escape(short)}{link(at)}</li>'
-        if full and rest(short, full) else f"<li>{html.escape(short)}{link(at)}</li>"
+        f'<li data-tip="{html.escape(rest(short, full), quote=True)}">{good(short)}{html.escape(short)}{link(at)}</li>'
+        if full and rest(short, full) else f"<li>{good(short)}{html.escape(short)}{link(at)}</li>"
         for short, full, at in reasons)
     was = v.get("modelScore")
-    capped = (f'<span class="gradewhy-was" title="AI said {was}; capped by the reasons '
-              f'marked">was {was}</span>'
+    # The word, not the arithmetic: "was 7" struck through raised the question it was meant
+    # to answer. The hover says who graded what and why it dropped.
+    capped = (f'<span class="gradewhy-was" title="Capped: the AI graded it {was}/10; the '
+              f'reasons marked on the left cap it lower.">capped</span>'
               if was is not None and int(was) != n else "")
     return (f'<aside class="gradewhy {band}" id="grade-why" aria-label="Why graded {n}/10">'
             f'<ul>{items}</ul>'

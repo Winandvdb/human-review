@@ -5333,7 +5333,8 @@ def test_the_grade_reasons_are_computed_from_what_the_page_measured(tmp_path):
     assert "Sequence: not re-traced" in seq and "C2 view on Structure" in seq
     assert "report" not in reasons["1 API endpoint broken (caps the grade at 7)"]
     panel = build.grade_reasons_html(spec)
-    assert '<b>7</b>/10' in panel and 'class="gradewhy-was"' in panel and ">was 8<" in panel
+    assert '<b>7</b>/10' in panel and 'class="gradewhy-was"' in panel and ">capped<" in panel \
+        and "AI graded it 8/10" in panel
 
 
 def test_ci_green_links_to_the_run_it_rests_on(tmp_path):
@@ -5346,7 +5347,7 @@ def test_ci_green_links_to_the_run_it_rests_on(tmp_path):
     spec = {"verdict": {"score": 8}}
     build.grade_signals(spec, out, root=None)
     panel = build.grade_reasons_html(spec)
-    assert ('CI green on 0746abc5 — <a href="https://github.com/acme/shop/actions/runs/37" '
+    assert ('\u2705 CI green on 0746abc5 — <a href="https://github.com/acme/shop/actions/runs/37" '
             'target="_blank" rel="noopener">CI run 37 ↗</a>') in panel
 
 

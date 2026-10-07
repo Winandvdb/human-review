@@ -240,6 +240,9 @@
    repo path is on the hover. It was the whole name with the extension in amber, which
    spent a third of the row on a file name nobody was reading. */
 .reqmap .rm-tw{flex:0 0 auto;font-size:10.5px;margin-bottom:0;padding-top:1px}
+/* One width for every extension, right-aligned: `.feature`/`.spec.ts` came out 50.6px and
+   `.java` 31.6px, so the 🎭/📺 left of it jumped 19px between rows (UX review, 7 Oct 2026). */
+.reqmap .rm-tw{min-width:51px;text-align:right;box-sizing:border-box}
 /* What the branch did to this test, on the test itself. It is the fact the deleted
    evidence cards carried in prose ("the new one", "the pre-existing flow, extended") -
    worth one word on the row. An untouched test used to get silence, on the theory that
@@ -286,7 +289,7 @@
 .reqmap .rm-t[data-shut=yes] .rm-thead{cursor:default}
 .reqmap .rm-t[data-shut=yes] .rm-thead:hover{background:none}
 .reqmap .rm-t[data-shut=yes] .rm-chev{visibility:hidden}
-.reqmap .rm-chev{flex:0 0 auto;font-size:12px;opacity:.55;transition:transform .15s ease}
+.reqmap .rm-chev{flex:0 0 auto;font-size:12px;opacity:.8;transition:transform .15s ease}
 .reqmap .rm-t[data-open=yes] .rm-chev{transform:rotate(90deg)}
 .reqmap .rm-t[data-open=yes] .rm-thead{color:var(--fg,#1c1c1c);font-weight:600}
 /* A selected sentence sorts the list into "these prove it" and the rest: the covering
@@ -322,7 +325,8 @@
    a control that would do nothing is worse than no control. */
 .reqmap .rm-link{flex:0 0 auto;align-self:center;width:12px;height:14px;
   margin:0 -5px 0 0;padding:0;border:0;background:none;color:var(--muted,#6b6b6b);
-  opacity:.5;cursor:pointer;transition:opacity .12s ease,color .12s ease}
+  /* .8, not .5: at half strength the fan read 2.4:1 on the dark card (UX review, 7 Oct 2026) */
+  opacity:.8;cursor:pointer;transition:opacity .12s ease,color .12s ease}
 /* The glyph is the picture of what pressing it draws: one trunk on the right, where the
    test is, fanning into three branches reaching left at the ticket. An arrowhead only
    said "that way"; this says what will be over there. Drawn rather than borrowed from a
@@ -353,6 +357,10 @@
   color:var(--muted,#6b6b6b)}
 .reqmap .rm-cats span{display:inline-flex;align-items:center}
 .reqmap .rm-cats .rm-cat{margin-right:5px}
+/* The three filter pills one width, the word centred: E2E, API and UNIT were 61.9, 60 and
+   68.8px, a row that looked hand-placed (UX review, 7 Oct 2026). */
+.reqmap .rm-cats .rm-cat{display:inline-flex;justify-content:center;min-width:70px;
+  box-sizing:border-box}
 .reqmap .rm-cats span+span{margin-left:14px}
 /* Inference, marked where it is claimed. Everything under it was read out of the code by
    a model, and a reader who knows that reads it differently. */

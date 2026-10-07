@@ -8,7 +8,9 @@
     // 15px, the page's own body size, at normal weight. It was 1.05rem/600 -- a hint
     // set LARGER and heavier than the sentence it explains, which reads as the page
     // shouting an aside.
-    '.tip{position:fixed;z-index:9999;pointer-events:none;background:rgba(20,20,22,.96);' +
+    // Opaque: at 96% the words of whatever the tip sat over showed through its own (UX
+    // review, 7 Oct 2026). The same dark bubble in both schemes.
+    '.tip{position:fixed;z-index:9999;pointer-events:none;background:#141416;' +
     'color:#fff;font:400 15px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;' +
     'padding:.6rem .9rem;border-radius:.6rem;max-width:22rem;box-shadow:0 10px 30px rgba(0,0,0,.35);' +
     // A repo-relative path is one long token as far as line breaking is concerned: no

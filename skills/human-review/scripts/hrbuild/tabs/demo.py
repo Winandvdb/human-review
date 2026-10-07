@@ -159,6 +159,20 @@ def voice_films(rel: str, out_dir: Path) -> list[tuple[str, str, str, list, str]
     return out
 
 
+#: The word beside a voice whose label is a bare emoji (the 🐘). It names the game, not the
+#: speaker: who it is stays the surprise (`VOICE_TIPS`), but a lone glyph at ~60% of the
+#: text's size read as a missing label rather than as an option (UX review, 7 Oct 2026).
+MYSTERY_VOICE_WORD = "guess who"
+
+
+def voice_face(label: str) -> str:
+    """A radio's visible label: the label itself, or — when it is a bare emoji — the emoji
+    at the text's size with `MYSTERY_VOICE_WORD` after it."""
+    if re.search(r"\w", label):
+        return html.escape(label)
+    return f'<span class="vs-emoji">{html.escape(label)}</span> {MYSTERY_VOICE_WORD}'
+
+
 def voice_switch(rel: str, voices: list[tuple[str, str, str, list, str]],
                  times: list | None = None) -> str:
     """The voice radio buttons: the offline voice first, then each cloned one.
@@ -185,7 +199,7 @@ def voice_switch(rel: str, voices: list[tuple[str, str, str, list, str]],
                       f'name="{html.escape(name)}" '
                       f'value="{html.escape(key)}" data-src="{html.escape(src)}"{ts(t)}'
                       f'{named(key, label, tip)[0]}'
-                      f'{" checked" if not key else ""}> {html.escape(label)}</label>'
+                      f'{" checked" if not key else ""}> {voice_face(label)}</label>'
                       for key, src, label, t, tip in opts)
             + "</div>")
 

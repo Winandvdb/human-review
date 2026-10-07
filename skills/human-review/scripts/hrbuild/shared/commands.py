@@ -96,9 +96,11 @@ def rerun_face(mark: str) -> str:
 RERUN_CHIP = ('<button type="button" class="chip chip-rerun chip-served" id="hr-rerun" '
               'hidden aria-disabled="true" data-rerun="__rerun__" '
               'aria-label="Regenerate this report" '
-              # Brief, since the `Served` badge beside it now carries what serving means:
-              # what the press does, what it leaves alone, and the price.
-              'data-tip="Rebuild the page. Free. Not the findings, not the film.">'
+              # The same words as every tab's ⚙️ (`TAB_RERUN_TIP`): one glyph, one wording
+              # (UX review, 7 Oct 2026). It used to be its own sentence — "Rebuild the page.
+              # Free. Not the findings, not the film." — which made the reader wonder whether
+              # the masthead ⚙️ and a tab's ⚙️ were two different presses.
+              'data-tip="Regenerate (scripted, free)">'
               f'{rerun_face(RERUN_MARK_SCRIPT)}</button>')
 
 # The same button with the model's half in front of it, and the only control on this page

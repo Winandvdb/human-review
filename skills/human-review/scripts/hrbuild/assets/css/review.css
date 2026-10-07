@@ -177,9 +177,11 @@ details.fixother[open] > summary.fixother-h { margin-bottom:.4rem; }
 .fixother-gen { margin:.5rem 0 0; font-size:.86rem; cursor:help; }
 .fixwarn { color:var(--drift); }
 /* A reason's citation of the spec (`design.md Decision 3`, `Q3`): the phrase opens the line
-   in the editor and quotes it on hover; the arrow opens it on GitHub at HEAD. */
+   in the editor and quotes it on hover; the arrow opens it on GitHub at HEAD. A hand, not
+   the question mark: it is a link, and the page's rule is hand = clickable, help = a mark
+   that only explains itself (tip.js; UX review, 7 Oct 2026). */
 a.specref { color:inherit; text-decoration:underline dotted; text-underline-offset:2px;
-            cursor:help; }
+            cursor:pointer; }
 a.specref:hover, a.specref:focus-visible { color:var(--link); }
 a.specref-gh { font-size:.8em; margin-left:.12em; text-decoration:none; color:var(--muted); }
 a.specref-gh:hover, a.specref-gh:focus-visible { color:var(--link); }

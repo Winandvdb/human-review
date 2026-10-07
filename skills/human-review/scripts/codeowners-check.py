@@ -487,6 +487,9 @@ CSS = """
 .cow-st svg { display:block; width:16px; height:16px; }
 .cow-st .cow-page, .cow-st .cow-badge { fill:var(--st); }
 .cow-file, .cow-gone { font:500 12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; }
+/* A monospace name is half underscores (`V4__owner_list_indexes.sql`), and an underline at
+   the default offset sat exactly on them, so the name read with its underscores gone. */
+.cow-file { text-underline-offset:4px; text-decoration-thickness:1px; }
 .cow-gone { color:var(--muted); text-decoration:line-through; }
 .cow-by { color:var(--muted); font-size:.78rem; }
 .cow-rule { font:600 11.5px/1.6 ui-monospace,Menlo,monospace; background:var(--code-bg);

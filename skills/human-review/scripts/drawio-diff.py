@@ -583,12 +583,18 @@ def overlay_traces(xml: str, observed: set, attr: str = TRACE_ATTR) -> tuple[str
                     "width": f"{W:g}", "height": f"{H:g}", "as": "geometry"})
                 ghost += 1
         for i, (a, b) in enumerate(undrawn):
+            detour = _detour(geo, box_of[a], box_of[b])
             cell = ET.SubElement(holder, "mxCell", {
                 "id": f"hr-undrawn-{i}", "parent": "1", "edge": "1",
                 "source": box_of[a], "target": box_of[b], "value": "",
                 "style": ("html=1;endArrow=block;dashed=1;rounded=0;"
-                          f"strokeColor={UNDRAWN_COLOR};strokeWidth=3;")})
-            ET.SubElement(cell, "mxGeometry", {"relative": "1", "as": "geometry"})
+                          + ("edgeStyle=orthogonalEdgeStyle;" if detour else "")
+                          + f"strokeColor={UNDRAWN_COLOR};strokeWidth=3;")})
+            g = ET.SubElement(cell, "mxGeometry", {"relative": "1", "as": "geometry"})
+            if detour:
+                pts = ET.SubElement(g, "Array", {"as": "points"})
+                for x, y in detour:
+                    ET.SubElement(pts, "mxPoint", {"x": f"{x:g}", "y": f"{y:g}"})
 
     report = {"attr": attr,
               "walked": sorted(walked),
@@ -596,6 +602,55 @@ def overlay_traces(xml: str, observed: set, attr: str = TRACE_ATTR) -> tuple[str
               "undrawn": [f"{a} → {b}" for a, b in undrawn],
               "unmapped": sorted({e for pair in observed for e in pair} - set(participant.values()))}
     return ET.tostring(root, encoding="unicode"), report
+
+
+def _crosses(box, p, q, pad: float = 4.0) -> bool:
+    """Does the segment p→q pass through `box` (x, y, w, h), grown by `pad`?"""
+    x, y, w, h = box
+    x0, y0, x1, y1 = x - pad, y - pad, x + w + pad, y + h + pad
+    t0, t1 = 0.0, 1.0
+    dx, dy = q[0] - p[0], q[1] - p[1]
+    for d, lo, hi, o in ((dx, x0, x1, p[0]), (dy, y0, y1, p[1])):
+        if d == 0:
+            if not lo <= o <= hi:
+                return False
+            continue
+        a, b = (lo - o) / d, (hi - o) / d
+        t0, t1 = max(t0, min(a, b)), min(t1, max(a, b))
+        if t0 > t1:
+            return False
+    return True
+
+
+def _detour(geo: dict, src: str, tgt: str, gap: float = 30.0):
+    """Waypoints that take a red to-do arrow round the boxes between its two ends, or None.
+
+    The arrow is drawn centre to centre, so a call from Notification Service to a Commons
+    box placed left of Backend went straight through Backend — its dashes struck through
+    the label "Backend" (UX review, 7 Oct 2026). When the straight line crosses a box that
+    is neither end, the arrow leaves its source from the quarter nearest the target (the
+    centre is where the source's own arrows already leave), runs along a lane just under
+    every box it would have crossed — or over them, when the lane under is not clear — and
+    comes up into the target's centre."""
+    if src not in geo or tgt not in geo:
+        return None
+    def centre(b):
+        x, y, w, h = geo[b]
+        return x + w / 2, y + h / 2
+    p, q = centre(src), centre(tgt)
+    hit = [k for k, box in geo.items() if k not in (src, tgt) and _crosses(box, p, q)]
+    if not hit:
+        return None
+    sx, sy, sw, sh = geo[src]
+    ex = sx + sw * (0.25 if q[0] < p[0] else 0.75)
+    involved = [geo[k] for k in hit + [src, tgt]]
+    for lane in (max(y + h for _, y, _, h in involved) + gap,
+                 min(y for _, y, _, _ in involved) - gap):
+        legs = [((ex, p[1]), (ex, lane)), ((ex, lane), (q[0], lane)), ((q[0], lane), q)]
+        if not any(_crosses(box, a, b, pad=2) for k, box in geo.items() if k not in (src, tgt)
+                   for a, b in legs):
+            return [(ex, lane), (q[0], lane)]
+    return None
 
 
 # ── linking a box to the class it names ───────────────────────────────────────────

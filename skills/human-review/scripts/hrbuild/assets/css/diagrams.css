@@ -1,6 +1,12 @@
 .diagram { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:1rem; margin:1.1rem 0; }
 .diagram .head { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; }
 .diagram .head b { font-size:1rem; }
+/* A badge straight after the title (UNCHANGED, on the Structure cards) sits against the
+   file name on the right, as it does on the Data cards — `space-between` put it in the
+   middle of whatever room the two names left, so it wandered card to card (UX review,
+   7 Oct 2026). Only right after the title: on a Data card the tab's presses stand between
+   the two and already push the badge right. */
+.diagram .head > b + .badge { margin-left:auto; }
 .prov { margin:.5rem 0 0; display:flex; gap:.9rem; flex-wrap:wrap; }
 .prov .srcref { margin-bottom:0; }
 .diagram .head span { color:var(--muted); font-size:.82rem; font-family:ui-monospace,Menlo,monospace; }
@@ -52,12 +58,12 @@
                  border-radius:999px; cursor:pointer; font:600 .78rem/1.75 inherit;
                  padding:0 .75rem; }
 .dgmbar button:hover { border-color:currentColor; color:var(--fg); }
-.dgmbar .dgm-newold u { text-decoration:none; opacity:.55; }
-/* The active word, underlined inside the button — the only thing that separates the two
-   states the one button stands for. Thick and offset so it survives being read at a
-   glance next to the border. */
-.dgmbar .dgm-newold u.on { text-decoration:underline; text-decoration-thickness:2px;
-                           text-underline-offset:3px; opacity:1; }
+.dgmbar .dgm-newold u { text-decoration:none; opacity:.5; }
+/* The active word, at full strength beside the faded one — the only thing that separates
+   the two states the one button stands for. Colour alone, not an underline: offset to
+   clear the letters, the underline ran into the pill's rounded bottom rim and cut it (UX
+   review, 7 Oct 2026); and not weight, which would widen the pill on every press. */
+.dgmbar .dgm-newold u.on { opacity:1; }
 .dgmviews[data-state="diff"] .dgm-diff { background:var(--view-diff); border-color:var(--view-diff); color:var(--on-fill); }
 .dgmviews[data-state="new"] .dgm-newold { background:var(--view-new); border-color:var(--view-new); color:var(--on-fill); }
 .dgmviews[data-state="old"] .dgm-newold { background:var(--view-old); border-color:var(--view-old); color:var(--on-fill); }

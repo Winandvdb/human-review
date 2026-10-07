@@ -846,11 +846,13 @@ def test_a_page_that_is_not_served_has_no_rerun_button():
     assert "clipboard" not in build.RERUN_JS
 
 
-def test_the_button_says_what_it_will_not_do():
-    """The part a reader cannot see, and the part they are right to worry about: the
-    findings are a judgement bought once, and the film costs minutes and a running app."""
+def test_the_masthead_gear_and_a_tab_gear_say_the_same_thing():
+    """UX review, 7 Oct 2026: the masthead ⚙️ read "Rebuild the page. Free. Not the
+    findings, not the film." and every tab's ⚙️ "Regenerate (scripted, free)" — one glyph,
+    two sentences, and the reader left wondering whether they were two presses. The
+    shorter one won: it says what the press does and that it is free."""
     tip = re.search(r'data-tip="([^"]*)"', build.RERUN_CHIP).group(1)
-    assert "Not the findings" in tip and "not the film" in tip and "Free" in tip
+    assert tip == build.TAB_RERUN_TIP == "Regenerate (scripted, free)"
 
 
 def test_the_served_badge_replaces_static_and_the_rerun_chip_keeps_a_brief_hover():
@@ -859,7 +861,7 @@ def test_the_served_badge_replaces_static_and_the_rerun_chip_keeps_a_brief_hover
     assert build.rerun_face(build.RERUN_MARK_SCRIPT) in build.RERUN_CHIP
     assert "chip-served" in build.RERUN_CHIP
     tip = re.search(r'data-tip="([^"]*)"', build.RERUN_CHIP).group(1)
-    assert tip.startswith("Rebuild the page")
+    assert tip.startswith("Regenerate")
     assert "Served by the review server" not in tip
     assert "mode.hidden = true" not in build.RERUN_JS, "the badge stays beside the ↺"
     assert "chip.textContent = 'Served';" in build.SERVER_JS

@@ -950,6 +950,33 @@ def test_a_call_no_arrow_carries_is_added_in_red_beside_its_caller():
     assert float(ghost.geometry["x"]) > 600 and ghost.geometry["y"] == "280"
 
 
+def _points(xml: str, cid: str) -> list:
+    import xml.etree.ElementTree as ET
+    cell = next(c for c in ET.fromstring(xml).iter("mxCell") if c.get("id") == cid)
+    return [(float(p.get("x")), float(p.get("y"))) for p in cell.iter("mxPoint")]
+
+
+def test_a_red_arrow_goes_round_a_box_instead_of_through_its_label():
+    """UX review, 7 Oct 2026: Commons lands left of Backend, and the call Notification
+    Service makes to it was drawn centre to centre — straight through Backend, its dashes
+    striking out the word "Backend". It now runs along a lane under the boxes it would
+    have crossed; the Backend → Commons arrow beside it, which crosses nothing, stays
+    straight."""
+    xml, report = dd.overlay_traces(DEPLOYMENT, {("Backend", "Commons"),
+                                                 ("NotificationService", "Commons")})
+    assert report["undrawn"] == ["Backend → Commons", "NotificationService → Commons"]
+    cells = dd.parse_model(xml)
+    box = cells["hr-undrawn-box-0"]
+    assert float(box.geometry["x"]) + 180 <= 0, "the ghost box sits left of Backend (x 0..200)"
+    straight, around = cells["hr-undrawn-0"], cells["hr-undrawn-1"]
+    assert "edgeStyle" not in straight.style and _points(xml, "hr-undrawn-0") == []
+    assert dd.style_dict(around.style)["edgeStyle"] == "orthogonalEdgeStyle"
+    (x0, lane), (x1, lane2) = _points(xml, "hr-undrawn-1")
+    assert lane == lane2 > 280 + 70, "the lane runs under Backend and Notification Service"
+    assert 400 < x0 < 500, "it leaves Notification Service left of its centre"
+    assert lane < 440, "and above Database, which it must not cross either"
+
+
 def test_a_multiline_lifeline_name_breaks_the_line_in_the_red_box():
     """`«module»\\nCommons` is one lifeline name with a newline in it; drawn as an html
     label it must break the line, not print a backslash-n."""

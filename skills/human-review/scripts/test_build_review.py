@@ -306,8 +306,11 @@ def test_each_voice_the_recorder_cut_is_a_radio_button_under_the_player(tmp_path
         {"key": "discovery", "label": "Discovery", "video": "f.voice-discovery.webm"},
         {"key": "ghost", "label": "Ghost", "video": "f.voice-ghost.webm"}]), encoding="utf-8")
     out = build.video_html(s, tmp_path)
-    radios = re.findall(r'<input type="radio"[^>]*data-src="([^"]+)"[^>]*> ([^<]+)</label>', out)
-    assert radios == [("assets/f.webm", "standard"), ("assets/f.voice-trump.webm", "🐘"),
+    radios = re.findall(r'<input type="radio"[^>]*data-src="([^"]+)"[^>]*> (.+?)</label>', out)
+    # The 🐘 keeps its face, at the text's size, with a word beside it (UX review, 7 Oct
+    # 2026): alone it read as a label that failed to load. The word is the game, not a name.
+    assert radios == [("assets/f.webm", "standard"),
+                      ("assets/f.voice-trump.webm", '<span class="vs-emoji">🐘</span> guess who'),
                       ("assets/f.voice-discovery.webm", "Discovery")], \
         "a voice whose film is not on disk is never offered"
     assert out.index("<video") < out.index('class="voice-switch"') < out.index("transcript")

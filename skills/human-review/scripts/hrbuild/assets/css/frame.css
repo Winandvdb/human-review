@@ -23,9 +23,11 @@ footer { margin-top:1rem; color:var(--muted); font-size:.85rem; }
    button has since moved to the foot of the page, and the room it was making is now the
    tabs' own — which is why there is no longer a `.grow` spacer pushing anything right. */
 .tabstrip { padding-right: max(1.25rem, calc(50vw - 620px + 1.25rem)); }
-/* Struck through, not hidden: the tab still holds the current state as context, and a
-   reviewer who cannot see that it exists cannot tell it was considered. */
-button.tab.quiet { text-decoration:line-through; text-decoration-thickness:1px; opacity:.5; }
+/* Faded, not hidden: the tab still holds the current state as context, and a reviewer who
+   cannot see that it exists cannot tell it was considered. Not struck through either: a
+   line through "Structure" read as "removed", which a context-only tab is not (Victor,
+   7 Oct 2026). */
+button.tab.quiet { text-decoration:none; opacity:.5; }
 button.tab.quiet:hover { opacity:.85; }
 /* Selected, a struck tab is not dimmed: opacity would reach its flares too, and the line
    they are there to hide would show through them. */

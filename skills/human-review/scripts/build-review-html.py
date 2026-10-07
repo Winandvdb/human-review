@@ -231,7 +231,7 @@ from hrbuild.tabs.tests import (
 )
 from hrbuild.tabs.demo import (
     VOICE_TIPS, voice_films, voice_switch, embed_html, VERDICT_FACE, video_html, VIDEO_VERDICT,
-    video_verdict_html,
+    video_verdict_html, MYSTERY_VOICE_WORD, voice_face,
     _link_captions, derived_app_links, derived_runtime, _project_root, _screen_changed
 )
 from hrbuild.tabs.city import (

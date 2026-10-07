@@ -365,9 +365,9 @@ def test_with_a_deployed_app_row_the_voices_still_sit_in_the_film_title_row(tmp_
         < out.index('<ol class="transcript"')
     assert "vidcol" not in out, "nothing left under the player"
     rule = build.CSS[build.CSS.index(".vidhead > .voice-switch"):]
-    assert "gap:.55rem" in rule[:rule.index("}")]
+    assert "gap:3px" in rule[:rule.index("}")], "the pills 3px apart"
     head = build.CSS[build.CSS.index(".vidside > .vidhead"):]
-    assert "column-gap:.9rem" in head[:head.index("}")], ".9rem after the presses"
+    assert "column-gap:.6rem" in head[:head.index("}")], ".6rem after the presses"
     # caption.js finds the group by the film it switches, not as a child of the wrap.
     assert "wrap.querySelectorAll('.voice-switch" not in build.CAPTION_JS
 

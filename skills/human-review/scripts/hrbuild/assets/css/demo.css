@@ -34,19 +34,23 @@
    height again. */
 .vidwrap > .vidside { display:flex; flex-direction:column; min-width:0; min-height:0;
                       contain:size; align-self:stretch; }
-/* Its head row: the title, the tab's presses after it, then the narration voices — emoji
-   faces, radios and faces centred on the title's letters, .9rem after the presses and
-   .55rem apart. The title never breaks; on a column too narrow for the row the voices
-   wrap under it, still in the head. */
+/* Its head row: the title, the tab's presses after it, then the narration voices, .6rem
+   after the presses. Each voice is its radio and its face in one subtle pill, 3px apart,
+   so which radio is whose face reads at a glance (Victor, 7 Oct 2026); the chosen one has
+   the firmer edge. The flex row centres the pills on the title's line box, which for this
+   1.3rem bold title is the middle of its capitals — no offset. The title never breaks; on
+   a column too narrow for the row the voices wrap under it, still in the head. At 1152px
+   the 19rem column holds the row with 8px to spare: the pills are sized for that. */
 .vidside > .vidhead { flex:none; display:flex; align-items:center; flex-wrap:wrap;
-                      column-gap:.9rem; row-gap:.2rem; margin:0 0 .5rem; }
+                      column-gap:.6rem; row-gap:.2rem; margin:0 0 .5rem; }
 .vidhead > h2.tabtitle { margin:0; white-space:nowrap; }
-.vidhead > .voice-switch { margin:0; gap:.55rem; flex-wrap:nowrap; font-size:1rem;
-                           position:relative; top:-2px; }
-.vidhead > .voice-switch label { gap:.25rem; }
-/* A little under the 1.3em the faces get elsewhere: at 1.3em the row filled the 19rem
-   column to its last pixel at 1152px, one font's worth of width away from wrapping. */
-.vidhead > .voice-switch .vs-emoji { font-size:1.15em; }
+.vidhead > .voice-switch { margin:0; gap:3px; flex-wrap:nowrap; font-size:1rem; }
+.vidhead > .voice-switch label { gap:3px; padding:1px 3px 1px 2px; line-height:1;
+                                 border:1px solid var(--line); border-radius:999px; }
+.vidhead > .voice-switch label:has(input:checked) {
+  border-color:color-mix(in srgb, var(--fg) 45%, var(--line)); }
+.vidhead > .voice-switch input { width:12px; height:12px; }
+.vidhead > .voice-switch .vs-emoji { font-size:1em; }
 .vidside > .adoptcol { flex:1 1 auto; min-height:0; overflow:hidden; }
 .vidside > .adoptcol > .transcript { flex:1 1 auto; min-height:0; max-height:none; }
 .vidside > .transcript { flex:1 1 auto; min-height:0; max-height:none; }

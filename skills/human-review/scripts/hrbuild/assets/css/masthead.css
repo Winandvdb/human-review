@@ -66,8 +66,10 @@
    each one click from its own page on GitHub. Monospaced names, because a git ref is a
    name to be matched character for character against a terminal, and the branch under
    review takes the link colour so the pair reads head-then-base at a glance. */
+/* line-height:1 so the mono face does not make this chip 0.3px taller than its neighbours --
+   centred in the bar, that half-pixel put its top on a different rounded row. */
 .chip.refchip b.refname { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-            font-size:.95em; }
+            font-size:.95em; line-height:1; }
 .chip.refchip b.refname.head { color:var(--link); }
 /* The `!` on the base chip: the pair of refs this page compares has drifted since it was
    built. Amber and not the page's red — a stale base is not a finding about the code, it

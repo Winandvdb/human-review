@@ -143,7 +143,7 @@ from hrbuild.shared.diagrams import (
     _source_link, _sql_shape, _SQL_COLLATE, _SQL_COLUMN, _SQL_INDEX, _SQL_TABLE,
     _unchanged_body, _why_not_drawn, trace_legend
 )
-from hrbuild.shared.c4 import C4_DIR, C4_SCALE, C4_VIEWBOX, render_c4, _c4_badge, _c4_body, \
+from hrbuild.shared.c4 import C4_DIR, C4_MIN_SCALE, C4_SCALE, C4_VIEWBOX, render_c4, _c4_badge, _c4_body, \
     _c4_img, _c4_picture
 from hrbuild.shared.bands import (
     set_bands, _BANDS, _TOP_BANDS, _flush_bands, _flush_top_bands, _lede_above

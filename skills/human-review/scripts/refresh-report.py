@@ -241,9 +241,10 @@ def c4_pending(review: Path) -> bool:
         held = json.loads((review / "assets" / "c4" / "verdict.json").read_text("utf-8"))
     except (OSError, ValueError):
         held = None
-    if isinstance(held, dict) and held.get("state") == "drawn":
+    if isinstance(held, dict) and held.get("state") in ("drawn", "none"):
         return False
-    out = subprocess.run(["git", "ls-files", "--", "*.dsl"], capture_output=True, text=True)
+    out = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "--", "*.dsl"],
+                         capture_output=True, text=True)
     return bool(out.stdout.strip())
 
 

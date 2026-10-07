@@ -34,12 +34,16 @@ C4_VIEWBOX = re.compile(r'viewBox="\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)\s*
 #: size is the size the type reads at on a page; a narrower card shrinks it further.
 C4_SCALE = 0.5
 
+#: …but never below this: a wide view (petclinic's C2 is 3020 units across) fitted to a
+#: 1078px card set its labels at 8px. Past this the card scrolls sideways instead.
+C4_MIN_SCALE = 0.45
+
 
 def _c4_img(path: Path, cls: str, alt: str) -> str:
     svg = path.read_text(encoding="utf-8")
     m = C4_VIEWBOX.search(svg)
     size = (f' width="{round(float(m[1]) * C4_SCALE)}" height="{round(float(m[2]) * C4_SCALE)}"'
-            if m else "")
+            f' style="min-width:{round(float(m[1]) * C4_MIN_SCALE)}px"' if m else "")
     data = base64.b64encode(svg.encode("utf-8")).decode("ascii")
     return (f'<img class="{cls}" src="data:image/svg+xml;base64,{data}"{size} '
             f'alt="{html.escape(alt, quote=True)}" decoding="async">')
@@ -70,6 +74,9 @@ def _c4_body(row: dict, assets: Path) -> tuple[str, bool]:
         # there. The New/Old button alone is the whole control.
         views = re.sub(r'<button type="button" class="dgm-diff"[^>]*>Diff</button>', "",
                        views, count=1)
+        views = views.replace('data-tip="The diagram without diff. Click again to swap."',
+                              'data-tip="Structurizr\'s render on this branch, and at the '
+                              'merge-base. Click to swap."', 1)
         return views, True
     return (new or old
             or '<p class="sub">not rendered — re-run the <code>c4</code> step</p>'), False
@@ -92,14 +99,23 @@ def render_c4(block: dict, root: Path, out_dir: Path) -> tuple[str, int, int]:
         verdict = json.loads((assets / "verdict.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         verdict = {}
+    if verdict.get("state") == "none":
+        return "", 0, 0
     rows = read_manifest(assets / "MANIFEST.tsv")
+    # What went wrong, above whatever was drawn: a branch whose DSL no longer parses has
+    # no picture, and saying nothing would read as "no views".
+    problem = (f'<p class="sub c4-problem">Structurizr: {html.escape(verdict["reason"])}</p>'
+               if rows and verdict.get("reason") else "")
     if not rows:
         if not verdict:
             return "", 0, 0
         why = verdict.get("reason") or "the c4 step drew nothing"
         dsl = ", ".join(Path(w).name for w in verdict.get("workspaces") or [])
+        broken = verdict.get("state") == "failed"
         return (f'<p class="sub c4-none">C4 views{f" in <code>{html.escape(dsl)}</code>" if dsl else ""}'
-                f' not drawn by Structurizr — {html.escape(why)}. The next refresh tries again.</p>', 1, 0)
+                f' not drawn by Structurizr — {html.escape(why)}.'
+                + ("" if broken else " The next refresh tries again.") + '</p>',
+                1, 1 if broken else 0)
     parts, changed = [], 0
     for r in rows:
         status = r.get("status") or ""
@@ -109,14 +125,16 @@ def render_c4(block: dict, root: Path, out_dir: Path) -> tuple[str, int, int]:
         note = (r.get("note") or "").strip()
         parts.append(
             f'<div class="diagram dgm-c4{" dgm-toggles" if toggles else ""}" '
-            f'id="c4-{html.escape(re.sub(r"[^A-Za-z0-9_-]+", "-", r["name"]), quote=True)}">'
-            f'<div class="head"><b>{html.escape(r["name"])}</b>'
+            f'id="c4-{html.escape(re.sub(r"[^A-Za-z0-9_-]+", "-", Path(r["source"]).stem + "-" + r["name"]), quote=True)}">'
+            # "(Structurizr)" in the title: the projected card above is called C2-Containers
+            # too, and the two may well disagree — they are two different claims.
+            f'<div class="head"><b>{html.escape(r["name"])} (Structurizr)</b>'
             # Whose picture this is, before what it shows: the same view names (C2,
             # Containers) are on the projected card above, drawn by another program.
-            + f'<span class="c4-desc">Structurizr{" · " + html.escape(desc) if desc else ""}</span>'
+            + (f'<span class="c4-desc">{html.escape(desc)}</span>' if desc else "")
             + _c4_badge(status)
             + _source_link(r["source"], root) + '</div>'
             + body
             + (f'<p class="sub dgm-stale">{html.escape(note)}</p>' if note else "")
             + '</div>')
-    return "\n".join(parts), len(rows), changed
+    return problem + "\n".join(parts), len(rows), changed

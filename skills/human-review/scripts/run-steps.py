@@ -1210,7 +1210,8 @@ def _c2(ctx: Ctx):
 
 def has_dsl() -> bool:
     """Whether the repository keeps a Structurizr DSL file — the `c4` step's whole input."""
-    out = subprocess.run(["git", "ls-files", "--", "*.dsl"], capture_output=True, text=True)
+    out = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "--", "*.dsl"],
+                         capture_output=True, text=True)
     return bool(out.stdout.strip())
 
 
@@ -2167,9 +2168,10 @@ STEP_INPUTS = {
                      "reads": ("assets/sequence.verdict.json",),
                      "tools": ("c2-from-sequence.py", "drawio-diff.py"),
                      "outputs": ("assets/c2",)},
-    # The DSL and anything it `!include`s by a path that does not end in .dsl is rare
-    # enough to leave out: a workspace split across files is split across .dsl files.
-    "c4":           {"paths": ("*.dsl",),
+    # The DSL, and the tests the cards quote: which C4 level a test checks is read off its
+    # source (`structurizr-views.py` `tests_reading`). Something a DSL `!include`s by a
+    # path that does not end in .dsl is rare enough to leave out.
+    "c4":           {"paths": ("*.dsl", "*Test.java", "*Tests.java", "*Test.kt", "*Tests.kt"),
                      "tools": ("structurizr-views.py",),
                      "outputs": ("assets/c4",)},
     "complexity":   {"paths": ("*.java",),

@@ -70,7 +70,7 @@ VIEW_LISTS = {"systemLandscapeViews": "SystemLandscape", "systemContextViews": "
               "customViews": "Custom", "filteredViews": "Filtered", "imageViews": "Image"}
 
 #: Directives whose argument is a path relative to the file that holds them.
-DIRECTIVE = re.compile(r'^\s*!(include|docs|adrs|image|script)\s+("?)([^"\s]+)\2', re.M)
+DIRECTIVE = re.compile(r'^\s*!(include|docs|adrs|image|script)\s+(?:"([^"]+)"|(\S+))', re.M)
 
 COLUMNS = ("name", "title", "description", "type", "status", "source",
            "new_light", "new_dark", "old_light", "old_dark", "note")
@@ -168,7 +168,7 @@ def closure(side: Side, entry: str) -> dict[str, bytes]:
             continue
         here = rel.rsplit("/", 1)[0] if "/" in rel else ""
         for m in DIRECTIVE.finditer(data.decode("utf-8", "replace")):
-            target = m.group(3)
+            target = m.group(2) or m.group(3)
             if "://" in target:
                 continue
             ref = _norm(f"{here}/{target}" if here else target)
@@ -209,7 +209,9 @@ def export_static(work: Path, entry: str) -> tuple[Path | None, str]:
     the container reads the DSL from a bind mount and writes the site back into it."""
     cid = work / ".cid"
     cid.unlink(missing_ok=True)
-    cmd = ["docker", "run", "--rm", "--cidfile", str(cid),
+    # As the caller: the image runs as a fixed uid that cannot write into a host-owned
+    # directory on Linux (Docker Desktop on a Mac maps it either way).
+    cmd = ["docker", "run", "--rm", "--cidfile", str(cid), "--user", f"{os.getuid()}:{os.getgid()}",
            "-v", f"{work}:/w", IMAGE, "export", "-w", f"/w/{entry}", "-f", "static",
            "-o", "/w/.hr-static"]
     try:
@@ -224,7 +226,7 @@ def export_static(work: Path, entry: str) -> tuple[Path | None, str]:
     if out.returncode != 0 or not (site / "workspace.js").is_file():
         tail = [l for l in (out.stderr + out.stdout).splitlines()
                 if "ERROR" in l or "Exception" in l or "error" in l.lower()]
-        why = (tail[-1] if tail else f"exit {out.returncode}").strip()
+        why = (tail[-1] if tail else f"exit {out.returncode}").strip().replace(" /w/", " ")
         if "Unable to find image" in out.stderr and out.returncode != 0:
             why = f"could not pull {IMAGE}"
         return None, f"Structurizr could not parse {entry}: {why[:300]}"
@@ -331,9 +333,14 @@ def tests_reading(root: Path, entry: str) -> list[dict]:
         except OSError:
             continue
         found.append({"path": rel,
-                      "levels": [lvl for lvl, rx in LEVEL_PROBES.items() if rx.search(text)]})
+                      "levels": [lvl for lvl, rx in LEVEL_PROBES.items() if rx.search(text)],
+                      # Whether it reads the arrows at all: without it, only the boxes
+                      # can be claimed as checked.
+                      "arrows": bool(RELATIONSHIP_PROBE.search(text))})
     return found
 
+
+RELATIONSHIP_PROBE = re.compile(r"get(?:Efferent|Afferent)?Relationships\s*\(")
 
 LEVEL_WORDS = {"Component": "components", "Container": "containers"}
 
@@ -345,8 +352,11 @@ def tested_note(vtype: str, tests: list[dict]) -> str:
     checking = [t for t in tests if vtype in t["levels"]]
     if checking:
         names = ", ".join(Path(t["path"]).name for t in checking)
-        return (f"Its {LEVEL_WORDS[vtype]} and their arrows are checked against the code "
-                f"by {names}.")
+        if any(t.get("arrows") for t in checking):
+            return (f"Its {LEVEL_WORDS[vtype]} and their arrows are checked against the "
+                    f"code by {names}.")
+        return (f"Its {LEVEL_WORDS[vtype]} are checked against the code by {names}; "
+                "its arrows are not.")
     names = ", ".join(Path(t["path"]).name for t in tests)
     levels = sorted({l for t in tests for l in t["levels"]})
     if levels:
@@ -406,6 +416,110 @@ def materialise(files: dict[str, bytes], into: Path) -> None:
         p.write_bytes(data)
 
 
+def ensure_image() -> str | None:
+    """Pull the image on its own clock: a first pull is ~430 MB, which must neither count
+    against the export's timeout nor be reported as one."""
+    have = subprocess.run(["docker", "image", "inspect", IMAGE], capture_output=True)
+    if have.returncode == 0:
+        return None
+    try:
+        pull = subprocess.run(["docker", "pull", IMAGE], capture_output=True, text=True,
+                              timeout=900)
+    except subprocess.TimeoutExpired:
+        return f"pulling {IMAGE} took longer than 15 min"
+    return None if pull.returncode == 0 else f"could not pull {IMAGE}"
+
+
+#: The title/description/date block Structurizr keeps in the SVG, hidden, when exported
+#: with `metadata: false`. The date makes every render differ from the last one by bytes.
+HIDDEN_TSPAN = re.compile(r'<tspan\b[^>]*display="none"[^>]*>.*?</tspan>', re.S)
+
+
+def draw(root: Path, entries: list[str], sides: dict, mb: str | None, base_ref: str,
+         out_dir: Path) -> tuple[list[dict], list[str], bool]:
+    """Every view of every workspace, into `out_dir`. Returns (rows, problems, broken):
+    `broken` when the branch's own DSL does not parse — a finding, said on the tab."""
+    from playwright.sync_api import sync_playwright
+
+    rows, problems, broken = [], [], False
+    with tempfile.TemporaryDirectory(prefix="hr-c4-") as tmp, sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        try:
+            for idx, entry in enumerate(entries):
+                # Two workspaces may both have a `C1` (or Structurizr's auto keys): their
+                # files are kept apart by the workspace's position, when there are two.
+                pre = f"{idx}-" if len(entries) > 1 else ""
+                tests = tests_reading(root, entry)
+                parsed = {}
+                for side in ("new", "old"):
+                    files = sides[entry][side]
+                    if not files:
+                        continue
+                    work = Path(tmp) / f"{idx}.{side}"
+                    materialise(files, work)
+                    site, err = export_static(work, entry)
+                    if site is None:
+                        where = "on this branch" if side == "new" else "at the merge-base"
+                        problems.append(f"{err} ({where})")
+                        broken |= side == "new"
+                        continue
+                    parsed[side] = (site, view_signatures(workspace_json(site)))
+                if sides[entry]["new"] and "new" not in parsed:
+                    continue          # the branch's DSL is broken: no picture claims otherwise
+                if "new" not in parsed and "old" not in parsed:
+                    continue
+                new_sigs = parsed.get("new", (None, {}))[1]
+                old_sigs = parsed.get("old", (None, {}))[1]
+                uncompared = ""
+                if mb is None:
+                    uncompared = (f" No merge-base with {base_ref} was found, so this view is "
+                                  "not compared with the base.")
+                elif sides[entry]["old"] and "old" not in parsed:
+                    uncompared = (" The merge-base's copy of the DSL did not parse, so this "
+                                  "view is not compared with it.")
+                if uncompared:
+                    old_sigs = None
+                status = {}
+                for key in set(new_sigs) | set(old_sigs or {}):
+                    if old_sigs is None:
+                        status[key] = "uncompared"
+                    elif key not in old_sigs:
+                        status[key] = "added"
+                    elif key not in new_sigs:
+                        status[key] = "deleted"
+                    else:
+                        status[key] = ("unchanged" if new_sigs[key]["sig"] ==
+                                       old_sigs[key]["sig"] else "modified")
+                try:
+                    drawn_new = render_site(browser, parsed["new"][0], list(new_sigs)) \
+                        if "new" in parsed else {}
+                    want_old = [k for k, s in status.items() if s in ("modified", "deleted")]
+                    drawn_old = render_site(browser, parsed["old"][0], want_old) \
+                        if want_old and "old" in parsed else {}
+                except Exception as e:      # noqa: BLE001 - the viewer, not the model
+                    problems.append(f"Structurizr's viewer could not draw {entry}: "
+                                    f"{str(e).splitlines()[0][:200]}")
+                    continue
+                for key, st in status.items():
+                    meta = new_sigs.get(key) or (old_sigs or {}).get(key)
+                    row = {"name": key, "title": meta["title"],
+                           "description": meta["description"], "type": meta["type"],
+                           "status": st, "source": entry,
+                           "note": tested_note(meta["type"], tests)
+                           + (uncompared if st == "uncompared" else "")}
+                    for side, drawn in (("new", drawn_new), ("old", drawn_old)):
+                        for mode, svg in (drawn.get(key) or {}).items():
+                            name = f"{pre}{safe(key)}.{side}.{mode}.svg"
+                            (out_dir / name).write_text(HIDDEN_TSPAN.sub("", svg),
+                                                        encoding="utf-8")
+                            row[f"{side}_{mode}"] = name
+                    row["_order"] = (TYPE_ORDER.get(meta["type"], 9), idx, meta["order"])
+                    rows.append(row)
+        finally:
+            browser.close()
+    return rows, problems, broken
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -426,6 +540,9 @@ def main(argv=None) -> int:
     if not entries:
         print("structurizr-views: no Structurizr DSL workspace in this repository")
         shutil.rmtree(out_dir, ignore_errors=True)
+        # Said once, so a plain refresh does not keep asking (refresh-report `c4_pending`);
+        # the card renders nothing for it.
+        write_verdict(out_dir, state="none", reason="no Structurizr DSL workspace")
         return 3
 
     sides = {e: {"new": closure(head, e) if (root / e).is_file() else None,
@@ -433,14 +550,7 @@ def main(argv=None) -> int:
              for e in entries}
     fp = fingerprint(*(s for e in entries for s in (sides[e]["new"], sides[e]["old"])))
 
-    why = docker_ready()
-    if why is None:
-        try:
-            from playwright.sync_api import sync_playwright  # noqa: F401
-        except ImportError:
-            why = ("Python Playwright is not installed "
-                   "(pip install playwright && playwright install chromium)")
-    if why:
+    def unavailable(why: str) -> int:
         # A previous render of exactly these inputs is still the truth: keep it.
         try:
             held = json.loads((out_dir / "verdict.json").read_text(encoding="utf-8"))
@@ -455,88 +565,48 @@ def main(argv=None) -> int:
         print(f"structurizr-views: not drawn — {why}", file=sys.stderr)
         return 4
 
-    from playwright.sync_api import sync_playwright
-
-    rows, problems = [], []
-    shutil.rmtree(out_dir, ignore_errors=True)
-    out_dir.mkdir(parents=True)
-    with tempfile.TemporaryDirectory(prefix="hr-c4-") as tmp, sync_playwright() as pw:
-        browser = pw.chromium.launch()
+    why = docker_ready()
+    if why is None:
         try:
-            for entry in entries:
-                tests = tests_reading(root, entry)
-                parsed = {}
-                for side in ("new", "old"):
-                    files = sides[entry][side]
-                    if not files:
-                        continue
-                    work = Path(tmp) / f"{safe(entry)}.{side}"
-                    materialise(files, work)
-                    site, err = export_static(work, entry)
-                    if site is None:
-                        problems.append(f"{side}: {err}")
-                        continue
-                    ws = workspace_json(site)
-                    sigs = view_signatures(ws)
-                    parsed[side] = (site, sigs)
-                if "new" not in parsed and "old" not in parsed:
-                    continue
-                new_sigs = parsed.get("new", (None, {}))[1]
-                old_sigs = parsed.get("old", (None, {}))[1]
-                if "new" in parsed and sides[entry]["old"] and "old" not in parsed:
-                    # The base side did not parse: every view is drawn as it stands now,
-                    # and the card says the comparison could not be made.
-                    old_sigs = None
-                status = {}
-                for key in set(new_sigs) | set(old_sigs or {}):
-                    if old_sigs is None:
-                        status[key] = "uncompared"
-                    elif key not in old_sigs:
-                        status[key] = "added"
-                    elif key not in new_sigs:
-                        status[key] = "deleted"
-                    else:
-                        status[key] = ("unchanged" if new_sigs[key]["sig"] ==
-                                       old_sigs[key]["sig"] else "modified")
-                drawn_new = render_site(browser, parsed["new"][0], list(new_sigs)) \
-                    if "new" in parsed else {}
-                want_old = [k for k, s in status.items() if s in ("modified", "deleted")]
-                drawn_old = render_site(browser, parsed["old"][0], want_old) \
-                    if want_old and "old" in parsed else {}
-                for key, st in status.items():
-                    meta = new_sigs.get(key) or (old_sigs or {}).get(key)
-                    row = {"name": key, "title": meta["title"],
-                           "description": meta["description"], "type": meta["type"],
-                           "status": st, "source": entry,
-                           "note": tested_note(meta["type"], tests)
-                           + (" The merge-base's copy of the DSL did not parse, so this "
-                              "view is not compared with it." if st == "uncompared" else "")}
-                    for side, drawn in (("new", drawn_new), ("old", drawn_old)):
-                        for mode, svg in (drawn.get(key) or {}).items():
-                            name = f"{safe(key)}.{side}.{mode}.svg"
-                            (out_dir / name).write_text(svg, encoding="utf-8")
-                            row[f"{side}_{mode}"] = name
-                    row["_order"] = (TYPE_ORDER.get(meta["type"], 9), entries.index(entry),
-                                     meta["order"])
-                    rows.append(row)
-        finally:
-            browser.close()
+            from playwright.sync_api import sync_playwright  # noqa: F401
+        except ImportError:
+            why = ("Python Playwright is not installed "
+                   "(pip install playwright && playwright install chromium)")
+    why = why or ensure_image()
+    if why:
+        return unavailable(why)
+
+    # Drawn beside the old output and swapped in at the end: a run that dies half-way
+    # (no Chromium, a viewer that hangs) leaves the previous views, not an empty folder.
+    stage = out_dir.with_name(out_dir.name + ".drawing")
+    shutil.rmtree(stage, ignore_errors=True)
+    stage.mkdir(parents=True)
+    try:
+        rows, problems, broken = draw(root, entries, sides, mb, args.base, stage)
+    except Exception as e:              # noqa: BLE001 - Chromium missing, or similar
+        shutil.rmtree(stage, ignore_errors=True)
+        return unavailable("the headless browser could not start ("
+                           + (str(e).splitlines() or ["?"])[0][:200] + ")")
 
     rows.sort(key=lambda r: r["_order"])
     clean = lambda v: str(v or "").replace("\t", " ").replace("\n", " ")
-    (out_dir / "MANIFEST.tsv").write_text(
+    (stage / "MANIFEST.tsv").write_text(
         "\t".join(COLUMNS) + "\n"
         + "".join("\t".join(clean(r.get(c)) for c in COLUMNS) + "\n" for r in rows),
         encoding="utf-8")
-    state = "drawn" if rows else "failed"
-    write_verdict(out_dir, state=state, reason="; ".join(problems), fingerprint=fp,
+    state = "drawn" if rows and not broken else "failed"
+    write_verdict(stage, state=state, reason="; ".join(problems), fingerprint=fp,
                   workspaces=entries, image=IMAGE, base=mb,
                   views={r["name"]: r["status"] for r in rows})
+    shutil.rmtree(out_dir, ignore_errors=True)
+    stage.rename(out_dir)
     for p in problems:
         print(f"structurizr-views: {p}", file=sys.stderr)
     print(f"structurizr-views: {len(rows)} view(s) drawn from {', '.join(entries)} "
           f"({', '.join(f'{r['name']}={r['status']}' for r in rows)})")
-    return 0 if rows else 1
+    # A DSL that does not parse is the branch's finding, written where the tab reads it;
+    # nothing drawn at all is this step failing.
+    return 0 if rows or broken else 1
 
 
 if __name__ == "__main__":

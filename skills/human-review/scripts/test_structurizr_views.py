@@ -52,8 +52,12 @@ def test_a_new_arrow_changes_the_view():
 
 
 def test_the_note_says_which_level_a_test_checks():
-    tests = [{"path": "src/test/C3ArchTest.java", "levels": ["Component"]}]
-    assert "checked against the code by C3ArchTest.java" in sv.tested_note("Component", tests)
+    tests = [{"path": "src/test/C3ArchTest.java", "levels": ["Component"], "arrows": True}]
+    assert "and their arrows are checked against the code by C3ArchTest.java" \
+        in sv.tested_note("Component", tests)
+    boxes = [dict(tests[0], arrows=False)]
+    assert sv.tested_note("Component", boxes).endswith("its arrows are not."), \
+        "a test that never reads a relationship cannot vouch for the arrows"
     c2 = sv.tested_note("Container", tests)
     assert c2.startswith("Hand-maintained") and "checks only its components" in c2
     assert sv.tested_note("Container", []).startswith("Hand-maintained: no test")
@@ -131,3 +135,23 @@ def test_the_structure_tab_gets_the_block_once_the_step_wrote_its_verdict(tmp_pa
 def test_a_structurizr_card_gets_its_own_prompt_not_the_projected_c2s():
     head = "C2-Containers Structurizr · Containers c4model.c1+c2.dsl"
     assert next(k for k, rx in DIAGRAM_KINDS if rx.search(head)) == "diagram.c4"
+
+
+def test_a_repository_without_a_workspace_draws_nothing_and_says_nothing(tmp_path):
+    assets = tmp_path / "assets" / "c4"
+    assets.mkdir(parents=True)
+    (assets / "verdict.json").write_text('{"state": "none"}', encoding="utf-8")
+    assert render_c4({}, tmp_path, tmp_path) == ("", 0, 0)
+
+
+def test_a_problem_is_said_above_the_views_that_were_drawn(tmp_path):
+    assets = tmp_path / "assets" / "c4"
+    assets.mkdir(parents=True)
+    _svg(assets, "C2.new.light.svg", "#fff")
+    _manifest(assets, [{"name": "C2", "type": "Container", "status": "unchanged",
+                        "source": "docs/w.dsl", "new_light": "C2.new.light.svg"}])
+    (assets / "verdict.json").write_text(json.dumps(
+        {"state": "drawn", "reason": "could not parse b.dsl"}), encoding="utf-8")
+    out, _, _ = render_c4({}, tmp_path, tmp_path)
+    assert out.index("could not parse b.dsl") < out.index('class="diagram')
+    assert 'class="c4-only"' in out, "a single mode shows in both schemes"

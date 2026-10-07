@@ -1274,9 +1274,11 @@ REQMAP_CSS = """
 /* The Unit/API/E2E key sits on the title row, over the card, in the stretch the title left
    empty; its margins are the title's, so the two read as one line. */
 .reqmap .rm-cats{grid-column:2;grid-row:1;align-self:center;min-height:0;margin:.2rem 2px .15rem}
-.reqmap .rm-cats .rm-catf{display:inline-flex;align-items:center;gap:3px;cursor:pointer;
+.reqmap .rm-cats .rm-catf{display:inline-flex;align-items:center;gap:0;cursor:pointer;
   user-select:none}
-.reqmap .rm-cats .rm-catf input{margin:0;cursor:pointer}
+.reqmap .rm-cats .rm-catf input{margin:0 -18px 0 6px;width:12px;height:12px;cursor:pointer;
+  position:relative;z-index:1}
+.reqmap .rm-cats .rm-catf > .rm-cat{padding-left:23px}
 .reqmap .rm-cats .rm-catf+.rm-catf{margin-left:9px}
 .reqmap .rm-cats .rm-catf:has(input:not(:checked)){opacity:.5}
 .reqmap .rm-t[data-catoff=yes]{display:none}

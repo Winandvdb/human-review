@@ -1926,7 +1926,7 @@ def _when(iso: str) -> str:
         d = datetime.datetime.fromisoformat((iso or "").replace("Z", "+00:00"))
     except ValueError:
         return ""
-    return f"opened on {d:%b} {d.day}, {d.year}"
+    return f"on {d:%b} {d.day}, {d.year}"
 
 
 #: How much of a decision's own words a hover quotes before cutting: a tooltip is one glance.

@@ -61,7 +61,7 @@ button.adopt:focus-visible { outline:2px solid var(--adopt); outline-offset:1px;
 /* Tests: the title row is a grid row, the ticket's title over the left pane and the
    UI/API/unit filter over the right one. The filter and the pill share the right cell;
    the filter keeps the margins it had there. */
-.reqmap .rm-body > .adopthead { grid-column:2; grid-row:1; align-self:center; }
+.reqmap .rm-body > .adopthead { grid-column:2; grid-row:1; align-self:center; flex-wrap:nowrap; }
 /* Stacked, the filter's 46px gap from the ticket above it moves onto the row, or the pill
    would centre on that gap rather than on the filter. */
 @media (max-width:900px) {

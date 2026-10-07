@@ -216,7 +216,7 @@
    under it. Only one open at a time - two open panes and the list stops being a list. */
 .reqmap .rm-t{border-bottom:1px solid var(--line,#e2e2e2)}
 .reqmap .rm-t:last-child{border-bottom:0}
-.reqmap .rm-thead{display:flex;align-items:baseline;gap:8px;padding:7px 10px;cursor:pointer;
+.reqmap .rm-thead{display:flex;align-items:center;gap:8px;padding:7px 5px 7px 6px;cursor:pointer;
   font-size:11.5px;line-height:1.35;color:var(--muted,#6b6b6b)}
 /* The card is headed the way the ticket is - one strip, an avatar's worth of icon and a
    name - because it is the ticket's counterpart, not a titled list beside it. The face
@@ -228,7 +228,9 @@
 .reqmap .rm-thead:hover{background:rgba(127,127,127,.07)}
 .reqmap .rm-tt{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap}
-.reqmap .rm-tw{flex:0 0 auto;font-size:10.5px}
+/* `.srcref` carries an 8px bottom margin for prose; in a centred row it pushed the file name 4px
+   above everything else. The 1px dotted underline is balanced by 1px on top. */
+.reqmap .rm-tw{flex:0 0 auto;font-size:10.5px;margin-bottom:0;padding-top:1px}
 /* The part of the file name that says what kind of test this is - `.feature`, `.spec.ts`,
    `.component.spec.ts`, `.java` - in amber, the page's own "look here" colour, so the
    kind is read off the row without decoding the whole name. Everything before the first
@@ -281,7 +283,7 @@
 .reqmap .rm-t[data-shut=yes] .rm-thead{cursor:default}
 .reqmap .rm-t[data-shut=yes] .rm-thead:hover{background:none}
 .reqmap .rm-t[data-shut=yes] .rm-chev{visibility:hidden}
-.reqmap .rm-chev{flex:0 0 auto;font-size:8px;opacity:.55;transition:transform .15s ease}
+.reqmap .rm-chev{flex:0 0 auto;font-size:12px;opacity:.55;transition:transform .15s ease}
 .reqmap .rm-t[data-open=yes] .rm-chev{transform:rotate(90deg)}
 .reqmap .rm-t[data-open=yes] .rm-thead{color:var(--fg,#1c1c1c);font-weight:600}
 /* A selected sentence sorts the list into "these prove it" and the rest: the covering
@@ -316,7 +318,7 @@
    stay in one column, and hidden rather than merely faded on a test that pins no sentence:
    a control that would do nothing is worse than no control. */
 .reqmap .rm-link{flex:0 0 auto;align-self:center;width:12px;height:14px;
-  margin:0 -1px 0 0;padding:0;border:0;background:none;color:var(--muted,#6b6b6b);
+  margin:0 -5px 0 0;padding:0;border:0;background:none;color:var(--muted,#6b6b6b);
   opacity:.5;cursor:pointer;transition:opacity .12s ease,color .12s ease}
 /* The glyph is the picture of what pressing it draws: one trunk on the right, where the
    test is, fanning into three branches reaching left at the ticket. An arrowhead only
@@ -465,4 +467,4 @@
 .reqmap .rm-run svg{display:block;width:15px;height:15px;overflow:visible;fill:var(--rm-run)}
 .reqmap .rm-run .rm-play,.reqmap .cov-av .rm-play{fill:var(--bg,#1e1e24)}
 /* Half the row's 8px gap between the shield and the stamp that follows it. */
-.reqmap .rm-run + .rm-st{margin-left:-4px}
+.reqmap .rm-tw + .rm-run,.reqmap .rm-run + .rm-st{margin-left:-4px}

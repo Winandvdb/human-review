@@ -512,6 +512,25 @@ def test_the_script_runs_against_its_own_root_so_it_can_live_in_a_shadow_root():
     assert "body.dv-hide-untouched" not in t and ".dv-hide-untouched .opblock" in t
 
 
+def test_an_operation_reads_as_a_diff_not_as_a_console():
+    """Victor, 7 Oct 2026: no spec title or description, a band per controller, bodies
+    open on Schema, no "Controls Accept header.", and responses fold by status -- 2xx
+    open, the rest folded unless this diff touched them."""
+    t = ovd.TEMPLATE
+    assert "defaultModelRendering: 'model'" in t, "bodies must open on Schema"
+    assert ".swagger-ui .info .title { font-size: 0 !important;" in t
+    assert ".swagger-ui .info__description" in t
+    assert ".response-control-media-type__accept-message { display: none !important; }" in t
+    assert "border-left: 4px solid var(--dv-attr) !important;" in t, "controller band"
+    # the fold: wired into decorate, 2xx open by default, a touched status opens too,
+    # and the reveal walk unfolds a line it has to walk into
+    assert "foldResponses();" in t and "function foldResponses()" in t
+    assert "/^2/.test(tr.dataset.code) || responseChanged(" in t
+    assert "t.in === 'response' && String(t.status) === code" in t
+    assert "if (host.matches('tr.response.dv-folded')) setFolded(host, false);" in t
+    assert "tr.response.dv-folded td.response-col_description > :not(" in t
+
+
 def test_the_skill_copy_and_the_public_repo_copy_have_not_drifted():
     """`openapi-visual-diff.py` lives twice: here, and as its own public repo. A fix in
     one and not the other is a trap for whoever reads the other one."""

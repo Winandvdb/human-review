@@ -261,6 +261,13 @@ button.chip-rerun-ai { border-color:var(--drift); color:var(--drift); }
 /* Was `margin-left:-.55rem`, pulling the mark back against the pill it belonged to. There
    is nothing to pull it against now: the label and the mark are one button. */
 /* What the command is doing, while it is doing it — and nothing at all otherwise.
+/* They are buttons, links or not: no underline under the pointer, anywhere in the row
+   (the sentence's quiet-link rule above reaches the two editor links), and a slight lift
+   instead — the tinted Update / Revert pills keep their colour on hover by design, so
+   without it they gave no sign of being under the pointer at all. */
+.rerun .rerun-acts a, .rerun .rerun-acts a:hover, .rerun .rerun-acts button:hover,
+.rerun .rerun-acts :hover > .cmd-word { text-decoration:none; }
+.rerun .rerun-acts a:hover, .rerun .rerun-acts button:hover { filter:brightness(1.18); }
    The `[hidden]` rule is not belt-and-braces: `display:flex` on a class beats the browser's
    own `[hidden] { display:none }`, so without it this line is on screen in every copy of
    the page, empty, under every diagram, for ever. It is the same trap the folded command

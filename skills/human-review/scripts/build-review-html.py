@@ -66,7 +66,7 @@ from hrbuild.shared.assets import (
     APP_ENV_JS, CAPTION_JS, CSS, CSS_FILES, DGM_VIEWS_JS, EDITOR_JS, FOCUS_JS, FOOTER_CSS,
     GENSEQ_JS, HSCROLL_JS, LATE_CSS, PAINT_HOLD_JS, PAINT_RELEASE_JS, RERUN_JS, SEQFOLD_JS, SEQHEADS_JS,
     SEQLINK_JS, SERVER_JS, TABS_JS, TIP_JS, TRACE_JS, XREF_CSS, XREF_JS, FOLDERS_JS,
-    FIXTURES_JS
+    FIXTURES_JS, EXPLAIN_JS
 )
 from hrbuild.shared.fixtures import (
     FIXTURE_COLORS_FILE,
@@ -160,8 +160,9 @@ from hrbuild.shared.masthead import (
     _picked_outside
 )
 from hrbuild.shared.adopt import (
-    DIAGRAM_CARD, DIAGRAM_KINDS, PETCLINIC, PIECES, PLACES, ROBOT, _CAPTION, _TAG, _close,
-    _last_caption, adopt_html, adopt_prompt, place_prompts
+    DIAGRAM_CARD, DIAGRAM_KINDS, EXPLAIN, PETCLINIC, PIECES, PLACES, ROBOT, _CAPTION, _TAG,
+    _close, _last_caption, adopt_html, adopt_prompt, explain_button, explain_data, explain_key,
+    place_prompts
 )
 from hrbuild.shared.footer import (
     DEMO_DOCKER_URL, DEMO_PAGES_URL, DEMO_ZIP_URL, FOOTER_BOILERPLATE, HOME_URL, INVITATION,
@@ -1464,6 +1465,8 @@ def _main(argv=None) -> int:
 {TRACE_JS}\n{SEQLINK_JS}\n{FOLDERS_JS}\n{SEQFOLD_JS}\n{SEQHEADS_JS}\n{HSCROLL_JS}\n{TABS_JS}\n{PAINT_RELEASE_JS}
 {RERUN_JS}
 {TIP_JS}
+{explain_data()}
+{EXPLAIN_JS}
 {fixtures_html}
 </body></html>
 """

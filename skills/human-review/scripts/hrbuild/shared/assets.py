@@ -80,6 +80,10 @@ APP_ENV_JS = _script("app-env.js")
 
 TIP_JS = _script("tip.js")
 
+# The blue (i) beside every prompt pill: opens the piece's "what am I looking at?" box,
+# from the `hr-explain` texts `shared/adopt.py` writes.
+EXPLAIN_JS = _script("explain.js")
+
 
 TRACE_JS = _script("trace.js")
 

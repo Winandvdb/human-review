@@ -1,6 +1,7 @@
 """The "Prompt to get this" buttons: one per piece — inside the card it is about, or at the
 right end of the tab's title row when the piece is the whole tab."""
 import html
+import json
 import re
 from pathlib import Path
 
@@ -202,3 +203,82 @@ def test_tab_title_pills_say_page_and_smaller_areas_keep_the_short_label():
     assert "this page" not in card
     cost = place_prompts("review", '<h2 id="assumed">A</h2><p class="pileround">r</p>')
     assert "Prompt to get this</button>" in cost and "this page" not in cost
+
+
+# The (i) beside every pill (7 Oct 2026, Victor): what the reader is looking at, read
+# before they copy a prompt for it.
+from hrbuild.shared.adopt import EXPLAIN, explain_data, explain_key  # noqa: E402
+
+ASSETS = SCRIPTS / "hrbuild" / "assets"
+
+
+@pytest.mark.parametrize("piece", sorted(PIECES))
+def test_every_piece_with_a_prompt_explains_itself(piece):
+    assert explain_key(piece), f"{piece} has a prompt but no EXPLAIN entry"
+
+
+@pytest.mark.parametrize("key", sorted(EXPLAIN))
+def test_each_explainer_is_two_to_four_short_lines_and_names_a_real_piece(key):
+    t = EXPLAIN[key]
+    assert key.split(":")[0] in PIECES
+    assert 2 <= len(t["li"]) <= 4, "ADHD-friendly: 2-4 lines"
+    for line in t["li"]:
+        assert len(re.sub(r"<[^>]+>", "", line)) <= 100, line
+    assert set(t) <= {"li", "ex", "code", "move"}
+    if "ex" in t:
+        assert t["ex"].startswith("e.g."), "an example is marked as one: the texts are static"
+    if "code" in t:
+        assert len(t["code"].split("\n")) <= 5, "a tiny snippet, not a listing"
+
+
+def test_the_i_sits_right_after_the_pill_inside_its_row():
+    row = adopt_html("diagram.domain", "Domain Model")
+    assert re.search(r'Prompt to get this</button><button type="button" class="hrx-i" '
+                     r'aria-pressed="false" data-explain="diagram\.domain"', row)
+    assert row.endswith("</button></div>")
+
+
+def test_a_card_title_picks_its_own_explainer_when_one_piece_covers_unlike_cards():
+    assert 'data-explain="diagram.drawio:Deployment"' in adopt_html("diagram.drawio", "Deployment")
+    assert 'data-explain="diagram.drawio"' in adopt_html("diagram.drawio", "Conceptual Model")
+
+
+def test_every_placed_pill_gets_an_i():
+    out = place_prompts("data", _card("Domain Model", "DomainModel.puml")
+                        + _card("Database", "DB.puml"))
+    assert out.count('class="adopt copycmd"') == out.count('class="hrx-i"') == 2
+
+
+def test_the_texts_ride_as_json_that_no_text_can_close():
+    block = explain_data()
+    body = block[block.index(">") + 1:block.rindex("</script>")]
+    assert "</" not in body
+    assert json.loads(body) == EXPLAIN
+
+
+def test_the_moved_intro_lines_still_exist_on_their_tabs():
+    """A `move` selector whose line is gone leaves the box short, silently."""
+    sources = "\n".join(p.read_text(encoding="utf-8") for p in SCRIPTS.rglob("*.py")
+                        if not p.name.startswith("test_"))
+    for key, t in EXPLAIN.items():
+        if "move" in t:
+            cls = t["move"].split(".")[-1]
+            assert cls in sources, f"{key}: nothing emits .{cls} any more"
+
+
+def test_the_explainer_script_reads_the_block_and_is_on_the_page():
+    js = (ASSETS / "explain.js").read_text(encoding="utf-8")
+    assert "getElementById('hr-explain')" in js and "button.hrx-i[data-explain]" in js
+    assert "localStorage" in js and "try" in js
+    page = (SCRIPTS / "build-review-html.py").read_text(encoding="utf-8")
+    assert "{explain_data()}\n{EXPLAIN_JS}" in page
+
+
+def test_the_pill_burst_is_a_square_so_no_angle_leaves_a_corner_bare():
+    """It was 260% x 700% of the pill: at 90 degrees narrower than the pill, so the hover
+    tint showed through at its ends (a black wedge in dark mode, 7 Oct 2026)."""
+    css = (ASSETS / "css" / "adopt.css").read_text(encoding="utf-8")
+    before = re.search(r"\.adoptline \.adopt::before\{([^}]*)\}", css).group(1)
+    assert "aspect-ratio:1/1" in before and "height:700%" not in before
+    hover = re.search(r"\.adoptline \.adopt:hover,[^{]*\{([^}]*)\}", css).group(1)
+    assert "background:#7c3aed" in hover

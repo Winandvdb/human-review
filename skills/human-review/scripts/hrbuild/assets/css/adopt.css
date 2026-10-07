@@ -72,10 +72,15 @@ button.adopt:focus-visible { outline:2px solid var(--adopt); outline-offset:1px;
    (`.btn-fancy`): a conic burst blooms from the centre and then turns slowly, a one-shot
    diagonal shimmer crosses it, a halo glows, the pill lifts 1px and its text goes white.
    Recoloured to the pill's purple; the copy behaviour and its "Copied" feedback are the
-   button's own and untouched. */
+   button's own and untouched.
+   The burst is a square four pills wide, never a rectangle: it was 260% x 700% of the
+   pill, and turned 90 degrees that is narrower than the pill, so its ends showed the hover
+   tint under the white text (a black wedge in dark, a blank one in light). A square that
+   wide covers the pill at every angle, and the solid purple under it fills the first
+   frames before the burst has grown. */
 .adoptline .adopt{position:relative;overflow:hidden;isolation:isolate;transition:color 280ms ease,box-shadow 420ms ease,transform 240ms ease}
-.adoptline .adopt:hover,.adoptline .adopt:focus-visible{color:#fff!important;box-shadow:0 0 18px rgba(167,139,250,.55),0 0 40px rgba(139,92,246,.28);transform:translateY(-1px);outline:none}
-.adoptline .adopt::before{content:'';position:absolute;left:50%;top:50%;width:260%;height:700%;background:conic-gradient(from 0deg,#8b5cf6 0%,#c084fc 14%,#7c3aed 32%,#a78bfa 50%,#8b5cf6 68%,#6d28d9 86%,#8b5cf6 100%);transform:translate(-50%,-50%) scale(0) rotate(0deg);z-index:-2;pointer-events:none;filter:blur(.4px) saturate(115%)}
+.adoptline .adopt:hover,.adoptline .adopt:focus-visible{color:#fff!important;background:#7c3aed;box-shadow:0 0 18px rgba(167,139,250,.55),0 0 40px rgba(139,92,246,.28);transform:translateY(-1px);outline:none}
+.adoptline .adopt::before{content:'';position:absolute;left:50%;top:50%;width:400%;aspect-ratio:1/1;background:conic-gradient(from 0deg,#8b5cf6 0%,#c084fc 14%,#7c3aed 32%,#a78bfa 50%,#8b5cf6 68%,#6d28d9 86%,#8b5cf6 100%);transform:translate(-50%,-50%) scale(0) rotate(0deg);z-index:-2;pointer-events:none;filter:blur(.4px) saturate(115%)}
 .adoptline .adopt:hover::before,.adoptline .adopt:focus-visible::before{animation:hrFancyFill 520ms cubic-bezier(.34,1.56,.64,1) forwards,hrFancySpin 5s linear 520ms infinite}
 .adoptline .adopt::after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 36%,rgba(255,255,255,.55) 50%,transparent 64%);transform:translateX(-140%);pointer-events:none;z-index:-1}
 .adoptline .adopt:hover::after,.adoptline .adopt:focus-visible::after{animation:hrFancyShimmer 900ms cubic-bezier(.4,0,.2,1) 240ms forwards}
@@ -83,3 +88,48 @@ button.adopt:focus-visible { outline:2px solid var(--adopt); outline-offset:1px;
 @keyframes hrFancySpin{from{transform:translate(-50%,-50%) scale(1) rotate(180deg)}to{transform:translate(-50%,-50%) scale(1) rotate(540deg)}}
 @keyframes hrFancyShimmer{from{transform:translateX(-140%)}to{transform:translateX(140%)}}
 @media (prefers-reduced-motion:reduce){.adoptline .adopt::before,.adoptline .adopt::after{animation:none!important}.adoptline .adopt:hover{background:#8b5cf6;transform:none}}
+/* (i) "What am I looking at?": a blue information point beside every "Prompt to get this"
+   pill, so whoever is about to copy that prompt first reads what the piece is. Pressed, it
+   opens a few lines under the tab's title row (head pill) or under the pill (card pill);
+   remembered per piece. */
+.adoptline:has(> .hrx-i){gap:.45rem;align-items:center}
+button.hrx-i{--hrx-i:#1d4ed8;--hrx-i-on:#3b82f6;--hrx-ring:rgba(59,130,246,.35);
+  display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none;
+  width:22px;height:22px;padding:0;margin:0;border:0;border-radius:50%;
+  background:var(--hrx-i);color:#fff;cursor:pointer;
+  font:700 15px/1 Georgia,"Times New Roman",serif;
+  box-shadow:0 1px 2px rgba(0,0,0,.25);transition:background .15s,box-shadow .15s,transform .15s}
+button.hrx-i::before{content:"i";display:block;transform:translateY(.5px)}
+@media (prefers-color-scheme: dark){
+  button.hrx-i{--hrx-i:#2563eb;--hrx-i-on:#60a5fa;--hrx-ring:rgba(96,165,250,.45)}
+}
+button.hrx-i:hover{background:var(--hrx-i-on)}
+button.hrx-i:focus-visible{outline:2px solid var(--hrx-i-on);outline-offset:2px}
+button.hrx-i[aria-pressed="true"]{background:var(--hrx-i-on);
+  box-shadow:0 0 0 3px var(--hrx-ring),0 0 12px var(--hrx-ring)}
+/* The explainer itself. */
+.hrx-box{box-sizing:border-box;max-width:52rem;margin:.4rem 0 .8rem;padding:.5rem .85rem .55rem;
+  border:1px solid color-mix(in srgb,var(--link) 40%,var(--line));border-left:3px solid var(--link);
+  border-radius:8px;background:color-mix(in srgb,var(--link) 7%,var(--card));color:var(--fg);
+  font:400 .86rem/1.45 -apple-system,system-ui,"Segoe UI",sans-serif;text-align:left;white-space:normal}
+.hrx-box[hidden]{display:none!important}
+.hrx-box.hrx-right{margin-left:auto}
+.hrx-box ul{margin:0;padding-left:1.05rem}
+.hrx-box li{margin:.08rem 0}
+.hrx-box code{font:.8rem ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code-bg);padding:0 .2rem;border-radius:3px}
+.hrx-box pre{margin:.4rem 0 0;padding:.35rem .6rem;background:var(--code-bg);border:1px solid var(--line);
+  border-radius:6px;font:.78rem/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto;white-space:pre;color:var(--fg)}
+.hrx-box pre .c{color:var(--muted)}
+.hrx-box pre .p{color:#c2410c;font-weight:700}
+@media (prefers-color-scheme: dark){ .hrx-box pre .p{color:#f0a868} }
+.hrx-box .hrx-ex{margin-top:.3rem;padding-left:1.05rem;color:var(--muted)}
+.hrx-box .hrx-ex code{color:var(--fg)}
+.hrx-box .hrx-src{display:block;margin-top:.3rem;color:var(--muted);font-size:.78rem}
+.hrx-box .hrx-src a{color:inherit}
+/* Tests: the tab fills the window exactly, so the explainer floats over it instead of
+   pushing the grid (and the page) down. */
+.adopthead:has(> .hrx-box.hrx-float){position:relative}
+.hrx-box.hrx-float{position:absolute;top:100%;right:0;z-index:60;width:min(30rem,100%);margin:.3rem 0 0;
+  background:color-mix(in srgb,var(--link) 9%,var(--card));box-shadow:0 8px 28px rgba(0,0,0,.35)}
+/* Moved into the explainer: the tab's own "how this was made" line. */
+.hrx-moved-away{display:none!important}

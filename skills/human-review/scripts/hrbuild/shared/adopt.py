@@ -21,6 +21,7 @@ cards that carry one, and `test_adopt.py` fails the day one of those stops being
 from __future__ import annotations
 
 import html
+import json
 import re
 
 from .footer import HOME_URL
@@ -104,6 +105,186 @@ PIECES: dict[str, tuple[str, str]] = {
                "who must approve it", "scripts/codeowners-check.py"),
     "cost": ("what writing and reviewing the change cost in model tokens",
              "scripts/review-cost.py, scripts/harness_cost.py"),
+}
+
+
+#: The (i) beside every pill: what the reader is looking at, before they copy a prompt for
+#: it (7 Oct 2026, Victor: "whoever goes to click Prompt to get this should first
+#: understand what they're looking at"). Static, the same on every PR, so no line may
+#: state what only one PR shows; an example is marked "e.g.". 2-4 short lines, plain
+#: English, a tiny petclinic example: an ADHD-friendly read, not documentation.
+#: Keyed by piece, or by "piece:Card title" when one piece covers unlike cards (the two
+#: draw.io diagrams). `move`: the tab's own "how this was made" line, a CSS selector,
+#: moved into the box so the visible page stays calm (its counts stay live).
+#: `li` lines, then `ex` (one muted example line) and/or `code` (a tiny snippet; HTML).
+EXPLAIN: dict[str, dict[str, object]] = {
+    'review.assumed': {
+        "li": [
+            'Where the ticket was vague: the guess the coder made, and how sure it was.',
+            'Read these first: a wrong guess is a wrong feature, however clean the code.',
+        ],
+        "ex": 'e.g. the ticket says "link a vet to a visit" but not whether the vet is optional.',
+    },
+    'review.open': {
+        "li": [
+            'What AI reviewers flagged that nobody has fixed yet.',
+            '<b>must look</b> › <b>worth a look</b> › <b>nit</b>. Agree or disagree with each.',
+        ],
+    },
+    'review.fixed': {
+        "li": [
+            'Issues the reviewers raised that an agent already fixed, one diff each.',
+            'Skim them: a fix can be wrong too.',
+        ],
+    },
+    'behaviour': {
+        "li": [
+            'A film of the feature: a script clicks through the real app; a voice explains.',
+            'Click a transcript line to jump there.',
+            '<b>Running app</b> (top): start this exact build and try it yourself.',
+        ],
+    },
+    'api': {
+        "li": [
+            'The REST contract (OpenAPI) on main vs this branch, diffed by oasdiff.',
+            '<b>Breaking</b>: a client written for main can now fail. <b>Info</b>: harmless, e.g. a new optional field.',
+        ],
+        "code": (
+            '<span class="c">e.g. GET /api/owners/1</span>\n'
+            '<span class="c">main:  </span>{ "name": "Leo" }\n'
+            '<span class="c">branch:</span>{ "firstName": "Leo" }   <span class="p">breaking</span><span class="c">: clients reading "name" get nothing</span>'
+        ),
+    },
+    'diagram.domain': {
+        "li": [
+            'The JPA entities and their links, generated from the Java classes.',
+            'The badge says whether this PR changed it.',
+        ],
+        "ex": 'e.g. <code>Owner 1─* Pet 1─* Visit</code>: an owner has pets, a pet has visits.',
+    },
+    'diagram.db': {
+        "li": [
+            'The database tables, rebuilt from the migration scripts.',
+            '"Also changed, not drawn": indexes and constraints the picture can\'t show.',
+        ],
+        "ex": 'e.g. <code>pets.owner_id «FK» → owners.id</code>: each pet row points at its owner.',
+    },
+    'diagram.drawio': {
+        "li": [
+            'The business concepts and how they relate, hand-drawn in draw.io.',
+            'No code here: the words a vet or a pet owner would use.',
+        ],
+        "ex": 'e.g. an Owner has Pets; a Vet has Specialties.',
+    },
+    'diagram.drawio:Deployment': {
+        "li": [
+            'What runs where at runtime, and who calls whom. Hand-drawn in draw.io.',
+            "A test checks every traced arrow really appears in the tests' traces.",
+        ],
+        "ex": 'e.g. Backend → Notification Service: booking a visit sends an SMS.',
+    },
+    'diagram.packages': {
+        "li": [
+            'How the backend code is split into Java packages. Arrow = "depends on".',
+            'ArchUnit tests fail the build if the code stops matching the drawing.',
+        ],
+        "ex": "e.g. a new import from <code>..domain</code> into <code>..rest</code> isn't drawn, so a test fails.",
+    },
+    'diagram.modules': {
+        "li": [
+            'The Maven modules and which one depends on which.',
+            "Generated from <code>mvn dependency:tree</code>, so it can't drift from the build.",
+        ],
+        "ex": 'e.g. <code>petclinic-backend → petclinic-commons</code>: shared code lives in commons.',
+    },
+    'diagram.c2': {
+        "li": [
+            'The C4 "containers" view: the apps and databases, and the calls between them.',
+            "Drawn from the tests' traces, not by hand: every arrow was really called.",
+        ],
+        "ex": 'e.g. Browser → Backend: <code>GET /api/owners</code>.',
+    },
+    'diagram': {
+        "li": [
+            'A diagram kept in the repository as PlantUML.',
+            'The badge says whether this PR changed it.',
+        ],
+    },
+    'requirements': {
+        "li": [
+            "Left: the ticket's requirements. Right: the tests that check them.",
+            'Requirement colour: <b>green</b> = a test proves it, <b>orange</b> = partly, <b>red</b> = no test.',
+            '<b>E2E</b> = browser · <b>API</b> = HTTP call · <b>Unit</b> = direct call.',
+        ],
+    },
+    'sequence': {
+        "move": 'details.seqhow',
+        "li": [
+            'One diagram per test: each HTTP call and SQL query, in order.',
+            'Watch for the same SELECT once per row: an N+1.',
+        ],
+        "code": (
+            '<span class="c">e.g. what a bad one looks like:</span>\n'
+            'GET /api/owners?page=0\n'
+            '  → OwnerRestController.listOwners\n'
+            '    → SELECT … FROM owners LIMIT 10\n'
+            '    → SELECT … FROM pets WHERE owner_id=?   <span class="p">×10 ← N+1</span>'
+        ),
+    },
+    'city': {
+        "li": [
+            'Code City: one building per class, grouped into districts by package.',
+            'By default: area = lines of code · height = cognitive complexity · colour = test coverage.',
+            'Tall and thin = small but tangled. Changed classes are highlighted.',
+        ],
+    },
+    'dsaudit': {
+        "li": [
+            'Every screen, opened on main and on this branch with the same data, side by side.',
+            "<b>Changed</b>: an element added, removed or restyled. Moving alone doesn't count.",
+            '<b>+1 gap</b>: one more control built outside the design system.',
+        ],
+        "ex": 'e.g. a raw <code>&lt;select&gt;</code> where the design system has its own dropdown.',
+    },
+    'complexity': {
+        "move": 'p.cx-lede',
+        "li": [
+            '<b>Cognitive complexity</b>: how hard code is to follow. Nesting is what costs.',
+            'One row per endpoint: its whole call chain, summed. Green = added by this PR.',
+        ],
+        "code": (
+            'for (Owner o : owners) {            <span class="p">// +1</span>  <span class="c">loop</span>\n'
+            '  if (o.getPets().isEmpty()) {      <span class="p">// +2</span>  <span class="c">if, nested once</span>\n'
+            '    for (Visit v : visits) {        <span class="p">// +3</span>  <span class="c">loop, nested twice</span>\n'
+            '      if (v.getVet() == null) {}    <span class="p">// +4</span>  <span class="c">if, 3 deep → total 10</span>'
+        ),
+    },
+    'logging': {
+        "move": 'p.tabsub',
+        "li": [
+            'Every log statement this PR adds or changes.',
+            'Check: right level? No secrets or personal data? Enough context to debug?',
+        ],
+        "code": (
+            '<span class="c">e.g. ✗</span> log.info("Saved {}", owner);  <span class="p">// prints the owner\'s phone and address</span>'
+        ),
+    },
+    'owners': {
+        "li": [
+            'Files this PR touches that <code>.github/CODEOWNERS</code> assigns to a team.',
+            "That team's review is requested; branch protection can make it required.",
+        ],
+        "code": (
+            'openapi.yaml   @org/tech-leads   <span class="c">← API changes need a tech lead</span>'
+        ),
+    },
+    'cost': {
+        "li": [
+            'AI spend on this PR: writing, reviewing, fixing, and building this page.',
+            '$ = Claude tokens at API list price, not what a subscription bills.',
+            'Time = model thinking + tools running (builds, tests, Docker).',
+        ],
+    },
 }
 
 #: A diagram card's piece, read off its head (title and source file), first match wins.
@@ -211,7 +392,31 @@ def adopt_html(piece: str, title: str = "", how: str = "in", page: bool = False)
             f'data-piece="{html.escape(piece)}" data-copy="{html.escape(prompt, quote=True)}" '
             'data-say="Copied — paste it to your coding agent" '
             'data-tip="Copy a prompt for your coding agent to get this into your project">'
-            f'{ROBOT} {label}</button></div>')
+            f'{ROBOT} {label}</button>{explain_button(piece, title)}</div>')
+
+
+def explain_key(piece: str, title: str = "") -> str | None:
+    """The `EXPLAIN` entry for a piece's card, or None when there is none."""
+    for key in (f"{piece}:{title}", piece):
+        if key in EXPLAIN:
+            return key
+    return None
+
+
+def explain_button(piece: str, title: str = "") -> str:
+    """The blue (i) right after the pill. `explain.js` opens its box on click."""
+    key = explain_key(piece, title)
+    if not key:
+        return ""
+    return (f'<button type="button" class="hrx-i" aria-pressed="false" '
+            f'data-explain="{html.escape(key, quote=True)}" aria-label="What am I looking at?" '
+            'data-tip="What am I looking at?"></button>')
+
+
+def explain_data() -> str:
+    """`EXPLAIN` as the JSON block `explain.js` reads; `</` escaped so no text can close it."""
+    return ('<script type="application/json" id="hr-explain">'
+            + json.dumps(EXPLAIN, ensure_ascii=False).replace("</", "<\\/") + "</script>")
 
 
 def place_prompts(tid: str, body: str) -> str:

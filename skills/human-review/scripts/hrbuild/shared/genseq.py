@@ -215,14 +215,22 @@ def _with_handlers(index: dict, root: Path) -> dict:
     return index
 
 
-def genseq_details(rel: str, root: Path) -> str:
+def genseq_details(rel: str, root: Path, *, work_tree: bool = False) -> str:
     """The sidecar the generator filed beside the diagram, carried into the page.
 
     Inlined rather than fetched: review.html is opened from file://, where fetch() of a
-    neighbouring file is blocked, and the guide has to survive being mailed as one file."""
+    neighbouring file is blocked, and the guide has to survive being mailed as one file.
+
+    `work_tree` is for a card whose picture was drawn from the committed `.puml` rather
+    than from this run's copy of it. The sidecar has to come from the same place: a
+    re-run of the suite re-identifies every arrow whose payload carries a per-run value,
+    so the overlay's sidecar names ids the committed picture never drew. On the visit-vet
+    review (7 Oct 2026) 37 of 66 handles on a `delta not drawn` card were dead that way —
+    `200 ⊕` and `select visits ⊕` plain text, `select pets ⊕` beside them still opening."""
     if not rel.endswith(".genseq.puml"):
         return ""
-    sidecar = genseq_file(rel[: -len(".puml")] + ".json", root)
+    json_rel = rel[: -len(".puml")] + ".json"
+    sidecar = Path(root) / json_rel if work_tree else genseq_file(json_rel, root)
     if not sidecar.is_file():
         return ""
     return _details_carrier(sidecar, root)

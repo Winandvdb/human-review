@@ -800,7 +800,7 @@ def _stale_sequence(puml_rel: str, test_rel: str, root: Path, out_dir: Path) -> 
             'drawn for it: <code>assets/diagrams/MANIFEST.tsv</code> is older than the '
             'diagram. Press <b>Rerun</b> — or run <code>run-steps.py --only diagrams</code>'
             ' — to redraw it.</p>'
-            + genseq_details(rel, root)
+            + genseq_details(rel, root, work_tree=True)
             + body + '</div>')
 
 
@@ -820,7 +820,7 @@ def _unchanged_sequence(puml_rel: str, test_rel: str, root: Path, out_dir: Path)
             f' data-test-src="vscode://file/{(root / test_rel).resolve()}:1:1">'
             '<div class="head"><span class="badge sev-info">unchanged</span>'
             + _source_link(rel, root) + '</div>'
-            + genseq_details(rel, root)
+            + genseq_details(rel, root, work_tree=True)
             + body + '</div>')
 
 

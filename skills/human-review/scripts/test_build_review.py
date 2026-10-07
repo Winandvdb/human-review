@@ -4435,6 +4435,36 @@ def test_the_tab_reads_this_runs_copy_of_a_diagram_not_the_restored_file(tmp_pat
     assert ".human-review" in build.SKIP_DIRS, "the copies are never paired a second time"
 
 
+def test_a_card_drawn_from_the_committed_puml_carries_the_committed_sidecar(tmp_path):
+    """`delta not drawn` and `unchanged` draw the work tree's `.puml`. A later run of the
+    suite re-identified the arrows whose payload moved, so the overlay's sidecar names ids
+    that picture never drew — and the `200 ⊕` on it went dead while `select pets ⊕` worked."""
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q",
+                    "--allow-empty", "-m", "c"], cwd=tmp_path, check=True)
+    rel = "generated/a.spec.ts.s.genseq.puml"
+    side = rel[: -len(".puml")] + ".json"
+    (tmp_path / "generated").mkdir()
+    (tmp_path / rel).write_text("@startuml\nBackend --> Browser: [[genseq://committed 200]]\n@enduml\n")
+    (tmp_path / side).write_text('{"details": {"committed": {"title": "200"}}}')
+    overlay = tmp_path / ".human-review/assets/genseq"
+    (overlay / "generated").mkdir(parents=True)
+    (overlay / rel).write_text("@startuml\nBackend --> Browser: [[genseq://rerun 200]]\n@enduml\n")
+    (overlay / side).write_text('{"details": {"rerun": {"title": "200"}}}')
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmp_path, capture_output=True,
+                          text=True).stdout.strip()
+    (overlay / ".head").write_text(head + "\n")
+
+    assert '"rerun"' in build.genseq_details(rel, tmp_path), "a pair drawn from the run reads the run"
+    carried = build.genseq_details(rel, tmp_path, work_tree=True)
+    assert '"committed"' in carried and '"rerun"' not in carried
+    src = (HERE / "hrbuild/tabs/sequence.py").read_text(encoding="utf-8")
+    for card in ("def _stale_sequence", "def _unchanged_sequence"):
+        body = src[src.index(card):]
+        body = body[:body.index("\ndef ")]
+        assert "_context_svg(rel, root" in body and "genseq_details(rel, root, work_tree=True)" in body
+
+
 # ── eval run 8: why each picture is there, and which of the branch's tests have none ────
 # The Sequence step now traces the tests a branch wrote, untagged; their pictures exist only
 # in the overlay (the step removes from the work tree what the run created), and the tab

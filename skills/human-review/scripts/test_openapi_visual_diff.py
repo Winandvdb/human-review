@@ -477,6 +477,16 @@ def test_the_expand_toggle_counts_changes_by_that_name():
     assert "expand 1 impacted" not in page
 
 
+def test_a_node_that_will_not_open_gets_its_tree_redrawn_once():
+    """test-pr, 7 Oct 2026 rebuild: booted on Schema, an array response's `Items` ignored
+    its toggle and 9 of 25 changes read "could not be opened". Redrawing the tree by a tab
+    switch (Example Value, then Schema) opens it; the walk does that once, then gives up."""
+    t = ovd.TEMPLATE
+    assert "async function redrawSchema(host)" in t
+    assert "if (!await openNode(kit, cur)) return again();" in t
+    assert "!redrawn && run === revealRun && await redrawSchema(host)" in t
+
+
 def test_a_breaking_badge_keeps_its_change_count():
     """Run 6: the breaking endpoint's badge said only BREAKING, where a modified one says
     "3 CHANGES" — the count was gone exactly where it matters most."""

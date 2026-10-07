@@ -201,7 +201,7 @@ from hrbuild.tabs.sequence import (
     AUTO_SNIPPETS, derived_snippets, GENSEQ_TAG, scenario_span, tagged_scenarios, _counted,
     _drew_nothing, _FEATURE_DECL, _FEATURE_STOP, _JAVA_DECL, _ref, _SKIP_LINE, _STRINGS,
     _tagged_decl, _test_kind, _TS_DECL,
-    SEQ_SELECTION, SEQ_WHY, sequence_selection, _slug, picked_for, _why_chip, _names,
+    SEQ_SELECTION, SEQ_WHY, sequence_selection, _slug, picked_for, _why_chip,
     SEQ_ALSO, ledger_status,
     SEQ_TOUCHED, touched_via, _branch_changed, _direct_imports, _TS_IMPORT, _JAVA_IMPORT,
     TRACE_SHOT, TRACE_SHOT_META, TRACE_ANSWER, TRACE_HOW, trace_how_html,
@@ -1183,7 +1183,7 @@ def _main(argv=None) -> int:
                 f'id="tabbtn-{tid}" aria-controls="{tid}" aria-selected="false" tabindex="-1"'
                 + (f' aria-label="{html.escape(tab["label"])} — {html.escape(badge_label)}"'
                    if tab_class and badge_label else "")
-                + f'>{html.escape(tab["label"])}{count}</button>'
+                + f'>{html.escape(SHORT_TAB_LABELS.get(tab["id"], tab["label"]))}{count}</button>'
             )
             strip.append(tab_rerun_html(tab["id"], tab["label"], tab_reruns.get(tab["id"])))
             # `intro` is prose about the *tab*, not about any one block in it — where the

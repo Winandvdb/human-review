@@ -192,7 +192,7 @@ from hrbuild.tabs.review import (
 )
 from hrbuild.tabs.sequence import (
     render_testpairs, SEQ_ARROW, SEQ_DECL,
-    SEQ_UI_DRIVERS, SRCBAR, STALE, TEST_CATS, TEST_RUNNERS, _cat_chip,
+    SEQ_UI_DRIVERS, SRCBAR, STALE, TEST_CATS, TEST_RUNNERS, _cat_chip, _lang_label,
     _fold_over, _folded_pair, _line_spans, _moved_since_base, _narrowed, _pair_cat,
     _pair_runner, _scenario_extents, _scenarios_drawn, _share_excerpts, _spans_for,
     _stale_sequence, _unchanged_sequence, _unquoted_note,

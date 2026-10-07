@@ -21,9 +21,9 @@ from ..shared.svg import inline_svg
 #: ride on the hover rather than being printed again under the tab title, since a second
 #: copy of a legend is a second place for the two to disagree.
 TEST_CATS = {
-    "e2e":  ("UI", "clicks the screen"),
+    "e2e":  ("E2E", "end to end: clicks the screen"),
     "api":  ("API", "REST/MCP"),
-    "unit": ("unit", "one isolated component"),
+    "unit": ("Unit", "one isolated component"),
 }
 
 #: What actually ran the test, keyed by the extension of the file the pair quotes.
@@ -137,28 +137,32 @@ def _pair_runner(test_rel: str) -> tuple[str, str] | None:
 
 
 def _cat_chip(cat: str | None, test_rel: str = "") -> str:
-    """The kind of test, and what wrote it: one pill reading `UI · Gherkin`.
+    """The kind of test, and what wrote it: one pill reading `E2E` or `API`.
 
     The kind alone comes off the Tests tab — same words, same palette, same pill. Copied
     rather than shared, as `reqmap.js` copies the file glyph: the Tests tab is an included
     asset that builds its own markup, and the two will not be made to import from each
     other. What is shared is the decision, which is written down in `TEST_CATS`.
 
-    The runner is this tab's own, and it is here because the kind is not enough to place a
-    row: `UI` covers both a Playwright spec and a Cucumber feature, and a reader looking
-    for the Gherkin scenario had to open every `UI` row to find which one it was. It rides
-    INSIDE the same pill rather than beside it in a second one — a second chip is a second
-    thing to learn and a second column to line up, for a word that only ever qualifies the
-    first. A file whose extension says nothing gets the kind alone, exactly as before."""
+    The language is not in the pill any more: `_lang_label` says it as the file's extension
+    at the row's right end, and the runner here only rides the hover."""
     if cat not in TEST_CATS:
         return ""
     label, what = TEST_CATS[cat]
     runner = _pair_runner(test_rel)
-    face = f"{label} \u00b7 {runner[0]}" if runner else label
     tip = what + (f", {runner[1]}" if runner else "")
     return (f'<span class="testcat" data-cat="{cat}"'
             + (f' data-runner="{html.escape(runner[0].lower(), quote=True)}"' if runner else "")
-            + f' data-tip="{html.escape(tip, quote=True)}">{html.escape(face)}</span>')
+            + f' data-tip="{html.escape(tip, quote=True)}">{html.escape(label)}</span>')
+
+
+def _lang_label(test_rel: str) -> str:
+    """The test file's extension — `.java`, `.feature`, `.spec.ts` — said small and muted at
+    the row's right end. The level pill says what kind of test it is; this says in what."""
+    name = Path(test_rel).name
+    m = re.search(r"(\.(?:spec|test)\.[jt]sx?)$", name)
+    ext = m.group(1) if m else Path(name).suffix
+    return (f'<span class="seqlang">{html.escape(ext)}</span>') if ext else ""
 
 
 #: What `run-steps.py` `_sequence` writes about the tests it traced beyond the tagged ones —
@@ -221,16 +225,18 @@ SEQ_TOUCHED = ("touched", "This branch changed: ")
 def _why_chip(kind: str | None, also: str | None = None, via: tuple[str, ...] = ()) -> str:
     if kind not in SEQ_WHY:
         return ""
-    face, tip = SEQ_WHY[kind]
-    extra = SEQ_ALSO.get(also) if kind == "tagged" else None
-    if kind == "tagged" and also == "touched" and via:
-        extra = (SEQ_TOUCHED[0], SEQ_TOUCHED[1] + ", ".join(Path(v).name for v in via))
-    status = ""
-    if extra:
-        face, tip = f"{face} \u00b7 {extra[0]}", f"{tip}. {extra[1]}"
-        status = f' data-status="{also}"'
-    return (f'<span class="seqwhy" data-why="{kind}"{status}'
-            f' data-tip="{html.escape(tip, quote=True)}">{html.escape(face)}</span>')
+    _, tip = SEQ_WHY[kind]
+    # One badge per test, never two: the tracing tag supersedes everything else, so a
+    # tagged test is a grey circled `@` whatever the branch did to it. An untagged pick is
+    # `+` (the branch wrote it) or `\u270d\ufe0f` (edited; the header's tests chip says it so too).
+    if kind == "tagged":
+        badge, tip = '<span class="sw-at">@</span>', "Traced because it carries the tracing tag."
+    elif kind == "added":
+        badge = '<span class="sw-add">+</span>'
+    else:
+        badge = '<span class="sw-edit">\u270d\ufe0f</span>'
+    return (f'<span class="seqwhy" data-why="{kind}"'
+            f' data-tip="{html.escape(tip, quote=True)}">{badge}</span>')
 
 
 def ledger_status(test_rel: str, scenarios, tests) -> str | None:
@@ -488,7 +494,7 @@ def _folded_pair(puml_rel: str, test_rel: str, pieces: list[str],
     return (f'<details class="testpair" open id="{pair_anchor(puml_rel)}"'
             f' data-test="{html.escape(test_rel)}">'
             f'<summary data-tip="{html.escape(test_rel)}">'
-            f'{_cat_chip(cat, test_rel)}{_why_chip(why, also, via)}{name}</summary>'
+            f'{_cat_chip(cat, test_rel)}{_why_chip(why, also, via)}{name}{_lang_label(test_rel)}</summary>'
             + src
             + "\n".join(x.strip("\n") for x in pieces)
             + "</details>")

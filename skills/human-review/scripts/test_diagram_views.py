@@ -604,7 +604,7 @@ def test_the_fold_is_labelled_with_the_scenario_and_keeps_the_path_as_its_toolti
     is not lost — it is the summary's tooltip — and it is not printed a third time here,
     because the fold's row under it and the diagram below both already carry it."""
     html_out = _pairs_fixture(tmp_path)
-    assert '<summary data-tip="spec.ts">A scenario</summary>' in html_out
+    assert '<summary data-tip="spec.ts">A scenario<span class="seqlang">.ts</span></summary>' in html_out
 
 
 def test_a_paired_diagram_does_not_repeat_the_name_the_fold_just_said(tmp_path):
@@ -675,7 +675,7 @@ def test_a_test_whose_sequence_did_not_change_is_paired_and_marked_not_orphaned(
                                                    tmp_path, tmp_path)
     assert "No diagram came back" not in html
     # No chapter in that .puml, so the summary falls back to the basename — all there is.
-    assert '<summary data-tip="same.ts">same.ts</summary>' in html
+    assert '<summary data-tip="same.ts">same.ts<span class="seqlang">.ts</span></summary>' in html
     assert '<span class="badge sev-info">unchanged</span>' in html
     assert "<text>same</text>" in html and "untouched" in html
     assert "dgmviews" not in html and "dgm-diff" not in html

@@ -3867,13 +3867,13 @@ def test_a_pair_is_named_by_its_scenarios_and_addressed_by_its_test(tmp_path):
     out = build._folded_pair(puml, rel, ["<p>picture</p>"],
                              scenarios=[(4, "remembers the vet")])
     assert f'id="{build.pair_anchor(puml)}"' in out
-    assert "<summary data-tip=\"test/add-visit.feature\">remembers the vet</summary>" in out
+    assert "<summary data-tip=\"test/add-visit.feature\">remembers the vet<span class=\"seqlang\">.feature</span></summary>" in out
     assert "add-visit.feature<" not in out, "the basename is not the heading any more"
     # Two chapters in one file are two lines of the contents, on one row.
     two = build._folded_pair(puml, rel, [""], scenarios=[(4, "one"), (9, "two")])
-    assert ">one · two</summary>" in two
+    assert ">one · two<span class=\"seqlang\">.feature</span></summary>" in two
     # Nothing recorded — the basename is all there is to call it.
-    assert ">add-visit.feature</summary>" in build._folded_pair(puml, rel, [""])
+    assert ">add-visit.feature<span class=\"seqlang\">.feature</span></summary>" in build._folded_pair(puml, rel, [""])
 
 
 def test_a_pair_says_what_kind_of_test_drew_it(tmp_path):
@@ -3884,12 +3884,13 @@ def test_a_pair_says_what_kind_of_test_drew_it(tmp_path):
     out = build._folded_pair(puml, rel, [""], scenarios=[(4, "remembers the vet")],
                              cat=build._pair_cat(puml, tmp_path))
     assert '<span class="testcat" data-cat="e2e"' in out
-    assert ">UI · Gherkin</span>remembers the vet</summary>" in out, "it leads the sentence"
+    assert ">E2E</span>remembers the vet" in out, "it leads the sentence"
+    assert '<span class="seqlang">.feature</span></summary>' in out, "language at the right end"
     # The tip is now composed, so it is escaped as one string: a literal em dash, not the
     # `&mdash;` entity that used to be concatenated in after the escaping.
-    assert 'data-tip="clicks the screen' in out, "the legend is on the hover"
+    assert 'data-tip="end to end: clicks the screen' in out, "the legend is on the hover"
     # The same three words the requirements map's legend uses, and no fourth.
-    assert [c[0] for c in build.TEST_CATS.values()] == ["UI", "API", "unit"]
+    assert [c[0] for c in build.TEST_CATS.values()] == ["E2E", "API", "Unit"]
     # Same three colours as the evidence cards a few hundred lines up the stylesheet.
     assert ".testcat[data-cat=api]" in build.CSS and ".testcat[data-cat=unit]" in build.CSS
 
@@ -3898,16 +3899,17 @@ def test_a_pair_also_says_what_wrote_the_test(tmp_path):
     """`UI` covered a Playwright spec and a Cucumber feature alike, and the shut row gave
     a reader no way to tell which was which — though only one of them is written in a
     language a non-programmer reads. The runner qualifies the kind inside the same pill."""
-    assert ">UI · Gherkin<" in build._cat_chip("e2e", "petclinic-test/src/book.feature")
-    assert ">UI · TypeScript<" in build._cat_chip("e2e", "petclinic-test/src/add.spec.ts")
-    assert ">API · JUnit<" in build._cat_chip("api", "src/test/java/AddVisitApiTest.java")
+    assert ">E2E<" in build._cat_chip("e2e", "petclinic-test/src/book.feature")
+    assert build._lang_label("petclinic-test/src/add.spec.ts") == '<span class="seqlang">.spec.ts</span>'
+    assert ">.java<" in build._lang_label("src/test/java/AddVisitApiTest.java")
+    assert ">API<" in build._cat_chip("api", "src/test/java/AddVisitApiTest.java")
     # Unlike the kind, this IS the file: no diagram is consulted, and none is needed.
     assert build._pair_runner("a/b.feature") == ("Gherkin", "a Cucumber scenario")
     # Longest suffix first, or a Playwright spec would answer to a bare `.ts` rule.
     assert build._pair_runner("a/b.spec.ts")[0] == "TypeScript"
     # An extension this has never heard of leaves the chip exactly as it was.
     assert build._cat_chip("e2e", "a/b.rb") == build._cat_chip("e2e")
-    assert ">UI<" in build._cat_chip("e2e", "a/b.rb")
+    assert ">E2E<" in build._cat_chip("e2e", "a/b.rb")
     # …and a runner never conjures a chip where the kind could not be read.
     assert build._cat_chip(None, "a/b.feature") == ""
 
@@ -4463,8 +4465,8 @@ def test_a_picture_says_whether_it_is_there_by_tag_or_because_the_branch_wrote_t
     pairs = re.findall(r'<details class="testpair".*?</summary>', out, re.S)
     assert len(pairs) == 2 and weight == 2, "the overlay-only picture is on the tab too"
     by_title = {("Sorting" in p): p for p in pairs}
-    assert 'data-why="added"' in by_title[True] and ">new test</span>" in by_title[True]
-    assert 'data-why="tagged"' in by_title[False] and ">tagged</span>" in by_title[False]
+    assert 'data-why="added"' in by_title[True] and '<span class="sw-add">+</span></span>' in by_title[True]
+    assert 'data-why="tagged"' in by_title[False] and '<span class="sw-at">@</span></span>' in by_title[False]
     assert "No tracing tag" in by_title[True]
     # The branch's own scenario is quoted beside its picture, not left "not excerpted here".
     sorting = out[out.index(f'id="{build.pair_anchor(picked)}"'):]
@@ -4486,9 +4488,9 @@ def test_a_picture_says_whether_it_is_there_by_tag_or_because_the_branch_wrote_t
         tmp_path, review, test_changes=ledger)
     both = [p for p in re.findall(r'<details class="testpair".*?</summary>', out2, re.S)
             if "Searching" in p][0]
-    assert 'data-why="tagged" data-status="added"' in both
-    assert ">tagged \u00b7 new test</span>" in both
-    assert "This branch wrote this test." in both
+    assert 'data-why="tagged"' in both
+    assert '<span class="sw-at">@</span></span>' in both and "sw-add" not in both, "one badge"
+    assert "carries the tracing tag" in both
 
 
 def _git(cwd, *args):
@@ -4657,22 +4659,19 @@ def test_a_tagged_test_whose_dsl_helper_the_branch_edited_says_touched(tmp_path,
         _git(tmp_path, "commit", "-qam", msg)
         seq._branch_changed.cache_clear()
         out, _, _ = build.render_testpairs(block, {}, [], tmp_path, review)
-        return re.findall(r'<span class="seqwhy".*?</span>', out, re.S)[0]
+        return re.findall(r'<span class="seqwhy".*?</span></span>', out, re.S)[0]
 
     # Only a file reached through the helper changed: not a direct import, still `tagged`.
-    assert ">tagged</span>" in chip("deep only")
+    assert '<span class="sw-at">@</span></span>' in chip("deep only")
 
     (src / "add-visit.dsl.ts").write_text("import {deep} from './deep';\nexport const a = 2;\n")
     touched = chip("edit the dsl")
-    assert 'data-why="tagged" data-status="touched"' in touched
-    assert ">tagged \u00b7 touched</span>" in touched
-    assert "add-visit.dsl.ts" in html.unescape(touched), "the hover names what changed"
-    assert "deep.ts" not in touched
+    assert '<span class="sw-at">@</span></span>' in touched and "sw-edit" not in touched
 
     # A ledger entry still wins: the branch EDITED this scenario says `edited test`.
     ledger = [{"path": spec, "line": 4, "status": "modified", "name": "Add a visit"}]
     out, _, _ = build.render_testpairs(block, {}, [], tmp_path, review, test_changes=ledger)
-    assert ">tagged \u00b7 edited test</span>" in out
+    assert 'sw-at">@</span></span>' in out and "sw-edit" not in out
 
 
 def test_direct_imports_resolve_java_classes_and_relative_ts_modules(tmp_path):

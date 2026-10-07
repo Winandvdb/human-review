@@ -52,7 +52,7 @@ details.testsrc > .snippet { margin:.4rem 0 0; }
    already on screen. Folded shut, it is the only thing on screen — the tab's table of
    contents, one line per test — so it is set as what it now is: prose, at the page's own
    weight, in the page's own face. Monospace was for a path; these are sentences. */
-details.testpair > summary { cursor:pointer; list-style:none; display:inline-flex; gap:.4rem;
+details.testpair > summary { cursor:pointer; list-style:none; display:flex; gap:.4rem;
   align-items:baseline; color:var(--fg); font-size:.95rem; font-weight:600;
   padding:.25rem 0; }
 details.testpair > summary::-webkit-details-marker { display:none; }
@@ -86,6 +86,10 @@ details.testpair > summary:hover > .testcat { color:var(--tc); }
   .testcat[data-cat=api]  { --tc:#d2b4ff; }
   .testcat[data-cat=unit] { --tc:#87e4e4; }
 }
+/* The test file's extension, small and muted at the right end of the row — the summary is a
+   flex row, so the auto margin pushes it there and the fold marker stays on the left. */
+.seqlang { margin-left:auto; align-self:center; padding-left:.8rem; flex:0 0 auto;
+  font:.72rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted); opacity:.7; }
 /* The suites' own last lines, folded inside the band that says why this tab was not
    re-traced. Wrapped rather than scrolled sideways: a Maven line is wider than any panel. */
 .seqverdict pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:.76rem;
@@ -96,15 +100,16 @@ details.testpair > summary:hover > .testcat { color:var(--tc); }
 /* Why the picture exists: tagged in the source, or a test this branch wrote that the step
    traced untagged. Quieter than the kind chip beside it — a fact about the evidence, not
    about the test — so an outline rather than a fill. */
-.seqwhy { flex:0 0 auto; align-self:center; padding:1px 6px; border-radius:999px;
-  font:600 .62rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.04em;
-  --sw:var(--muted); color:var(--sw); border:1px solid currentColor; }
-.seqwhy[data-why=added], .seqwhy[data-why=modified],
-.seqwhy[data-status] { --sw:#2e6b2e; }
-details.testpair > summary:hover > .seqwhy { color:var(--sw); }
+.seqwhy { flex:0 0 auto; align-self:center; display:inline-flex; gap:.3rem; align-items:center;
+  --sw:#2e6b2e; }
+.seqwhy > span { display:inline-flex; align-items:center; justify-content:center;
+  min-width:1.35rem; height:1.35rem; padding:0 .2rem; border:1.5px solid var(--sw);
+  border-radius:999px; font-size:.78rem; font-weight:700; line-height:1; }
+.seqwhy .sw-at { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted);
+  border-color:var(--muted); opacity:.75; }
+.seqwhy .sw-add { color:var(--sw); }
 @media (prefers-color-scheme: dark) {
-  .seqwhy[data-why=added], .seqwhy[data-why=modified],
-  .seqwhy[data-status] { --sw:#8fd18f; }
+  .seqwhy { --sw:#8fd18f; }
 }
 /* The selection line: one fact per item, run together with a muted dot, each list longer
    than two names folded under its own count. An open fold takes the whole width, so its

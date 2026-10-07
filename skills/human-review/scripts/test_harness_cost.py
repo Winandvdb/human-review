@@ -863,6 +863,21 @@ def test_a_branch_reset_to_its_base_forgets_who_wrote_what_it_undid(tmp_path):
     assert hc.fork_time(repo, base) == at, "the change forks again at the reset"
 
 
+def test_the_reset_still_counts_after_main_is_merged_into_the_branch(tmp_path):
+    """test-pr merged origin/main on 7 Oct: the fork moved to the new main, whose tree the
+    5 Oct reset no longer equals, and the rebuilt Cost tab billed the undone 17-18 Sep
+    session again ($11 -> $27). A reset to main as it was then is still a reset."""
+    repo, base, undo = _restarted_branch(tmp_path)
+    git(repo, "checkout", "-q", "main")
+    (repo / "b.txt").write_text("main moved on\n")
+    commit(repo, "main moves on", "2026-10-06T09:00:00+00:00")
+    git(repo, "checkout", "-q", "feat")
+    git(repo, "merge", "-q", "--no-edit", "main")
+    sha, at = hc.restart_point(repo, "main")
+    assert sha == undo and at.isoformat().startswith("2026-10-05T16:58")
+    assert hc.claimed_sessions(repo, "main") == ["the-one"]
+
+
 def test_a_recorded_implementation_drops_a_session_the_branch_undid(tmp_path):
     """`review-cost.json` was written before the reset was understood: the build drops the
     undone session from it and says so on the row's hover."""

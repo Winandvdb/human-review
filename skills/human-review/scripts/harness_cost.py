@@ -159,12 +159,15 @@ def restart_point(root: Path, base: str) -> "tuple[str, dt.datetime] | None":
     27 hours and $15.53 of it, as a second "implementing session" of a change it wrote
     none of."""
     fork = git(root, "merge-base", base, "HEAD") or base
-    tree = git(root, "rev-parse", f"{fork}^{{tree}}")
-    if not tree:
+    # Any tree the base has had, not only the fork's: merging main into the branch moves
+    # the fork forward, and the reset (a tree equal to main *as it was then*) stopped
+    # matching — test-pr after its 7 Oct merge of main billed the undone session again.
+    trees = set(git(root, "log", "--format=%T", "--max-count=20000", fork).split())
+    if not trees:
         return None
     for line in git(root, "log", "--format=%H %T %cI", f"{fork}..HEAD").splitlines():
         sha, t, when = (line.split(" ") + ["", "", ""])[:3]
-        if t == tree and parse(when):
+        if t in trees and parse(when):
             return sha, parse(when)
     return None
 

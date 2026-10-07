@@ -1573,7 +1573,12 @@ details.dsa-screen > summary .dsa-sumtail { font-weight: 400; }
   padding: 0 .35rem; font-weight: 700; white-space: nowrap; }
 .dsa-fixed { color: var(--dsa-ok); }
 .dsa-pre { opacity: .7; }
-.dsa-count { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.dsa-count { text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.dsa-howbox { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: .5rem .8rem; margin: .4rem 0 .6rem; font-size: .88rem; line-height: 1.45; }
+.dsa-howbox[hidden] { display: none; }
+.dsa-howbox ul { margin: .15rem 0 .5rem; padding-left: 1.2rem; }
+.dsa-howbox ul:last-child { margin-bottom: 0; }
 .dsa-gap, .dsa-comp, .dsa-fixed, .dsa-pre { cursor: help; }
 .dsa-unlisted { color: var(--dsa-bad); border: 1px solid var(--dsa-bad); border-radius: 6px;
   padding: .45rem .7rem; margin: .4rem 0 .8rem; font-size: .9rem; }
@@ -1627,6 +1632,21 @@ HL_JS = """<script>
 // Hovering a row lights its box on the picture. Delegated on `document` for the same
 // reason the diagram viewer is: the fragment is pasted into a page it does not own.
 (function () {
+  // The count opens the box that says how "changed" is decided.
+  function toggleHow(el) {
+    var box = document.getElementById(el.getAttribute('aria-controls'));
+    if (!box) return;
+    box.hidden = !box.hidden;
+    el.setAttribute('aria-expanded', String(!box.hidden));
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest && e.target.closest('.dsa-count');
+    if (el) toggleHow(el);
+  });
+  document.addEventListener('keydown', function (e) {
+    var el = e.target.closest && e.target.closest('.dsa-count');
+    if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleHow(el); }
+  });
   function marks(root, id) {
     return root.querySelectorAll('.dsa-mark[data-find="' + CSS.escape(id) + '"]');
   }
@@ -2217,18 +2237,28 @@ def _side_name(meta: dict) -> str:
     return label or commit or "?"
 
 
-def count_tooltip(result: dict) -> str:
-    """How "N of M screens changed" is arrived at — `screen_touched` and `combine`, in words."""
+COUNT_TIP = "Base and branch, opened side by side. Click: how \u201cchanged\u201d is decided."
+
+
+def how_box(result: dict) -> str:
+    """The box the count opens: how the screens were compared, and what makes one
+    "changed" (`screen_touched` and `combine`, in words)."""
     screens = result["screens"]
     sides = (screens[0].get("sides") if screens else None) or {}
     new, old = _side_name(sides.get("new") or {}), _side_name(sides.get("old") or {})
-    return (f"Every one of the {len(screens)} screens listed in human-review.json was opened "
-            f"twice, side by side: on {new} and on {old}, same data, same browser. A screen "
-            "counts as changed when its page structure (DOM) differs \u2014 an element added, "
-            "removed or changed; an element that only moved does not count. When the DOM is "
-            f"identical, an element repainted by more than {RESTYLE_CHURN:.0%} of its own box "
-            "counts too, and so does a gap or design-system component the branch added or "
-            "removed.")
+    c = lambda t: f"<code>{html.escape(t)}</code>"
+    return (
+        '<div class="dsa-howbox" id="dsa-howbox" hidden>'
+        "<b>How the screens were compared</b><ul>"
+        f"<li>All {len(screens)} screens listed in {c('human-review.json')}, each opened "
+        "twice, side by side</li>"
+        f"<li>base {c(old)} \u00b7 branch {c(new)}</li>"
+        "<li>same seeded data, same browser, animations off</li></ul>"
+        "<b>A screen counts as changed when</b><ul>"
+        "<li>an element was added, removed or changed (moving alone doesn\u2019t count)</li>"
+        "<li>the DOM is identical, but an element repainted more than "
+        f"{RESTYLE_CHURN:.0%} of its own box</li>"
+        "<li>the branch added or removed a gap or a design-system component</li></ul></div>")
 
 
 def regression_tip(result: dict) -> str:
@@ -2289,10 +2319,10 @@ def render(result: dict, assets_prefix: str, *, root: Path | None = None,
     if touched and not deltas:
         deltas = ['<span class="dsa-pre">no gap and no design-system component added or '
                   "removed</span>"]
-    count_tip = html.escape(count_tooltip(result), quote=True)
     verdict_line = " \u00b7 ".join(
-        [f'<span class="dsa-count" data-tip="{count_tip}">{len(touched)} of {n} screens '
-         'changed</span>'] + deltas)
+        [f'<span class="dsa-count" role="button" tabindex="0" aria-expanded="false" '
+         f'aria-controls="dsa-howbox" data-tip="{html.escape(COUNT_TIP, quote=True)}">'
+         f'{len(touched)} of {n} screens changed</span>'] + deltas)
 
     # The embedded copy drops the per-element table. It is keyed on every signature on
     # every screen — 190KB of it on a seven-screen run, most of the fragment's weight —
@@ -2319,6 +2349,7 @@ def render(result: dict, assets_prefix: str, *, root: Path | None = None,
         '<h2 class="tabtitle">UX design system</h2>'
         f'{unlisted_line}'
         f'<p class="dsa-hdr">{verdict_line}</p>'
+        f'{how_box(result)}'
         # Screens with a verdict first — a gap, a regression, a component — so the tab
         # opens on a marked-up picture; the changed-but-nothing-to-judge ones trail.
         + "".join(render_screen(sc, assets_prefix, build, result.get("registry") or {},

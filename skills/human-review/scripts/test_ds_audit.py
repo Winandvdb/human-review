@@ -1393,11 +1393,15 @@ def test_each_side_records_its_commit_and_the_old_side_is_labelled_by_it(tmp_pat
     assert again["old"]["commit"] == base
 
 
-def test_the_count_has_a_tooltip_that_names_each_side_once():
+def test_the_count_opens_a_box_that_names_each_side_once():
     reg, screen = _owners_screen()
     screen["sides"]["new"].update(label="abc12345", commit="abc12345" + "0" * 32)
     screen["sides"]["old"].update(label="main", commit="d01c3776" + "0" * 32)
-    frag = ds.render(ds.build_result([screen], reg), "")
-    tip = ds.count_tooltip(ds.build_result([screen], reg))
-    assert 'class="dsa-count" data-tip="' in frag and "on abc12345 and on main (d01c3776)" in tip
+    result = ds.build_result([screen], reg)
+    frag = ds.render(result, "")
+    box = ds.how_box(result)
+    assert 'class="dsa-count" role="button" tabindex="0" aria-expanded="false"' in frag
+    assert '<div class="dsa-howbox" id="dsa-howbox" hidden>' in frag
+    assert "<code>d01c3776</code>" not in box and "main (d01c3776)" in box
+    assert "<code>abc12345</code>" in box and "abc12345 (abc12345)" not in box
     assert 'class="disclose"' in frag

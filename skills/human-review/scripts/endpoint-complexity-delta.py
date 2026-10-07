@@ -247,6 +247,10 @@ def graph_nodes(cur, old):
 # nothing that costs is not drawn at all, and a node with more expensive children than
 # this shows the costliest and folds the rest into "+N".
 GRAPH_KIDS = 6
+# A box wears its class's colour on its frame, so two boxes of one mapper read as a pair
+# and the next mapper over reads as another. The hues are numbered here and painted in CSS;
+# none of them is green, red or the link blue, which already mean added, removed and open.
+CLASS_HUES = 6
 
 
 def _split(key: str) -> tuple[str, str]:
@@ -304,6 +308,7 @@ def _graph(nodes, groups=()) -> tuple[str, set[str]]:
                 kids.setdefault(n["method"], []).append(t)
     weight: dict[str, int] = {}
     drawn: set[str] = set()
+    hues: dict[str, int] = {}  # class -> its colour, numbered as the classes are met
 
     def w(k):
         if k not in weight:
@@ -330,7 +335,8 @@ def _graph(nodes, groups=()) -> tuple[str, set[str]]:
         sub = f'<div class="cg-kids">{"".join(parts)}</div>' if parts else ""
         fork = " cg-fork" if len(down) > 1 else ""
         below = f'<div class="cg-down{fork}">{"".join(down)}</div>' if down else ""
-        node = _node(by[k], lines_of.get(k))
+        node = _node(by[k], lines_of.get(k),
+                     hues.setdefault(k.partition("#")[0], len(hues)) % CLASS_HUES)
         return (f'<div class="cg-t{" cg-v" if down else ""}"><div class="cg-row">'
                 f'<div class="cg-stem">{node}</div>{sub}</div>{below}</div>')
 
@@ -359,7 +365,7 @@ def _lines(hits) -> str:
     return "".join(out)
 
 
-def _node(n, group=None) -> str:
+def _node(n, group=None, hue=None) -> str:
     """A method as a box. The box itself is a toggle, not a link: a click selects it and,
     when the method was charged for anything, folds its lines open inside it. Navigation
     is the ↗ alone — a box that sometimes opened the editor and sometimes did nothing was
@@ -382,7 +388,8 @@ def _node(n, group=None) -> str:
              f'<b class="cg-d">−{-d}</b>' if d < 0 else "")
     lines = f'<div class="cg-lines">{_lines(hits)}</div>' if hits else ""
     has = " cg-has" if hits else ""
-    return (f'<div class="cg-n{mark}{zero}{has}" tabindex="0" role="button"'
+    tint = f" cg-h{hue}" if hue is not None else ""
+    return (f'<div class="cg-n{tint}{mark}{zero}{has}" tabindex="0" role="button"'
             f' aria-expanded="false"{_tip(tip)}>'
             f'<span class="cg-c">{html.escape(cls)}{go}</span>'
             f'<span class="cg-cog">{cog}</span>'
@@ -946,9 +953,11 @@ a.cx-why-line:hover code { text-decoration:underline; }
     The names are set in the UI face, not monospace: the graph is as wide as its deepest
     chain times its widest names, and a proportional face buys back a fifth of that. */
 .cg-n { display:inline-grid; grid-template-columns:auto auto; column-gap:6px;
-        align-items:center; padding:0; border:1px solid var(--line); border-radius:6px;
+        align-items:center; padding:0; border:1px solid var(--cg-hue, var(--line)); border-radius:6px;
         background:var(--card); color:inherit; white-space:nowrap; cursor:pointer;
         position:relative; z-index:1; transition:border-color .12s, background .12s; }
+.cg-h0 { --cg-hue:#f59e0b; } .cg-h1 { --cg-hue:#ec4899; } .cg-h2 { --cg-hue:#8b5cf6; }
+.cg-h3 { --cg-hue:#06b6d4; } .cg-h4 { --cg-hue:#f97316; } .cg-h5 { --cg-hue:#d946ef; }
 .cg-n:hover { border-color:var(--link); }
 .cg-n:focus-visible { outline:2px solid var(--link); outline-offset:1px; }
 /* Clicked: the box takes the link blue — frame, ring and a tint — so the one being read
@@ -956,7 +965,8 @@ a.cx-why-line:hover code { text-decoration:underline; }
 .cg-n.cg-open { border-color:var(--link); box-shadow:0 0 0 1px var(--link) inset;
                 background:color-mix(in srgb, var(--link) 12%, var(--card)); opacity:1; }
 .cg-c { grid-column:1 / 3; display:flex; align-items:center; gap:3px; height:18px;
-        box-sizing:border-box; padding:0 6px; border-bottom:1px solid var(--line);
+        box-sizing:border-box; padding:0 6px;
+        border-bottom:1px solid color-mix(in srgb, var(--cg-hue, var(--line)) 45%, var(--line));
         font:500 10.5px/14px system-ui,sans-serif; color:var(--muted); }
 .cg-m { grid-column:1; display:flex; align-items:center; height:20px; padding-left:6px;
         font:600 10.5px/14px system-ui,sans-serif; }
@@ -1000,6 +1010,8 @@ a.cx-why-new code { color:var(--cx-added); }
 a.cx-why-new .cx-why-inc { color:var(--cx-added); }
 @media (prefers-color-scheme: dark) {
   .cx-lede, .cx-group { --cx-added:#4ec27f; --cx-removed:#9fb0d0; }
+  .cg-h0 { --cg-hue:#fbbf24; } .cg-h1 { --cg-hue:#f472b6; } .cg-h2 { --cg-hue:#a78bfa; }
+  .cg-h3 { --cg-hue:#22d3ee; } .cg-h4 { --cg-hue:#fb923c; } .cg-h5 { --cg-hue:#e879f9; }
   .cx-bar i { background:#3d3d4a; }
   /* The verb is the only coloured *text* on the row, and the light palette was never
      re-themed for dark: #2e7d32 on --card is 3.3:1 and #1565c0 is 2.9:1, so forty-three

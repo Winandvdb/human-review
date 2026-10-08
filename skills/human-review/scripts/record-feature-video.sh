@@ -88,7 +88,11 @@ BASE_URL="${BASE_URL:-http://127.0.0.1:4200}"
 API_URL="${API_URL:-http://127.0.0.1:8080}"
 
 curl -fsS -o /dev/null "$BASE_URL/" || { echo "[video] frontend not up at $BASE_URL" >&2; exit 2; }
-curl -fsS -o /dev/null "$API_URL/api/pettypes" || { echo "[video] backend not up at $API_URL" >&2; exit 2; }
+# A frontend-only app (no backend) sets HUMAN_REVIEW_API_PROBE to the empty string.
+API_PROBE="${HUMAN_REVIEW_API_PROBE-/api/pettypes}"
+if [ -n "$API_PROBE" ]; then
+  curl -fsS -o /dev/null "$API_URL$API_PROBE" || { echo "[video] backend not up at $API_URL" >&2; exit 2; }
+fi
 
 # Something answers — but WHICH something? The two checks above were the whole of the
 # liveness test for months, and they are a test of the port, not of the commit. This
@@ -262,7 +266,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 set +e
-NODE_PATH="$ROOT/petclinic-test/node_modules" node -e '
+NODE_PATH="${HUMAN_REVIEW_NODE_PATH:-$ROOT/petclinic-test/node_modules}" node -e '
 const {chromium} = require("playwright");
 const [baseUrl, apiUrl, videoDir, raw, cuesPath, voiceDir, narrator, featurePath,
     cardTitle, cardSubtitle, leadPath, idlePath] = process.argv.slice(1);
@@ -345,10 +349,12 @@ const get = async (url) => {
       .replace(/\/$/, "");
 
   const browser = await chromium.launch({slowMo: 450});
+  // HUMAN_REVIEW_VIDEO_VIEWPORT="390x844" films a phone-first app at phone size.
+  const [vw, vh] = (process.env.HUMAN_REVIEW_VIDEO_VIEWPORT || "1280x800").split("x").map(Number);
   const context = await browser.newContext({
     baseURL: baseUrl,
-    viewport: {width: 1280, height: 800},
-    recordVideo: {dir: videoDir, size: {width: 1280, height: 800}},
+    viewport: {width: vw, height: vh},
+    recordVideo: {dir: videoDir, size: {width: vw, height: vh}},
   });
   const page = await context.newPage();
 
@@ -453,7 +459,9 @@ const get = async (url) => {
   };
 
   // Everything above is the harness; everything the film SHOWS comes from the project.
-  const flow = require(featurePath);
+  // In a "type": "module" project the script is ESM: require() hands back its namespace.
+  const loaded = require(featurePath);
+  const flow = typeof loaded === "function" ? loaded : loaded && loaded.default;
   if (typeof flow !== "function") {
     throw new Error(`${featurePath} must module.exports = async ({page, say, pause, …}) => {…}`);
   }

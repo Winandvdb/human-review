@@ -1,9 +1,9 @@
-/* A DB fixture's colour (assets/fixtures.js): in front of its Demo-tab button, and on each
+/* A DB fixture's colour: in its chip on the Demo tab's DB Fixture row, and (fixtures.js) on each
    E2E row of the Tests tab that starts from it. The ring is the page's own text colour at
    low alpha, so a light dot holds its edge on the light theme and a dark one on the dark. */
 .fx-dot { display:inline-block; flex:0 0 auto; width:.6rem; height:.6rem; border-radius:50%;
   background:var(--fx, #8b929c); box-shadow:0 0 0 1px color-mix(in srgb, currentColor 35%, transparent);
   vertical-align:middle; cursor:help; }
-.appenv-reset .fx-dot { margin:0 .35rem .1rem 0; cursor:inherit; }
+.appenv-fx .fx-dot { cursor:inherit; }
 .rm-t .fx-dot { margin:0 .1rem; align-self:center; cursor:pointer; }
 .rm-t .fx-dot:hover, .rm-t .fx-dot:focus-visible { outline:2px solid var(--fx); outline-offset:1px; }

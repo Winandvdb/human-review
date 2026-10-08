@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""The Demo tab's dataset quick view: the 👁 beside each DB Fixture button.
+"""The Demo tab's dataset quick view: the 👁 in each chip of the DB Fixture row.
 
 Two halves. `dataset_view.py` executes the project's own schema, seed and fixture SQL in
-an in-memory SQLite and hands the page the rows; `dataset-view.js` draws an eye per reset
-button and, on a press, the tables side by side. The data half is tested on a small
+an in-memory SQLite and hands the page the rows; `dataset-view.js` draws an eye per fixture
+in the DB Fixture row and, on a press, the tables side by side. The data half is tested on a small
 repository written here in Postgres dialect — the constructs a real fixture uses
 (`INSERT … SELECT … FROM (VALUES …) AS p(a, b) JOIN`, `DATE '…'`, `TRUNCATE … CASCADE`,
 an `ALTER TABLE … ADD CONSTRAINT … FOREIGN KEY`) — and the drawing half in a browser.
@@ -128,9 +128,14 @@ def test_a_statement_sqlite_cannot_run_is_skipped_and_named(repo):
 
 # ── the drawing half, in a browser ─────────────────────────────────────────────────────
 
-BAR = ('<div class="appenv"><div class="appenv-run"><span class="appenv-resets">'
-       '<button type="button" class="appenv-reset" data-fixture="">Default</button>'
-       '</span></div></div>')
+BAR = ('<div class="appenv"><div class="appenv-run"><span class="appenv-title">Running app'
+       '</span></div><div class="appenv-fixtures">'
+       + "".join(f'<span class="appenv-fx" data-fixture="{n}"><span class="fx-dot"></span>'
+                 f'<span class="appenv-fx-name">{n or "Default"}</span>'
+                 f'<button type="button" class="appenv-reset" data-fixture="{n}"'
+                 f' aria-disabled="true">Seed</button></span>'
+                 for n in ("", "green", "unknown"))
+       + '</div></div>')
 
 
 @pytest.fixture(scope="module")
@@ -162,20 +167,22 @@ def _big(repo):
     return dv.build(repo)
 
 
-def test_every_reset_button_gets_an_eye_even_the_ones_the_probe_adds_later(browser, repo):
+def test_every_fixture_the_data_knows_gets_an_eye_between_its_name_and_its_seed(browser, repo):
+    """In the DB Fixture row, never in the Running app one: offline, the old eye was left
+    hanging alone after Start (8 Oct 2026). A fixture with no data gets none."""
     page = _open(browser, dv.build(repo))
-    assert page.eval_on_selector_all(".dsv-eye", "es => es.map(e => e.dataset.fixture)") == [""]
-    # app-env.js appends a button per fixture the running environment lists.
-    page.evaluate("""() => { const b = document.createElement('button');
-        b.className = 'appenv-reset'; b.dataset.fixture = 'green'; b.textContent = 'green';
-        document.querySelector('.appenv-resets').appendChild(b); }""")
-    page.wait_for_function("document.querySelectorAll('.dsv-eye').length === 2")
+    assert page.eval_on_selector_all(".dsv-eye", "es => es.map(e => e.dataset.fixture)") \
+        == ["", "green"]
+    assert page.locator(".appenv-run .dsv-eye").count() == 0
+    order = page.evaluate("""() => [...document.querySelector('.appenv-fx[data-fixture=green]')
+        .children].map(c => c.className)""")
+    assert order == ["fx-dot", "appenv-fx-name", "dsv-eye", "appenv-reset"]
     page.close()
 
 
 def test_the_eye_opens_and_closes_that_fixtures_tables_and_does_not_reset(browser, repo):
     page = _open(browser, _big(repo))
-    page.evaluate("""() => { window.RESETS = 0; document.querySelector('.appenv-resets')
+    page.evaluate("""() => { window.RESETS = 0; document.querySelector('.appenv-fixtures')
         .addEventListener('click', ev => { if (ev.target.closest('.appenv-reset')) RESETS++; }); }""")
     page.click(".dsv-eye")
     panel = page.locator("#dsv-panel")

@@ -90,6 +90,7 @@ from hrbuild.shared.fixtures import (
     _fx_step_defs,
     _fx_strip_comments,
     _fx_verdict,
+    demo_fixtures,
     fixture_colors,
     fixture_dirs,
     fixture_registry,
@@ -104,7 +105,8 @@ from hrbuild.shared.commands import (
     rerun_face, RERUN_MARK_AI, RERUN_MARK_SCRIPT, RERUN_MARK_SLOW, _RERUN_RING,
     rerun_html, rerun_tests_chip, RUN_TESTS_FACE, tab_rerun_html, TAB_RERUN_TIP,
     place_tab_reruns, tab_title_row, TAB_TITLES, CARD_HEADED_TABS, _TABTITLE_OPEN, _CARD_TITLE,
-    reveal_html, runtime_html, STATIC_RUN_TIP, _app_anchor
+    reveal_html, runtime_html, fixtures_row_html, SEED_OFFLINE_TIP, STATIC_RUN_TIP,
+    _app_anchor
 )
 from hrbuild.shared.snippets import (
     DIFF_CONTEXT, diff_html, DIFF_INLINE_TOKEN, diff_link_html, DIFF_TOKEN, diff_uri_handler,

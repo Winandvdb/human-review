@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 
 from ..shared.commands import _app_anchor, runtime_html
+from ..shared.fixtures import demo_fixtures
 from dataset_view import dataset_html
 
 def _link_captions(cues, links, drive=False):
@@ -349,8 +350,8 @@ def video_html(s, out_dir: Path) -> str:
     # two-column grid, so a band emitted as one of its children takes a column and stands
     # next to the picture instead of across the top of it. What it contradicts is the
     # picture, so it has to be the thing read first, full width.
-    head = runtime_html(rt) if rt else ""
-    # The 👁 beside each DB Fixture button, and the rows it shows: computed from the
+    head = runtime_html(rt, fixtures=demo_fixtures(_project_root(out_dir))) if rt else ""
+    # The 👁 in each chip of the DB Fixture row, and the rows it shows: computed from the
     # project's own seed and fixture SQL (`dataset_view.py`), so it needs no app running.
     if head:
         head += dataset_html(_project_root(out_dir))

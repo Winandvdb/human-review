@@ -710,7 +710,47 @@ def _app_anchor(href: str) -> str:
     return f'<a data-app="{html.escape(href)}" href="{html.escape(href)}">'
 
 
-def runtime_html(rt, tail: str = "") -> str:
+#: What a Seed button says while nothing answers. It is on screen, greyed, and this is why.
+SEED_OFFLINE_TIP = "Start the app first"
+
+
+def fixtures_row_html(fixtures: list | None, can_reset: bool) -> str:
+    """The "DB Fixture:" row under the Running app one: every fixture the project has, each
+    as its colour dot, its name, a 👁 on its data (put there by `dataset-view.js`, from
+    rows computed at build time, so it works with the app down) and a **Seed** button that
+    resets the database to it.
+
+    The list is the build's — `demo_fixtures`, read off `db/fixtures/*.sql` — and the row
+    is on screen whatever the app is doing (Victor, 8 Oct 2026). It used to be buttons the
+    *running* environment listed, inside the Running app row: down, they all left and the
+    seed's 👁 hung alone after Start; and an instance started from an older image listed
+    only Default while green.sql sat in the repo. So the names never move now; only the
+    Seed buttons do, from greyed ("Start the app first") to live, as APP_ENV_JS hears the
+    app answer. Seed is opt-in on the environment's `reset` endpoint, like every verb.
+
+    `fixtures` is `[(name, colour), …]` with the seed as `""`; None means "the seed only",
+    which is all a page knows that was rendered without a project to read."""
+    items = list(fixtures) if fixtures else [("", "#8b929c")]
+    if len(items) < 2 and not can_reset:
+        # One Default with nothing to do to it is a row that says nothing.
+        return ""
+
+    def item(name: str, colour: str) -> str:
+        label = name or "Default"
+        seed = (f'<button type="button" class="appenv-reset" data-fixture="{html.escape(name)}"'
+                f' aria-disabled="true" aria-label="Seed the DB with {html.escape(label)}"'
+                f' data-tip="{SEED_OFFLINE_TIP}">Seed</button>') if can_reset else ""
+        return (f'<span class="appenv-fx" data-fixture="{html.escape(name)}">'
+                f'<span class="fx-dot" aria-hidden="true" style="--fx:{html.escape(colour)}">'
+                f'</span><span class="appenv-fx-name">{html.escape(label)}</span>{seed}</span>')
+
+    return ('<div class="appenv-fixtures" role="group" aria-label="DB fixtures">'
+            '<span class="appenv-fixtures-to" data-tip="The datasets the demo DB can be '
+            'reset to: the seed, or the seed plus a fixture">DB Fixture:</span>'
+            + "".join(item(n, c) for n, c in items) + '</div>')
+
+
+def runtime_html(rt, tail: str = "", fixtures: list | None = None) -> str:
     """The app the walkthrough was filmed against: start it, open it, stop it, reset it.
 
     This page is a file on disk that outlives the branch it describes, so it cannot hold a
@@ -808,29 +848,11 @@ def runtime_html(rt, tail: str = "") -> str:
     controls = "".join(f'<span class="appenv-act appenv-{verb}" hidden>{box}</span>'
                        for verb, box in verbs)
 
-    if rt.get("reset"):
-        # Not a shell command and so not one of the three: it is a POST the *application*
-        # answers, which is why it works off disk as soon as something is up, and why it
-        # has no line for anybody to paste.
-        #
-        # A group and not one button: the environment may know named fixtures — datasets
-        # it restores *on top of* the seed — and it is the running environment that says
-        # which, when the probe asks `GET <reset>`. Nothing here lists them, so a fixture
-        # added to the project is a button on the next probe, with no rebuild of this page
-        # and no second list to fall out of step with the files. APP_ENV_JS appends one
-        # `.appenv-reset` per fixture after this one; with any listed, the row reads
-        # "DB Fixture: [Default] [green]", and with none it stays a lone "Reset DB".
-        # The lead words' hover carries the one sentence that makes the buttons after them
-        # legible: eval run 6's "Reset DB to: default | green" left "green" unexplained.
-        controls += ('<span class="appenv-resets">'
-                     '<span class="appenv-resets-to" hidden data-tip="Wipe the demo DB, then '
-                     'load the seed, or the seed plus a fixture">DB Fixture:</span>'
-                     '<button type="button" class="appenv-reset" data-fixture="" hidden'
-                     ' aria-disabled="true" data-tip="Back to the starting data">'
-                     'Reset DB</button></span>')
+    # The fixtures get a row of their own under this one (`fixtures_row_html`).
+    row = fixtures_row_html(fixtures, bool(rt.get("reset")))
 
     return (f'<div class="appenv" data-fallback="{html.escape(fallback)}"'
             f'{f' data-reset="{html.escape(rt["reset"])}"' if rt.get("reset") else ""}'
             f'{f' data-drive="{html.escape(rt["drive"])}"' if rt.get("drive") else ""}>'
             '<div class="appenv-run"><span class="appenv-title">Running app</span>'
-            + at + controls + tail + '</div></div>')
+            + at + controls + tail + '</div>' + row + '</div>')

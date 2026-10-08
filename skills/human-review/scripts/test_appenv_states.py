@@ -32,6 +32,8 @@ RUNTIME = {"command": "./start-docker.sh up --ref abc123",
            "stop": "./start-docker.sh down --ref abc123",
            "urlCommand": "./start-docker.sh url petclinic-abc123",
            "reset": "/__reset"}
+#: The fixtures the build found: the seed, then one per `db/fixtures/*.sql`.
+FIXTURES = [("", "#8b929c"), ("green", "#2fa84f"), ("busy-day", "#3b82f6")]
 
 # What the reader can see, not what the page contains: `hidden` is how the script takes a
 # verb away and `display:none` is how the stylesheet takes a whole half of the row away,
@@ -57,12 +59,14 @@ PROBE = """() => {
     state: vis(state) ? state.textContent : null,
     url: vis(url) ? [url.textContent, url.getAttribute('href'), url.target] : null,
     start: verb('start'), stop: verb('stop'), where: q('.appenv-where'),
-    reset: vis(q('.appenv-reset')) ? q('.appenv-reset').textContent : null,
-    // The fixture buttons the environment reported, after the seed's, and the words that
-    // lead the group once there is more than one state to reset to.
-    fixtures: [...document.querySelectorAll('.appenv-reset')].slice(1).filter(vis)
-                .map(b => b.textContent),
-    to: vis(q('.appenv-resets-to')) ? q('.appenv-resets-to').textContent : null,
+    // The DB Fixture row: its lead words, the fixtures it names, and per fixture whether
+    // its Seed can be pressed and what its hover says.
+    to: vis(q('.appenv-fixtures-to')) ? q('.appenv-fixtures-to').textContent : null,
+    fixtures: [...document.querySelectorAll('.appenv-fx')].filter(vis)
+                .map(f => f.querySelector('.appenv-fx-name').textContent),
+    seeds: [...document.querySelectorAll('.appenv-fx .appenv-reset')].filter(vis)
+             .map(b => [b.dataset.fixture, b.getAttribute('aria-disabled') !== 'true',
+                        b.dataset.tip]),
   };
 }"""
 
@@ -102,7 +106,7 @@ window.fetch = url => window.SLOW ? new Promise(() => {})
                 json.dumps(slow_probe), json.dumps(fail), json.dumps(fixtures),
                 json.dumps(found))
     return ("<!doctype html><meta charset=utf-8><style>" + build.CSS + "</style>"
-            + stub + build.runtime_html(RUNTIME) + build.APP_ENV_JS)
+            + stub + build.runtime_html(RUNTIME, fixtures=FIXTURES) + build.APP_ENV_JS)
 
 
 @pytest.fixture(scope="module")
@@ -145,7 +149,10 @@ def test_offline_says_offline_and_shows_no_address(row):
     # fail, and there is no Where: the row asked the host itself before saying Offline.
     assert seen["start"]["word"] == "Start App in Docker"
     assert seen["stop"] is None and seen["where"] is None
-    assert seen["reset"] is None
+    # The fixtures stay on screen with nothing up, every Seed greyed with the reason.
+    assert seen["to"] == "DB Fixture:"
+    assert seen["fixtures"] == ["Default", "green", "busy-day"]
+    assert seen["seeds"] == [[n, False, "Start the app first"] for n, _ in FIXTURES]
     # Which face that verb wears is SERVER_JS's answer, per action, and this page stubs
     # SERVER_JS out on purpose — see test_command_html.py for the raising, and the real
     # served page for the effect. Here it is still the clipboard.
@@ -181,52 +188,68 @@ def test_live_shows_the_address_as_a_link_into_a_new_tab(row):
     # Start is gone and Stop takes its place.
     assert seen["start"] is None
     assert seen["stop"]["word"] == "Stop" and seen["where"] is None
-    assert seen["reset"] == "Reset DB"
-    # An environment that lists no fixtures has one state to reset to, and the button says
-    # the whole thing on its own.
-    assert seen["fixtures"] == [] and seen["to"] is None
+    # Every Seed is armed, and says what it puts back.
+    assert [x[1] for x in seen["seeds"]] == [True, True, True]
+    assert seen["seeds"][0][2] == "Reset the DB to the seed, the starting data"
+    assert "\u201cgreen\u201d fixture on top" in seen["seeds"][1][2]
 
 
-def test_live_draws_one_reset_button_per_fixture_the_environment_lists(row):
-    """The fixtures are the running environment's to name — the page lists none of them —
-    so a SQL file added to the project is a button on the next probe, with no rebuild."""
+def test_the_fixtures_are_the_builds_not_the_running_apps(row):
+    """Victor, 8 Oct 2026: an instance started from an older image listed only Default,
+    and the row shrank to it while green.sql sat in the repository. The names are the
+    build's now; the environment's list only greys a Seed it could not honour."""
     seen = row(served=True, live=True,
-               fixtures={"ok": True, "fixtures": ["green", "busy-day"], "current": "green"})
-    # "DB Fixture: [Default] [green] [busy-day]" — one verb, and its arguments. The face is
-    # the bare name the environment gave; that it lands on top of the seed is the hover.
-    assert seen["to"] == "DB Fixture:"
-    assert seen["reset"] == "Default"
-    assert seen["fixtures"] == ["green", "busy-day"]
-    # Only the face changed: the click still sends the name the environment listed.
-    sent = row.page.evaluate("[...document.querySelectorAll('.appenv-reset')]"
-                             ".map(b => b.dataset.fixture)")
-    assert sent == ["", "green", "busy-day"]
+               fixtures={"ok": True, "fixtures": ["green"], "current": "seed"})
+    assert seen["fixtures"] == ["Default", "green", "busy-day"]
+    armed = {n: on for n, on, _ in seen["seeds"]}
+    assert armed == {"": True, "green": True, "busy-day": False}
+    tip = [t for n, _, t in seen["seeds"] if n == "busy-day"][0]
+    assert "no \u201cbusy-day\u201d fixture" in tip
+    # A fixture the app does not list is never added: the row is the build's alone.
+    seen = row(served=True, live=True, fixtures={"ok": True, "fixtures": ["green", "extra"]})
+    assert seen["fixtures"] == ["Default", "green", "busy-day"]
 
 
 def test_a_fixture_the_environment_describes_carries_its_description(row):
     """A sidecar may describe a fixture — `{name, about}` or a top-level `about` map — and
-    the button's hover is that description; without one it still says what a fixture is."""
-    row(served=True, live=True, fixtures={"ok": True, "about": {"busy-day": "40 visits today"},
-                                          "fixtures": [{"name": "green",
-                                                        "about": "the Weasley household"},
-                                                       "busy-day", "bare"]})
-    tips = row.page.evaluate("""() => [...document.querySelectorAll('.appenv-reset')]
-        .map(b => [b.textContent, b.getAttribute('data-tip')])""")
-    assert tips[0] == ["Default", "Back to the starting data"]
-    assert tips[1][0] == "green" and tips[1][1].endswith(": the Weasley household")
-    assert "on top of it" in tips[1][1], "the hover still says it lands on the seed"
-    assert tips[2][1].endswith(": 40 visits today")
-    assert "a named set of extra demo rows" in tips[3][1]
-    lead = row.page.evaluate("document.querySelector('.appenv-resets-to').dataset.tip")
+    the Seed's hover carries that description."""
+    seen = row(served=True, live=True,
+               fixtures={"ok": True, "about": {"busy-day": "40 visits today"},
+                         "fixtures": [{"name": "green", "about": "the Weasley household"},
+                                      "busy-day"]})
+    tips = {n: t for n, _, t in seen["seeds"]}
+    assert tips["green"].endswith(": the Weasley household")
+    assert tips["busy-day"].endswith(": 40 visits today")
+    lead = row.page.evaluate("document.querySelector('.appenv-fixtures-to').dataset.tip")
     assert "the seed plus a fixture" in lead
 
 
-def test_fixture_buttons_leave_with_the_app(row):
-    """Down, there is nothing to reset: the fixtures go with Reset DB, and so do the words
-    that lead them."""
+def test_a_seed_press_posts_that_fixture_and_never_changes_the_buttons_width(row):
+    page = row.page
+    page.set_content(row.html(served=True, live=True))
+    page.wait_for_function("() => document.querySelector('.appenv-state').dataset.state"
+                           " === 'live'")
+    page.evaluate("""() => { window.POSTS = []; const f = window.fetch;
+        window.fetch = (u, o) => (o && o.method === 'POST' ? (POSTS.push(u),
+            new Promise(r => setTimeout(() => r({ok: true}), 300))) : f(u, o)); }""")
+    seeds = page.locator(".appenv-fx .appenv-reset")
+    w = seeds.nth(1).bounding_box()["width"]
+    x = seeds.nth(2).bounding_box()["x"]
+    seeds.nth(1).click()
+    assert page.evaluate("POSTS") == ["http://localhost:4200/__reset/green"]
+    assert seeds.nth(1).text_content() == "Seed\u2026"
+    assert seeds.nth(1).bounding_box()["width"] == w
+    assert seeds.nth(2).bounding_box()["x"] == x, "the chips after it do not move"
+    page.wait_for_function("() => document.querySelectorAll('.appenv-fx .appenv-reset')[1]"
+                           ".textContent === 'Seed \u2713'")
+
+
+def test_the_fixtures_stay_when_the_app_goes(row):
+    """Down, there is nothing to seed: every Seed greys, and the names stay."""
     seen = row(served=True, live=False,
                fixtures={"ok": True, "fixtures": ["green"], "current": "green"})
-    assert seen["reset"] is None and seen["fixtures"] == [] and seen["to"] is None
+    assert seen["fixtures"] == ["Default", "green", "busy-day"]
+    assert all(not on and tip == "Start the app first" for _, on, tip in seen["seeds"])
 
 
 def test_off_disk_every_verb_is_on_screen_as_its_own_clipboard(row):
@@ -240,7 +263,8 @@ def test_off_disk_every_verb_is_on_screen_as_its_own_clipboard(row):
     row underneath, labelled `START` `STOP` `WHERE` and wearing the *rerun* mark."""
     seen = row(served=False, live=False)
     assert seen["state"] == "Offline"
-    assert seen["reset"] is None
+    assert seen["fixtures"] == ["Default", "green", "busy-day"]
+    assert not any(on for _, on, _ in seen["seeds"])
     assert [seen[v]["word"] for v in ("start", "stop")] == ["Start App in Docker", "Stop"]
     assert [seen[v]["copies"] for v in ("start", "stop")] == [RUNTIME["command"], RUNTIME["stop"]]
     assert seen["where"] is None, "the host's `url` command is never a button"

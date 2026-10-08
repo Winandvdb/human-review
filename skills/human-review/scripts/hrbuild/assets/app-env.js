@@ -162,11 +162,11 @@
   // `command_html` emitted, and SERVER_JS owns which of the two is up.
   var acts = {start: bar.querySelector('.appenv-start'),
               stop: bar.querySelector('.appenv-stop')};
-  // The seed's button, which the build draws, and after it one per fixture the running
-  // environment reports — those are drawn here, because only the environment knows them.
-  var resets = bar.querySelector('.appenv-resets');
-  var reset = bar.querySelector('.appenv-reset');
-  var resetsTo = bar.querySelector('.appenv-resets-to');
+  // The "DB Fixture:" row under this one: a Seed button per fixture, all drawn by the
+  // build from the project's files. The row and its names never move; only the buttons
+  // are armed here, once something answers.
+  var resets = bar.querySelector('.appenv-fixtures');
+  var SEED_OFF = 'Start the app first';
   // One command at a time. `docker compose up` is minutes, the row stays readable
   // throughout, and a second press in the middle of it is a reader who could not tell the
   // first one had started — a Stop sent into a half-built stack is the worst of them.
@@ -213,9 +213,6 @@
     el.setAttribute('aria-disabled', on ? 'false' : 'true');
     el.dataset.tip = tip;
   }
-  // Disarmed *and* gone. Both, and in that order, because `hidden` is a style and a
-  // stylesheet that failed to load would otherwise leave a live button behind.
-  function gate(el, on, tip) { if (!el) return; arm(el, on, tip); el.hidden = !on; }
 
   // A whole verb, in or out of the row. The tip is not touched: it was written by the
   // build and it says what a click here does, which does not change with the state.
@@ -233,8 +230,9 @@
   function setLive(live, why) {
     show(acts.start, !served || !live);
     show(acts.stop, !served || live);
-    resetButtons().forEach(function (el) { gate(el, live, resetTip(el)); });
-    if (resetsTo && !live) resetsTo.hidden = true;
+    // Greyed, never hidden: the fixtures are on screen with the app down (8 Oct 2026),
+    // and a Seed that disappears with it would leave a row of names that do nothing.
+    resetButtons().forEach(function (el) { arm(el, live, live ? resetTip(el) : SEED_OFF); });
     [].forEach.call(document.querySelectorAll('.cue-drive'), function (el) {
       arm(el, live, live ? 'Drive the app to this point' : why);
     });
@@ -312,27 +310,17 @@
   function resetButtons() {
     return resets ? [].slice.call(resets.querySelectorAll('.appenv-reset')) : [];
   }
-  // What each button puts back, in words. Eval run 6 drew "Reset DB to: default | green"
-  // and nothing on the page said what "green" was. A fixture is a named set of extra demo
-  // rows the environment loads on top of the seed; when the environment describes it
-  // (`about`), the description is the tip, and otherwise the tip says what kind of thing
-  // the name is.
+  // What each Seed puts back, in words. A fixture is a named set of extra demo rows the
+  // environment loads on top of the seed; when the environment describes it (`about`),
+  // the description joins the tip.
   function resetTip(el) {
     var name = el && el.dataset.fixture, about = el && el.dataset.about;
-    if (!name) return 'Back to the starting data';
-    return 'Restore the seed, then load the “' + name + '” fixture on top of it'
-           + (about ? ': ' + about : ' — a named set of extra demo rows this '
-                                     + 'environment ships');
-  }
-  // With fixtures the group is one verb and its arguments — "DB Fixture: [Default]
-  // [green]" — and without, the seed's button says the whole thing on its own.
-  function nameResets(any) {
-    if (resetsTo) resetsTo.hidden = !any;
-    if (reset) reset.textContent = any ? 'Default' : 'Reset DB';
+    if (!name) return 'Reset the DB to the seed, the starting data';
+    return 'Reset the DB to the seed, then load the \u201c' + name + '\u201d fixture on top'
+           + (about ? ': ' + about : '');
   }
   // A fixture as the environment lists it: a bare name, or `{name, about}` — and a
-  // top-level `about: {name: text}` map is read too, so a sidecar can describe its
-  // fixtures either way without the page caring which.
+  // top-level `about: {name: text}` map is read too.
   function fixtureOf(item, info) {
     var name = typeof item === 'string' ? item : (item && item.name);
     if (!name) return null;
@@ -341,36 +329,36 @@
     return {name: String(name), about: String(about)};
   }
 
-  // The fixtures are the environment's to name, and asked for every time it is found up:
-  // a file added to the project is a button on the next probe, and an instance built from
-  // a commit that had none answers with none — or, older still, with no list at all,
-  // which is the same thing. Any failure leaves the lone Reset DB, which is what it was.
+  // The names are the build's; the environment is asked only what it can actually load.
+  // An instance started from an image older than a fixture's SQL would answer its Seed
+  // with a 404, so that one Seed is greyed and says why — the name stays, because the
+  // fixture is the branch's. No list in the answer (a sidecar from before fixtures) or
+  // no answer at all changes nothing.
   function listFixtures(b) {
     if (!bar.dataset.reset) return;
     fetch(b + bar.dataset.reset, {cache: 'no-store'}).then(function (r) {
       return r.ok ? r.json() : null;
     }).then(function (info) {
       // The row may have moved on while this was in flight — stopped, or pointed at
-      // another instance — and buttons for that one must not land in this one's row.
-      if (!info || base() !== b || state.dataset.state !== 'live') return;
-      var found = (Array.isArray(info.fixtures) ? info.fixtures : [])
-        .map(function (item) { return fixtureOf(item, info); })
-        .filter(function (f) { return f; });
-      resetButtons().slice(1).forEach(function (el) { el.remove(); });
-      found.forEach(function (f) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'appenv-reset';
-        btn.dataset.fixture = f.name;
-        if (f.about) btn.dataset.about = f.about;
-        // The bare name: "DB Fixture:" in front of it already says what it is, and that
-        // it lands on top of the seed is in the hover (5 Oct 2026: "seed + green" was the
-        // same word "seed" on every button). The name sent on click is data-fixture.
-        btn.textContent = f.name;
-        gate(btn, true, resetTip(btn));
-        resets.appendChild(btn);
+      // another instance — and its answer is not this one's.
+      if (!info || base() !== b || state.dataset.state !== 'live'
+          || !Array.isArray(info.fixtures)) return;
+      var found = {};
+      info.fixtures.forEach(function (item) {
+        var f = fixtureOf(item, info);
+        if (f) found[f.name] = f;
       });
-      nameResets(found.length > 0);
+      resetButtons().forEach(function (el) {
+        var name = el.dataset.fixture || '';
+        if (!name) return;
+        if (!found[name]) {
+          arm(el, false, 'The running app has no \u201c' + name + '\u201d fixture: it '
+                         + 'was started from a commit without ' + name + '.sql');
+          return;
+        }
+        if (found[name].about) el.dataset.about = found[name].about;
+        arm(el, true, resetTip(el));
+      });
     }).catch(function () {});
   }
 
@@ -549,20 +537,21 @@
   // exists to prevent are the reviewer's own repeated form submissions, and they know
   // when they have made a mess.
   //
-  // One listener for the whole group, since the fixture buttons come and go with the
-  // probe.
+  // One listener for the whole row.
   if (resets) resets.addEventListener('click', function (ev) {
     var btn = ev.target.closest('.appenv-reset');
-    if (!btn || blocked(btn)) return;
+    if (!btn || blocked(btn) || btn.disabled) return;
     var b = base();
     if (!b) return;
     var name = btn.dataset.fixture, face = btn.textContent, all = resetButtons();
     all.forEach(function (el) { el.disabled = true; });
-    btn.textContent = 'Resetting\u2026';
+    // Marks, not words: "Seeding…" is twice as wide as "Seed", and a button that grows
+    // mid-press shoves every fixture after it sideways (the min-width holds these).
+    btn.textContent = 'Seed\u2026';
     fetch(b + bar.dataset.reset + (name ? '/' + encodeURIComponent(name) : ''),
           {method: 'POST', cache: 'no-store'}).then(function (r) {
-      btn.textContent = r.ok ? 'Reset' : 'Reset failed';
-    }).catch(function () { btn.textContent = 'Reset failed'; }).then(function () {
+      btn.textContent = r.ok ? 'Seed \u2713' : 'Seed \u2717';
+    }).catch(function () { btn.textContent = 'Seed \u2717'; }).then(function () {
       setTimeout(function () {
         btn.textContent = face;
         all.forEach(function (el) { el.disabled = false; });

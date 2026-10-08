@@ -183,9 +183,12 @@ def test_every_verb_starts_hidden_and_is_raised_by_the_script(tmp_path):
     out = build.video_html(s, tmp_path)
     for verb in ("start", "stop"):
         assert f'<span class="appenv-act appenv-{verb}" hidden>' in out
+    # Seed is the exception: it is on screen from the start, greyed, with the reason as
+    # its tip — the DB Fixture row is always there (8 Oct 2026), and only the script arms it.
     at = out.index('class="appenv-reset"')
     tag = out[out.rindex("<button", 0, at):out.index(">", at) + 1]
-    assert " hidden " in tag and 'aria-disabled="true"' in tag
+    assert " hidden" not in tag and 'aria-disabled="true"' in tag
+    assert 'data-tip="Start the app first"' in tag
 
 
 def test_off_disk_every_verb_is_the_clipboard_for_its_own_command(tmp_path):
@@ -202,12 +205,10 @@ def test_off_disk_every_verb_is_the_clipboard_for_its_own_command(tmp_path):
     s["runtime"] = {"command": "up", "stop": "down", "urlCommand": "where",
                     "reset": "/__reset"}
     out = build.video_html(s, tmp_path)
-    # Nothing hides a verb off disk any more. Reset keeps its rule and is the one
-    # exception: it is a POST the application answers, not a line anybody can paste, so
-    # there is nothing for a clipboard there to be the honest form of.
-    for verb in ("start", "stop"):
+    # Nothing hides a verb off disk any more — not even the fixtures' Seed, which stays
+    # on screen greyed until something answers (8 Oct 2026).
+    for verb in ("start", "stop", "resets", "fixtures"):
         assert f".appenv:not(.appenv-served) .appenv-{verb}" not in build.CSS
-    assert ".appenv:not(.appenv-served) .appenv-resets { display:none; }" in build.CSS
     # The second row is gone, name and all.
     for dead in ("appenv-manual", "appenv-cmd", "appenv-verb"):
         assert dead not in out and f".{dead}" not in build.CSS
@@ -286,9 +287,50 @@ def test_the_reset_control_appears_only_when_an_endpoint_is_declared(tmp_path):
     assert "appenv-reset" not in out
     s["runtime"] = {"command": "x", "base": "http://localhost:4200", "reset": "/__reset"}
     out = build.video_html(s, tmp_path)
-    # "Reset DB" and not "Reset data": what it puts back is the database the demo runs
-    # on, and the reviewer who is about to press it is deciding whether they mind.
-    assert 'data-reset="/__reset"' in out and ">Reset DB<" in out
+    # One Seed per fixture in the DB Fixture row; with no project to read, the seed alone.
+    assert 'data-reset="/__reset"' in out and ">Seed</button>" in out
+    assert '<span class="appenv-fx-name">Default</span>' in out
+
+
+def test_the_fixture_row_lists_every_fixture_the_build_found_under_the_running_app_row():
+    """Victor, 8 Oct 2026: the fixtures are the build's, not the running app's, and they
+    sit in a row of their own under "Running app", whether anything is up or not. Each is
+    its dot, its name and a Seed; the 👁 is dataset-view.js's to add."""
+    rt = {"command": "up", "stop": "down", "reset": "/__reset"}
+    out = build.runtime_html(rt, fixtures=[("", "#8b929c"), ("green", "#2fa84f"),
+                                           ("busy-day", "#3b82f6")])
+    run_end = out.index("</div>", out.index('<div class="appenv-run">'))
+    row = out.index('<div class="appenv-fixtures"')
+    assert run_end < row, "a row of its own, after the Running app one"
+    assert "appenv-reset" not in out[:run_end], "nothing of the fixtures in the app row"
+    assert ">DB Fixture:<" in out
+    names = [out[i + len('<span class="appenv-fx-name">'):out.index("<", i + 1)]
+             for i in [j for j in range(len(out))
+                       if out.startswith('<span class="appenv-fx-name">', j)]]
+    assert names == ["Default", "green", "busy-day"]
+    assert out.count(">Seed</button>") == 3
+    assert 'style="--fx:#2fa84f"' in out and 'style="--fx:#8b929c"' in out
+    assert 'data-fixture="green"' in out
+    # Without a reset endpoint the row still lists the data, with nothing to press.
+    bare = build.runtime_html({"command": "up"}, fixtures=[("", "#8b929c"), ("green", "#0f0")])
+    assert ">green<" in bare and "appenv-reset" not in bare
+    # And the seed alone with nothing to do to it is no row at all.
+    assert "appenv-fixtures" not in build.runtime_html({"command": "up"})
+
+
+def test_demo_fixtures_are_read_off_the_sql_files_not_the_colour_map(tmp_path):
+    demo_fixtures = build.demo_fixtures
+    d = tmp_path / "db" / "fixtures"
+    d.mkdir(parents=True)
+    (d / "green.sql").write_text("select 1;")
+    (d / "blue.sql").write_text("select 1;")
+    (d / "fixture-colors.json").write_text('{"green": "#2fa84f", "gone": "#123456"}')
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "add", "."], check=True)
+    got = demo_fixtures(tmp_path)
+    assert [n for n, _ in got] == ["", "blue", "green"]
+    assert dict(got)["green"] == "#2fa84f"
+    assert demo_fixtures(None) == [("", "#8b929c")]
 
 
 def test_a_recorded_video_gets_a_player(tmp_path):

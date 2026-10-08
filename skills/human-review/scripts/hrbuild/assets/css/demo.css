@@ -133,11 +133,10 @@
 .transcript a:hover { border-bottom-style:solid; }
 @media (max-width:820px) { .vidwrap { grid-template-columns:1fr; } }
 
-/* The dataset quick view (`dataset-view.js`): a 👁 attached to each DB Fixture button, and
+/* The dataset quick view (`dataset-view.js`): a 👁 in each chip of the DB Fixture row, and
    under the band the tables that fixture loads, side by side, scrolling sideways. */
-.appenv .appenv-reset:has(+ .dsv-eye) { border-top-right-radius:0; border-bottom-right-radius:0; }
-.appenv .dsv-eye { cursor:pointer; margin-left:-.3rem; padding:0 .35rem; border-left:0;
-  border-top-left-radius:0; border-bottom-left-radius:0; color:var(--muted); line-height:inherit; }
+.appenv .dsv-eye { cursor:pointer; padding:0 .3rem; border-color:transparent;
+  background:transparent; color:var(--muted); line-height:1.5; }
 .appenv .dsv-eye:hover, .appenv .dsv-eye.on { color:var(--link); background:var(--accent-soft); }
 .dsv { margin:.5rem 0 .7rem; border:1px solid var(--line); border-radius:var(--r, 6px);
   background:var(--card); padding:.45rem .6rem .55rem; }

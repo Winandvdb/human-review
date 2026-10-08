@@ -1,5 +1,5 @@
-// The Demo tab's dataset quick view: a 👁 attached to each "DB Fixture" button opens the
-// rows that button would load, as small grids under the Running app band — so a reviewer
+// The Demo tab's dataset quick view: a 👁 in each fixture of the "DB Fixture:" row opens
+// the rows that fixture loads, as small grids under the Running app band — so a reviewer
 // sees what "green" is without reading green.sql (Victor, 7 Oct 2026). The rows were
 // computed at build time from the project's own SQL (`dataset_view.py`) and sit in
 // #dsv-data; nothing here talks to the app, so the view works with the app down too.
@@ -160,31 +160,26 @@
     sync();
   }
 
-  // One 👁 right after each reset button, attached to it. A sibling and not a child: the
-  // band's own click handler resets on any click inside `.appenv-reset`, and it rewrites
-  // the button's text while it works. The buttons come and go with the probe, so the eyes
-  // follow them through a MutationObserver rather than once at load.
+  // One 👁 per fixture in the "DB Fixture:" row, after its name and before its Seed. The
+  // row is the build's and never redraws, so this runs once. Only a fixture the data
+  // knows gets one: an eye that opens nothing is worse than none. (It used to ride each
+  // reset *button*, which the running app drew; down, the buttons went and the seed's eye
+  // was left hanging alone after Start — 8 Oct 2026.)
   function eyes() {
-    var group = bar.querySelector('.appenv-resets');
-    if (!group) return;
-    [].forEach.call(group.querySelectorAll('.dsv-eye'), function (e) {
-      var prev = e.previousElementSibling;
-      if (!prev || !prev.classList.contains('appenv-reset')
-          || (prev.dataset.fixture || '') !== e.dataset.fixture) e.remove();
-    });
-    [].forEach.call(group.querySelectorAll('.appenv-reset'), function (b) {
-      var name = b.dataset.fixture || '';
-      var next = b.nextElementSibling;
-      if (!has(name) || (next && next.classList.contains('dsv-eye'))) return;
+    [].forEach.call(bar.querySelectorAll('.appenv-fx[data-fixture]'), function (fx) {
+      var name = fx.dataset.fixture || '';
+      if (!has(name) || fx.querySelector('.dsv-eye')) return;
       var e = document.createElement('button');
       e.type = 'button';
       e.className = 'dsv-eye';
       e.dataset.fixture = name;
       e.setAttribute('aria-label', 'Show the data in ' + label(name));
       e.setAttribute('aria-controls', 'dsv-panel');
+      e.setAttribute('aria-expanded', 'false');
       e.dataset.tip = tipFor(name);
       e.textContent = '👁︎';
-      b.insertAdjacentElement('afterend', e);
+      var nm = fx.querySelector('.appenv-fx-name');
+      if (nm) nm.insertAdjacentElement('afterend', e); else fx.appendChild(e);
     });
     sync();
   }
@@ -195,10 +190,6 @@
     ev.stopPropagation();
     show(shown === e.dataset.fixture ? null : e.dataset.fixture);
   });
-  var group = bar.querySelector('.appenv-resets');
-  if (group && window.MutationObserver) {
-    new MutationObserver(eyes).observe(group, {childList: true});
-  }
   eyes();
 
   // For other parts of the page (the Tests tab's fixture dots): bring up one fixture's

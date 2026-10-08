@@ -97,6 +97,23 @@ def fixture_colors(root: Path, files: list[str] | None = None) -> dict:
     return {"seed": seed, "colors": colors, "palette": free}
 
 
+def demo_fixtures(root: Path | None, files: list[str] | None = None) -> list[tuple[str, str]]:
+    """``[("", seed colour), (name, colour), …]``: the seed (Default) first, then every
+    ``<name>.sql`` the project's fixtures folders hold, in folder order — the Demo tab's
+    "DB Fixture:" row. Read off the files at build time, never off the running app: the
+    row is on screen with the app down, and an instance started from an older image must
+    not shrink the list (8 Oct 2026: :7655 listed only Default while green.sql was there).
+    A name only ``fixture-colors.json`` mentions has no SQL to load and is not listed."""
+    if root is None:
+        return [("", FIXTURE_SEED)]
+    root = Path(root)
+    files = _fx_ls(root) if files is None else files
+    reg = fixture_colors(root, files)
+    on_disk = {Path(f).stem for f in files
+               if Path(f).parent.name == "fixtures" and f.endswith(".sql")}
+    return [("", reg["seed"])] + [(n, c) for n, c in reg["colors"].items() if n in on_disk]
+
+
 def _fx_strip_comments(src: str) -> str:
     """Comments out, strings kept: a comment is the author musing, a string is what runs."""
     out, i, n = [], 0, len(src)

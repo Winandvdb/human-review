@@ -455,16 +455,24 @@ span.tabre > button.chip-rerun span.rr-mark { font-size:9px; line-height:1; colo
 .appenv .appenv-url { font:1em/1.6 ui-monospace,Menlo,monospace; color:var(--link);
     text-decoration:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .appenv .appenv-url:hover { text-decoration:underline; }
-/* Reset is the exception to the row's one-control-per-verb rule and the only thing in it
-    still hidden off disk. It is not a shell command — it is a POST the application
-    answers — so there is no line for anybody to paste and nothing for a clipboard to be
-    the honest form of. A button that always fails is worse than an absent one. */
-.appenv:not(.appenv-served) .appenv-resets { display:none; }
-/* "DB Fixture:", then the seed and one button per fixture the environment reported. One
-    group, because they are one verb with an argument. The lead words explain the buttons
-    on hover; no dotted underline, which in this row read as one more link. */
-.appenv .appenv-resets { display:inline-flex; flex-wrap:wrap; gap:.3rem; align-items:center; }
-.appenv .appenv-resets-to[data-tip] { cursor:help; }
+/* The "DB Fixture:" row, under the Running app one and always on screen (Victor, 8 Oct
+    2026): every fixture the build found, each a chip — its dot, its name, the 👁 on its
+    data (dataset-view.js) and Seed. The names never move with the app; only Seed goes
+    from greyed ("Start the app first") to live. The lead words explain the row on hover;
+    no dotted underline, which in this band read as one more link. */
+.appenv .appenv-fixtures { display:flex; flex-wrap:wrap; gap:.4rem .6rem; align-items:center; }
+.appenv .appenv-fixtures-to { font-weight:600; margin-right:.1rem; cursor:help; }
+.appenv .appenv-fx { display:inline-flex; align-items:center; gap:.35rem;
+    padding:.1rem .15rem .1rem .5rem; border:1px solid var(--line); border-radius:6px;
+    background:var(--bg); line-height:1.5; }
+.appenv .appenv-fx-name { white-space:nowrap; }
+/* Seed: a small bordered verb at the chip's end, wide enough for its in-flight marks
+    (`Seed…`, `Seed ✓`) so a press never shoves the chips after it. Greyed while nothing
+    answers; still hoverable, because its tip is the reason. */
+.appenv .appenv-fx .appenv-reset { padding:0 .4rem; min-width:5.2em; text-align:center;
+    line-height:1.5; }
+.appenv .appenv-reset[aria-disabled="true"], .appenv .appenv-reset:disabled {
+    color:var(--muted); cursor:not-allowed; background:transparent; opacity:.6; }
 /* Three states, and the page must never claim the third without having asked: unknown
     until the probe answers, then live — where the address speaks for it and the pill
     steps out of the way — or down, where "Offline" is the whole truth there is. */

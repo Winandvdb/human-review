@@ -1,12 +1,11 @@
-// One coloured dot per DB fixture: in front of each "DB Fixture:" button on the Demo tab,
-// and on each E2E row of the Tests tab whose starting data the build could read off the
-// test's own code (`hrbuild/shared/fixtures.py`). The colours are the project's, from a
-// `fixture-colors.json` beside the fixtures' SQL; the seed is always grey.
+// One coloured dot per DB fixture on each E2E row of the Tests tab whose starting data the
+// build could read off the test's own code (`hrbuild/shared/fixtures.py`). The colours are
+// the project's, from a `fixture-colors.json` beside the fixtures' SQL; the seed is always
+// grey. (The Demo tab's "DB Fixture:" row wears the same dots, drawn by the build itself.)
 //
-// Both places are drawn by somebody else — the buttons by APP_ENV_JS when the environment
-// answers, the rows by the Tests tab's own script, regrouped since by testchapters.js — so
-// the dots are put on from the outside, idempotently, and put back by a MutationObserver
-// whenever either redraws. A row the registry does not name gets no dot: an unknown start
+// The rows are drawn by the Tests tab's own script and regrouped since by testchapters.js,
+// so the dots are put on from the outside, idempotently, and put back by a
+// MutationObserver whenever either redraws. A row the registry does not name gets no dot: an unknown start
 // is said by saying nothing, never by a guess.
 (function () {
   var el = document.getElementById('hr-fixtures');
@@ -16,7 +15,7 @@
   var palette = reg.palette && reg.palette.length ? reg.palette : ['#3b82f6'];
 
   // A fixture the build never saw (added to the project after this page was made) still
-  // gets a colour: the next of the palette, by its place among the buttons.
+  // gets a colour: the next of the palette.
   function colourOf(name, i) {
     if (!name || name === 'seed') return reg.seed || '#8b929c';
     return colors[name] || palette[i % palette.length];
@@ -40,14 +39,14 @@
   // A row's dot is a way into that fixture's data, the same view the Demo tab's 👁 opens:
   // `window.hrOpenDataset(name)` when the dataset viewer is on the page, with the name its
   // button sends ("" for Default, as the button's data-fixture has it); without it, the
-  // Demo tab, scrolled to the fixture buttons, with this one's button in focus.
+  // Demo tab, scrolled to the "DB Fixture:" row, with this fixture's Seed in focus.
   function open(name) {
     var key = name === 'seed' ? '' : name;
     if (typeof window.hrOpenDataset === 'function') { window.hrOpenDataset(key); return; }
     var tab = document.getElementById('tabbtn-behaviour');
     if (tab) tab.click();
     setTimeout(function () {
-      var group = document.querySelector('.appenv-resets') || document.querySelector('.appenv');
+      var group = document.querySelector('.appenv-fixtures') || document.querySelector('.appenv');
       if (!group) return;
       group.scrollIntoView({block: 'center', behavior: 'smooth'});
       var btn = Array.prototype.filter.call(group.querySelectorAll('.appenv-reset'),
@@ -65,33 +64,6 @@
   }
   document.addEventListener('click', onRowDot, true);
   document.addEventListener('keydown', onRowDot, true);
-
-  function demo() {
-    var group = document.querySelector('.appenv-resets');
-    if (!group) return;
-    var lead = group.querySelector('.appenv-resets-to');
-    var any = lead && !lead.hidden;
-    var unknown = 0;
-    Array.prototype.forEach.call(group.querySelectorAll('.appenv-reset'), function (btn) {
-      var have = btn.querySelector('.fx-dot');
-      // A lone "Reset DB" has nothing to tell apart; a grey dot there is only noise.
-      if (!any) { if (have) have.remove(); return; }
-      var name = btn.dataset.fixture || '';
-      var c = colourOf(name, name && !colors[name] ? unknown++ : 0);
-      if (have && have.parentNode === btn && btn.firstChild === have) {
-        if (have.style.getPropertyValue('--fx') !== c) have.style.setProperty('--fx', c);
-        return;
-      }
-      if (have) have.remove();
-      var d = dot(c, name ? 'The “' + name + '” fixture' : 'The seed');
-      // The button's tip is the one that says what a press does; the dot defers to it.
-      d.removeAttribute('data-tip');
-      d.setAttribute('aria-hidden', 'true');
-      d.removeAttribute('role');
-      d.removeAttribute('aria-label');
-      btn.insertBefore(d, btn.firstChild);
-    });
-  }
 
   function rows() {
     Array.prototype.forEach.call(document.querySelectorAll('.rm-t[data-id]'), function (row) {
@@ -125,7 +97,7 @@
   var queued = false;
   function run() {
     queued = false;
-    demo(); rows();
+    rows();
   }
   function later() {
     if (queued) return;
@@ -134,7 +106,7 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
-  // Whatever redraws a button or a row — the probe, a press, the chapters regrouping —
+  // Whatever redraws a row — the Tests tab's script, the chapters regrouping —
   // the dots follow on the next frame. `run` changes nothing on a page already dotted,
   // so its own insertions settle after one pass.
   new MutationObserver(later).observe(document.body, {childList: true, subtree: true,

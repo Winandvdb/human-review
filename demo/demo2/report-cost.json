@@ -1,7 +1,7 @@
 {
  "schema": "report-cost/1",
- "started": "2026-10-05T17:48:30+00:00",
- "recordedAt": "2026-10-05T18:00:59+00:00",
+ "started": "2026-10-07T08:35:03+00:00",
+ "recordedAt": "2026-10-07T08:56:00+00:00",
  "harness": "claude-code",
  "guide": {
   "key": "guide",
@@ -10,8 +10,8 @@
   "reason": null,
   "source": "recorded",
   "window": [
-   "2026-10-05T17:48:30+00:00",
-   "2026-10-05T18:00:59+00:00"
+   "2026-10-07T08:35:03+00:00",
+   "2026-10-07T08:56:00+00:00"
   ],
   "harnesses": [
    "claude-code"
@@ -19,21 +19,21 @@
   "entries": [
    {
     "harness": "claude-code",
-    "session": "1223564f-43ac-4d25-b819-80c959774b4a",
+    "session": "8782fda6-f385-4d47-8079-96d9f3c08509",
     "what": "the /human-review run",
     "window": [
-     "2026-10-05T17:48:14+00:00",
-     "2026-10-05T18:00:58+00:00"
+     "2026-10-07T08:12:33+00:00",
+     "2026-10-07T08:55:58+00:00"
     ],
-    "tokens": 1146796,
+    "tokens": 20964698,
     "models": {
-     "Opus 5.5": 728720,
-     "Sonnet 5.5": 418076
+     "Opus 5.5": 20668264,
+     "Sonnet 5.5": 296434
     },
-    "usd": 1.0523,
+    "usd": 5.1722,
     "aic": null,
-    "calls": 19,
-    "modelSeconds": 80.8,
+    "calls": 39,
+    "modelSeconds": 341.1,
     "subagentModels": [
      "Sonnet 5.5"
     ],
@@ -44,44 +44,37 @@
     "session": "claude -p (.model-runs.json)",
     "what": "requirements\u2194tests mapping (rerun-model.py)",
     "window": [
-     "2026-10-05T17:57:46+00:00",
-     "2026-10-05T18:00:40+00:00"
+     "2026-10-07T08:54:14+00:00",
+     "2026-10-07T08:55:45+00:00"
     ],
-    "tokens": 112553,
+    "tokens": 76066,
     "models": {
-     "Sonnet 5.5": 112553
+     "Sonnet 5.5": 76066
     },
-    "usd": 0.62,
+    "usd": 0.3888,
     "aic": null,
     "calls": 1,
-    "modelSeconds": 173.7,
+    "modelSeconds": 90.3,
     "program": "rerun-model.py"
    }
   ],
-  "tokens": 1259349,
-  "usd": 1.6723,
+  "tokens": 21040764,
+  "usd": 5.561,
   "aic": null,
-  "modelSeconds": 254.5
+  "modelSeconds": 431.4
  },
  "wallclock": {
-  "started": "2026-10-05T17:48:30+00:00",
-  "ended": "2026-10-05T18:00:59+00:00",
-  "seconds": 749,
-  "modelSeconds": 254.5,
+  "started": "2026-10-07T08:35:03+00:00",
+  "ended": "2026-10-07T08:56:00+00:00",
+  "seconds": 1257,
+  "modelSeconds": 431.4,
   "steps": [
    {
     "label": "sequence diagrams from traces",
     "tabs": [
      "sequence"
     ],
-    "seconds": 234
-   },
-   {
-    "label": "Code City capture",
-    "tabs": [
-     "city"
-    ],
-    "seconds": 106
+    "seconds": 555
    },
    {
     "label": "test change manifest",
@@ -91,19 +84,19 @@
     "seconds": 1
    },
    {
-    "label": "diagram deltas",
-    "tabs": [
-     "data",
-     "packages"
-    ],
-    "seconds": 29
-   },
-   {
     "label": "review-points.md and the two commits",
     "tabs": [
      "review"
     ],
     "seconds": 1
+   },
+   {
+    "label": "diagram deltas",
+    "tabs": [
+     "data",
+     "packages"
+    ],
+    "seconds": 24
    },
    {
     "label": "what landed after the review commit",
@@ -145,302 +138,84 @@
     "tabs": [
      "owners"
     ],
-    "seconds": 1
-   },
-   {
-    "label": "Playwright trace recordings",
-    "tabs": [
-     "requirements"
-    ],
-    "seconds": 28
-   },
-   {
-    "label": "feature recording",
-    "tabs": [
-     "behaviour"
-    ],
-    "seconds": 226
-   },
-   {
-    "label": "per-test coverage of the change",
-    "tabs": [
-     "requirements"
-    ],
-    "seconds": 73
+    "seconds": 0
    },
    {
     "label": "container view projected from the sequences",
     "tabs": [
      "packages"
     ],
-    "seconds": 14
+    "seconds": 10
+   },
+   {
+    "label": "Playwright trace recordings",
+    "tabs": [
+     "requirements"
+    ],
+    "seconds": 96
    },
    {
     "label": "design-system audit",
     "tabs": [
      "dsaudit"
     ],
-    "seconds": 41
+    "seconds": 51
+   },
+   {
+    "label": "per-test coverage of the change",
+    "tabs": [
+     "requirements"
+    ],
+    "seconds": 84
+   },
+   {
+    "label": "Code City capture",
+    "tabs": [
+     "city"
+    ],
+    "seconds": 19
+   },
+   {
+    "label": "feature recording",
+    "tabs": [
+     "behaviour"
+    ],
+    "seconds": 121
    },
    {
     "label": "assemble content.json and build the page",
     "tabs": [
      "guide"
     ],
-    "seconds": 14
+    "seconds": 134
    }
   ],
-  "stepSeconds": 776
+  "stepSeconds": 1104
  },
  "refreshes": [
   {
-   "at": "2026-10-07T13:43:47+00:00",
-   "seconds": 52.9,
+   "at": "2026-10-07T08:57:07+00:00",
+   "seconds": 66.0,
    "steps": "none"
   },
   {
-   "at": "2026-10-07T13:47:37+00:00",
-   "seconds": 61.9,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T13:49:38+00:00",
-   "seconds": 62.0,
-   "steps": "complexity"
-  },
-  {
-   "at": "2026-10-07T13:51:32+00:00",
-   "seconds": 61.0,
-   "steps": "complexity"
-  },
-  {
-   "at": "2026-10-07T13:55:47+00:00",
-   "seconds": 63.1,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T13:56:18+00:00",
-   "seconds": 72.4,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T14:13:16+00:00",
-   "seconds": 55.7,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T14:20:42+00:00",
-   "seconds": 63.8,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T14:22:39+00:00",
-   "seconds": 77.4,
-   "steps": "c2,api,owners,city"
-  },
-  {
-   "at": "2026-10-07T14:22:39+00:00",
-   "seconds": 12.4,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T14:29:03+00:00",
-   "seconds": 57.2,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T14:32:37+00:00",
-   "seconds": 57.1,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T14:35:20+00:00",
-   "seconds": 52.9,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T14:53:14+00:00",
-   "seconds": 52.8,
-   "steps": "complexity"
-  },
-  {
-   "at": "2026-10-07T14:54:25+00:00",
-   "seconds": 60.9,
-   "steps": "complexity"
-  },
-  {
-   "at": "2026-10-07T18:15:25+00:00",
-   "seconds": 12.4,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:16:56+00:00",
-   "seconds": 61.4,
+   "at": "2026-10-07T10:54:37+00:00",
+   "seconds": 71.6,
    "steps": "api"
   },
   {
-   "at": "2026-10-07T18:22:24+00:00",
-   "seconds": 56.0,
-   "steps": "none"
+   "at": "2026-10-07T21:10:50+00:00",
+   "seconds": 452.4,
+   "steps": "basestack,reviewpoints,aftermath,diagrams,sequence,c2,c4,complexity,api,specchanges,logging,dsaudit,owners,tests,traces,testcov,city"
   },
   {
-   "at": "2026-10-07T18:25:29+00:00",
-   "seconds": 67.0,
-   "steps": "none"
+   "at": "2026-10-07T23:19:10+00:00",
+   "seconds": 99.5,
+   "steps": "static"
   },
   {
-   "at": "2026-10-07T18:28:34+00:00",
-   "seconds": 57.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:29:53+00:00",
-   "seconds": 67.2,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:33:26+00:00",
-   "seconds": 78.4,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:36:00+00:00",
-   "seconds": 69.1,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:37:48+00:00",
-   "seconds": 69.1,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:37:48+00:00",
-   "seconds": 72.7,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:37:52+00:00",
-   "seconds": 17.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:38:18+00:00",
-   "seconds": 73.8,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:39:41+00:00",
-   "seconds": 75.2,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:39:45+00:00",
-   "seconds": 72.2,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:40:10+00:00",
-   "seconds": 80.4,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:40:48+00:00",
-   "seconds": 86.2,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:42:53+00:00",
-   "seconds": 56.4,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:45:15+00:00",
-   "seconds": 58.2,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:48:53+00:00",
-   "seconds": 64.4,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:50:05+00:00",
-   "seconds": 59.4,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:52:17+00:00",
-   "seconds": 59.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:56:21+00:00",
-   "seconds": 57.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T18:56:59+00:00",
-   "seconds": 52.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T19:14:50+00:00",
-   "seconds": 72.7,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T19:29:07+00:00",
-   "seconds": 62.0,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T19:30:36+00:00",
-   "seconds": 80.1,
-   "steps": "city"
-  },
-  {
-   "at": "2026-10-07T19:51:18+00:00",
-   "seconds": 54.5,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T20:09:12+00:00",
-   "seconds": 55.9,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T23:11:29+00:00",
-   "seconds": 60.6,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-07T23:13:06+00:00",
-   "seconds": 70.7,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-08T05:56:58+00:00",
-   "seconds": 53.7,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-08T06:03:45+00:00",
-   "seconds": 48.5,
-   "steps": "api"
-  },
-  {
-   "at": "2026-10-08T06:12:29+00:00",
-   "seconds": 56.0,
-   "steps": "none"
-  },
-  {
-   "at": "2026-10-08T06:14:24+00:00",
-   "seconds": 54.9,
-   "steps": "api"
-  },
-  {
-   "at": "2026-10-08T10:12:41+00:00",
-   "seconds": 53.6,
+   "at": "2026-10-08T00:01:21+00:00",
+   "seconds": 51.8,
    "steps": "none"
   }
  ]

@@ -6,7 +6,7 @@
   "petclinic-backend/docs/c4model.c1+c2.dsl"
  ],
  "image": "structurizr/structurizr",
- "base": "fe5534397311f26d4899c1812ecdd6f9e6fa4512",
+ "base": "390f0e0efee30a2aeeaa07895560d97eafaab479",
  "views": {
   "C2-Containers": "unchanged",
   "C2-BackendOutbound": "unchanged",

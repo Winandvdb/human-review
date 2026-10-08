@@ -1,4 +1,4 @@
   * specchanges -> api
-    $ git merge-base fe5534397311f26d4899c1812ecdd6f9e6fa4512 HEAD
-    $ openapi-changes html-report --no-logo --no-explorer --report-file .human-review/assets/openapi-changes.html 'fe5534397311f26d4899c1812ecdd6f9e6fa4512:openapi.yaml' ./openapi.yaml
-[1mreport written to '.human-review/assets/openapi-changes.html' (3095kb)[m
+    $ git merge-base 390f0e0efee30a2aeeaa07895560d97eafaab479 HEAD
+    $ openapi-changes html-report --no-logo --no-explorer --report-file .human-review/assets/openapi-changes.html '390f0e0efee30a2aeeaa07895560d97eafaab479:openapi.yaml' ./openapi.yaml
+[1mreport written to '.human-review/assets/openapi-changes.html' (3093kb)[m

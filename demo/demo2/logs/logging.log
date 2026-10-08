@@ -1,8 +1,4 @@
   * logging -> logging
-    $ git merge-base fe5534397311f26d4899c1812ecdd6f9e6fa4512 HEAD
-    $ /Users/victorrentea/.claude/plugins/cache/human-review/human-review/ca04dd2071fd/skills/human-review/scripts/logextract.py petclinic-backend --repo . --since fe5534397311f26d4899c1812ecdd6f9e6fa4512 --json .human-review/assets/logging.json
-2 logging statement(s) on added/modified lines
-  petclinic-backend/src/main/java/victor/training/petclinic/rest/error/ExceptionControllerAdvice.java:86:9  [WARN ] log.warn  (SLF4J, declared)  added
-        log.warn("Invalid request parameters: {}", errors);
-  petclinic-backend/src/main/java/victor/training/petclinic/rest/error/ExceptionControllerAdvice.java:96:9  [WARN ] log.warn  (SLF4J, declared)  added
-        log.warn("Invalid request parameters: {}", errors);
+    $ git merge-base 390f0e0efee30a2aeeaa07895560d97eafaab479 HEAD
+    $ /Users/victorrentea/workspace/human-review/skills/human-review/scripts/logextract.py petclinic-backend --repo . --since 390f0e0efee30a2aeeaa07895560d97eafaab479 --json .human-review/assets/logging.json
+0 logging statement(s) on added/modified lines

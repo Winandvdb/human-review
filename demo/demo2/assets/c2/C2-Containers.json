@@ -2,14 +2,12 @@
   "new": {
     "sources": [
       "petclinic-test/generated/AddVisitApiTest.java.adds-a-visit-to-an-existing-pet.genseq.puml",
-      "petclinic-test/generated/OwnerListTest.java.defaultrequest-returnsfirsttenbynameascendingandthetotal.genseq.puml",
-      "petclinic-test/generated/OwnerListTest.java.response-isanobjectwithexactlycontentandtotalelements.genseq.puml",
+      "petclinic-test/generated/OwnerListTest.java.defaultpage-isthefirsttenbyname.genseq.puml",
+      "petclinic-test/generated/OwnerListTest.java.unfilteredtotal-countseveryowner.genseq.puml",
       "petclinic-test/generated/add-visit.spec.ts.add-a-visit-to-an-existing-pet-from-the-owner-detail-page.genseq.puml",
-      "petclinic-test/generated/owner-search.feature.a-new-search-goes-back-to-the-first-page.genseq.puml",
-      "petclinic-test/generated/owner-search.feature.changing-the-page-size-goes-back-to-the-first-page.genseq.puml",
-      "petclinic-test/generated/owner-search.feature.paging-through-the-whole-list-reaches-every-owner-exactly-once.genseq.puml",
+      "petclinic-test/generated/owner-search.feature.choosing-5-rows-per-page.genseq.puml",
       "petclinic-test/generated/owner-search.feature.searching-with-an-empty-last-name-shows-the-first-page-of-every-owner.genseq.puml",
-      "petclinic-test/generated/owner-search.feature.sorting-by-city-descending.genseq.puml"
+      "petclinic-test/generated/owner-search.feature.sorting-by-city.genseq.puml"
     ],
     "nodes": {
       "Backend": {
@@ -61,19 +59,19 @@
         "to": "DB",
         "status": "same",
         "protocol": "SQL",
-        "operations": 6,
+        "operations": 7,
         "operationsDelta": 0,
-        "calls": 72,
+        "calls": 70,
         "detail": [
           {
             "name": "OwnerRepository.findByLastNameStartingWith",
             "path": "",
-            "calls": 32
+            "calls": 18
           },
           {
-            "name": "SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type \u2026",
+            "name": "insert for victor.training.petclinic.domain.Owner",
             "path": "",
-            "calls": 17
+            "calls": 12
           },
           {
             "name": "insert for victor.training.petclinic.domain.Visit",
@@ -81,19 +79,24 @@
             "calls": 2
           },
           {
+            "name": "select count(*) from Owner x",
+            "path": "",
+            "calls": 1
+          },
+          {
             "name": "select owners",
             "path": "",
-            "calls": 7
+            "calls": 5
           },
           {
             "name": "select pets",
             "path": "",
-            "calls": 8
+            "calls": 18
           },
           {
             "name": "select visits",
             "path": "",
-            "calls": 6
+            "calls": 14
           }
         ],
         "toKind": "db"
@@ -139,7 +142,7 @@
         "protocol": "HTTP",
         "operations": 4,
         "operationsDelta": 0,
-        "calls": 19,
+        "calls": 11,
         "detail": [
           {
             "name": "Add a visit for an owner's pet",
@@ -152,9 +155,9 @@
             "calls": 3
           },
           {
-            "name": "List owners",
+            "name": "List one page of owners",
             "path": "GET /api/owners",
-            "calls": 14
+            "calls": 6
           },
           {
             "name": "getPet",
@@ -194,6 +197,23 @@
             "name": "PhoneNumbers.normalize",
             "path": "",
             "calls": 2
+          }
+        ],
+        "toKind": "container"
+      },
+      {
+        "from": "\u00abmodule\u00bb\\nCommons",
+        "to": "Backend",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 1,
+        "detail": [
+          {
+            "name": "NotificationServiceClient.homeDialCode",
+            "path": "",
+            "calls": 1
           }
         ],
         "toKind": "container"
@@ -464,19 +484,19 @@
         "to": "DB",
         "status": "same",
         "protocol": "SQL",
-        "operations": 6,
-        "operationsDelta": 1,
-        "calls": 72,
+        "operations": 7,
+        "operationsDelta": 0,
+        "calls": 70,
         "detail": [
           {
             "name": "OwnerRepository.findByLastNameStartingWith",
             "path": "",
-            "calls": 32
+            "calls": 18
           },
           {
-            "name": "SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type \u2026",
+            "name": "insert for victor.training.petclinic.domain.Owner",
             "path": "",
-            "calls": 17
+            "calls": 12
           },
           {
             "name": "insert for victor.training.petclinic.domain.Visit",
@@ -484,19 +504,24 @@
             "calls": 2
           },
           {
+            "name": "select count(*) from Owner x",
+            "path": "",
+            "calls": 1
+          },
+          {
             "name": "select owners",
             "path": "",
-            "calls": 7
+            "calls": 5
           },
           {
             "name": "select pets",
             "path": "",
-            "calls": 8
+            "calls": 18
           },
           {
             "name": "select visits",
             "path": "",
-            "calls": 6
+            "calls": 14
           }
         ],
         "toKind": "db"
@@ -542,7 +567,7 @@
         "protocol": "HTTP",
         "operations": 4,
         "operationsDelta": 0,
-        "calls": 19,
+        "calls": 11,
         "detail": [
           {
             "name": "Add a visit for an owner's pet",
@@ -555,9 +580,9 @@
             "calls": 3
           },
           {
-            "name": "List owners",
+            "name": "List one page of owners",
             "path": "GET /api/owners",
-            "calls": 14
+            "calls": 6
           },
           {
             "name": "getPet",
@@ -604,16 +629,16 @@
       {
         "from": "\u00abmodule\u00bb\\nCommons",
         "to": "Backend",
-        "status": "removed",
+        "status": "same",
         "protocol": "calls",
         "operations": 1,
         "operationsDelta": 0,
-        "calls": 2,
+        "calls": 1,
         "detail": [
           {
             "name": "NotificationServiceClient.homeDialCode",
             "path": "",
-            "calls": 2
+            "calls": 1
           }
         ],
         "toKind": "container"
@@ -625,18 +650,16 @@
         "petclinic-test/generated/add-visit.spec.ts.add-a-visit-to-an-existing-pet-from-the-owner-detail-page.genseq.puml"
       ],
       "onlyNew": [
-        "petclinic-test/generated/OwnerListTest.java.defaultrequest-returnsfirsttenbynameascendingandthetotal.genseq.puml",
-        "petclinic-test/generated/OwnerListTest.java.response-isanobjectwithexactlycontentandtotalelements.genseq.puml",
-        "petclinic-test/generated/owner-search.feature.a-new-search-goes-back-to-the-first-page.genseq.puml",
-        "petclinic-test/generated/owner-search.feature.changing-the-page-size-goes-back-to-the-first-page.genseq.puml",
-        "petclinic-test/generated/owner-search.feature.paging-through-the-whole-list-reaches-every-owner-exactly-once.genseq.puml",
+        "petclinic-test/generated/OwnerListTest.java.defaultpage-isthefirsttenbyname.genseq.puml",
+        "petclinic-test/generated/OwnerListTest.java.unfilteredtotal-countseveryowner.genseq.puml",
+        "petclinic-test/generated/owner-search.feature.choosing-5-rows-per-page.genseq.puml",
         "petclinic-test/generated/owner-search.feature.searching-with-an-empty-last-name-shows-the-first-page-of-every-owner.genseq.puml",
-        "petclinic-test/generated/owner-search.feature.sorting-by-city-descending.genseq.puml"
+        "petclinic-test/generated/owner-search.feature.sorting-by-city.genseq.puml"
       ],
       "onlyOld": [
         "petclinic-test/generated/owner-search.feature.searching-with-an-empty-last-name-lists-every-owner.genseq.puml"
       ]
     }
   },
-  "base": "fe5534397311f26d4899c1812ecdd6f9e6fa4512"
+  "base": "390f0e0efee30a2aeeaa07895560d97eafaab479"
 }

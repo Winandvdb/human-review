@@ -4,8 +4,6 @@
 HIDE_STEREOTYPE()
 skinparam hyperlinkUnderline false
 skinparam hyperlinkColor #1A4FA0
-AddElementTag("removed", $bgColor="#C62828", $fontColor="#FFFFFF", $borderColor="#8E0000", $legendText="removed by this branch")
-AddRelTag("removed", $textColor="#C62828", $lineColor="#C62828", $lineStyle=DashedLine(), $legendText="call this branch removed")
 title [[https://c4model.com/diagrams/container{What is a C2 diagram?} C2 Containers]]
 System_Boundary(c2_system, "PetClinic") {
   Container(Backend, "Backend", "Java 21 / Spring Boot 3.5", "")
@@ -18,10 +16,9 @@ System_Boundary(c2_system, "PetClinic") {
 Rel(Backend, DB, "SQL", "")
 Rel(Backend, NotificationService, "[[genseq://c2-279a196c9d{Click for the calls behind this line} HTTP ⊕]]", "1 ops")
 Rel(Backend, _module__nCommons, "[[genseq://c2-103d57f8db{Click for the calls behind this line} calls ⊕]]", "1 ops")
-Rel(Browser, Backend, "[[genseq://c2-43d2943456{Click for the calls behind this line} HTTP ⊕]]", "4 ops")
+Rel(Browser, Backend, "[[genseq://c2-32de166756{Click for the calls behind this line} HTTP ⊕]]", "4 ops")
 Rel(NotificationService, SMS_gateway, "[[genseq://c2-cb01a30b7a{Click for the calls behind this line} calls ⊕]]", "1 ops")
 Rel(NotificationService, _module__nCommons, "[[genseq://c2-e128eb6ba0{Click for the calls behind this line} calls ⊕]]", "1 ops")
-Rel(_module__nCommons, Backend, "[[genseq://c2-cd32149db2{Click for the calls behind this line} calls ⊕]]", "1 ops", $tags="removed")
-SHOW_LEGEND(true)
+Rel(_module__nCommons, Backend, "[[genseq://c2-cd32149db2{Click for the calls behind this line} calls ⊕]]", "1 ops")
 caption Diagram generated from sequence diagrams of the test traces
 @enduml

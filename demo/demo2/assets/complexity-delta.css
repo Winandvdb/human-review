@@ -19,6 +19,9 @@
 .cx-kind-cols { display:grid; grid-template-columns:1fr var(--cx-col-added) var(--cx-col-total);
     gap:.4rem; align-items:baseline; padding-right:calc(.8rem + 1px); }
 .cx-kind-cols .cx-colh { text-align:right; }
+/* "Added" is the colour of the `+2` under it; "Total" and the totals are plain, bold. */
+.cx-colh-added { color:#2e7d32; }
+.cx-colh-total { color:var(--fg); font-weight:700; }
 .cx-key { font-weight:700; }
 .cx-list { border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--card); }
 /* The grid moved off the row and onto `.cx-head`, because the row now has a second thing
@@ -115,6 +118,7 @@ details.cx-row .cx-bar { padding:7px 0; margin:-7px 0; box-sizing:content-box; }
 .cx-up .cx-badge, .cx-up.cx-key { color:var(--cx-added); }
 .cx-down .cx-badge, .cx-down.cx-key { color:var(--cx-removed); }
 .cx-n { font:600 12px/1 ui-monospace,Menlo,monospace; text-align:right; }
+.cx-head .cx-n { color:var(--fg); font-weight:700; }
 /* ── the breakdown ──────────────────────────────────────────────────────────────────
     What the bar is made of, one counted construct per line: the source line it was read
     off, and what it cost, hard right. The number on a row is an assertion about somebody
@@ -212,9 +216,11 @@ a.cx-why-line:hover code { text-decoration:underline; }
     The names are set in the UI face, not monospace: the graph is as wide as its deepest
     chain times its widest names, and a proportional face buys back a fifth of that. */
 .cg-n { display:inline-grid; grid-template-columns:auto auto; column-gap:6px;
-        align-items:center; padding:0; border:1px solid var(--line); border-radius:6px;
+        align-items:center; padding:0; border:1px solid var(--cg-hue, var(--line)); border-radius:6px;
         background:var(--card); color:inherit; white-space:nowrap; cursor:pointer;
         position:relative; z-index:1; transition:border-color .12s, background .12s; }
+.cg-h0 { --cg-hue:#f59e0b; } .cg-h1 { --cg-hue:#ec4899; } .cg-h2 { --cg-hue:#8b5cf6; }
+.cg-h3 { --cg-hue:#06b6d4; } .cg-h4 { --cg-hue:#f97316; } .cg-h5 { --cg-hue:#d946ef; }
 .cg-n:hover { border-color:var(--link); }
 .cg-n:focus-visible { outline:2px solid var(--link); outline-offset:1px; }
 /* Clicked: the box takes the link blue — frame, ring and a tint — so the one being read
@@ -222,7 +228,8 @@ a.cx-why-line:hover code { text-decoration:underline; }
 .cg-n.cg-open { border-color:var(--link); box-shadow:0 0 0 1px var(--link) inset;
                 background:color-mix(in srgb, var(--link) 12%, var(--card)); opacity:1; }
 .cg-c { grid-column:1 / 3; display:flex; align-items:center; gap:3px; height:18px;
-        box-sizing:border-box; padding:0 6px; border-bottom:1px solid var(--line);
+        box-sizing:border-box; padding:0 6px;
+        border-bottom:1px solid color-mix(in srgb, var(--cg-hue, var(--line)) 45%, var(--line));
         font:500 10.5px/14px system-ui,sans-serif; color:var(--muted); }
 .cg-m { grid-column:1; display:flex; align-items:center; height:20px; padding-left:6px;
         font:600 10.5px/14px system-ui,sans-serif; }
@@ -238,7 +245,7 @@ a.cg-go:hover { background:var(--link); color:var(--card); }
     full-size ▶, not ▸: at the name's own size ▸ was a speck, and a speck does not say
     "this opens". */
 .cg-tog { display:inline-flex; margin-right:5px; }
-.cg-tog::before { content:"\25B6\FE0E"; font-size:9px; line-height:1; color:var(--muted);
+.cg-tog::before { content:"\25B6\FE0E"; font-size:13px; line-height:1; color:var(--muted);
                   transition:transform .12s; }
 .cg-n:hover .cg-tog::before { color:var(--link); }
 .cg-open .cg-tog::before { transform:rotate(90deg); color:var(--link); }
@@ -266,6 +273,9 @@ a.cx-why-new code { color:var(--cx-added); }
 a.cx-why-new .cx-why-inc { color:var(--cx-added); }
 @media (prefers-color-scheme: dark) {
   .cx-lede, .cx-group { --cx-added:#4ec27f; --cx-removed:#9fb0d0; }
+  .cx-colh-added { color:#4ec27f; }
+  .cg-h0 { --cg-hue:#fbbf24; } .cg-h1 { --cg-hue:#f472b6; } .cg-h2 { --cg-hue:#a78bfa; }
+  .cg-h3 { --cg-hue:#22d3ee; } .cg-h4 { --cg-hue:#fb923c; } .cg-h5 { --cg-hue:#e879f9; }
   .cx-bar i { background:#3d3d4a; }
   /* The verb is the only coloured *text* on the row, and the light palette was never
      re-themed for dark: #2e7d32 on --card is 3.3:1 and #1565c0 is 2.9:1, so forty-three

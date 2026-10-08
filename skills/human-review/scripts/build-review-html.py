@@ -201,7 +201,9 @@ from hrbuild.tabs.review import (
     grade_reasons, grade_reasons_html, _first_clause, _CLAUSE_END, PILE_ROUND, _round_kicker,
     _LEDE_SHOWN, _LIST_OFFSET, _merge_seam_shas, _open_list, _pile_anchor, _raised_by,
     _ref_link, _regenerate_offer, _score_target, _tooling_commit_shas,
-    gh_comment_link, prepare_pr_push, pr_comment_slug, PR_COMMENTS_JSON, PR_PILE_LETTER,
+    gh_comment_link, prepare_pr_push, attach_pr_body, pr_description_html, pr_body_html,
+    _md_inline, PR_BODY_JSON, _PULL_URL, _PR_BODY_BOILERPLATE, pr_comment_slug, PR_COMMENTS_JSON,
+    PR_PILE_LETTER,
     PR_POSTED_JSON, PR_PUSH_JS, push_pr_button, push_pr_dialog, PUSH_PR_ACTION,
     PUSH_PR_DRY_ACTION, _PR_SLUG_MAX, PR_PREVIEW_TAG, PR_RESULT_TAG, _payload_changed,
     VSCODE_PR_URI, vscode_pr_uri, vscode_pr_link, _PR_URL, VSC_ICON, vscode_file_link,
@@ -416,6 +418,7 @@ def _main(argv=None) -> int:
     # them as lists. This is the point at which the branch's own record becomes the page's.
     resolve_review_points(spec, out_dir)
     prepare_pr_push(spec, out_dir, root, HERE)
+    attach_pr_body(spec, out_dir, root)
     # The Tests tab's matrix is drawn from its inputs here, before `own_layout` looks for
     # the fragment: the ticket, the coverage and the pairing (tests.py:scripted_reqmap).
     scripted_reqmap(spec, out_dir, root)

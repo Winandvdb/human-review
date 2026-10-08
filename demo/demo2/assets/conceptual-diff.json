@@ -25,15 +25,16 @@
     "in": "the Finder"
   },
   "tested_against": "Java Domain Model",
+  "tested_against_path": "/Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated/petclinic-backend/src/main/java/victor/training/petclinic/domain",
   "rerun": {
     "cwd": "/Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated",
-    "command": "/Users/victorrentea/workspace/human-review/skills/human-review/scripts/drawio-diff.py --base f78a360af2d7329451d88b900fe9b3619869e843 --diagram petclinic-backend/docs/ConceptualModel.drawio.png --concepts petclinic-backend/docs/generated/DomainModel.puml --out-dir .human-review/assets --name conceptual --redraw 'python3 petclinic-backend/docs/scripts/conceptual-model-patch.py' --tested-against 'Java Domain Model'"
+    "command": "/Users/victorrentea/workspace/human-review/skills/human-review/scripts/drawio-diff.py --base fe5534397311f26d4899c1812ecdd6f9e6fa4512 --diagram petclinic-backend/docs/ConceptualModel.drawio.png --concepts petclinic-backend/docs/generated/DomainModel.puml --out-dir .human-review/assets --name conceptual --redraw 'python3 petclinic-backend/docs/scripts/conceptual-model-patch.py' --tested-against 'Java Domain Model' --tested-against-path petclinic-backend/src/main/java/victor/training/petclinic/domain"
   },
   "redraw": {
     "cwd": "/Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated",
-    "command": "git checkout f78a360af2d7329451d88b900fe9b3619869e843 -- petclinic-backend/docs/ConceptualModel.drawio.png && python3 petclinic-backend/docs/scripts/conceptual-model-patch.py",
+    "command": "git checkout fe5534397311f26d4899c1812ecdd6f9e6fa4512 -- petclinic-backend/docs/ConceptualModel.drawio.png && python3 petclinic-backend/docs/scripts/conceptual-model-patch.py",
     "diagram": "petclinic-backend/docs/ConceptualModel.drawio.png",
-    "base": "f78a360af2d7329451d88b900fe9b3619869e843"
+    "base": "fe5534397311f26d4899c1812ecdd6f9e6fa4512"
   },
   "revert": {
     "cwd": "/Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated",

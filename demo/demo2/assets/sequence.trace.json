@@ -1,12 +1,12 @@
 {
  "diagram": "petclinic-test/generated/OwnerListTest.java.response-isanobjectwithexactlycontentandtotalelements.genseq.puml",
  "test": "OwnerListTest.java",
- "trace": "f4c6127b70c37428a2420249ad85e4d1",
+ "trace": "667ccd2e4538b19d85633f937983c970",
  "traces": 1,
  "spans": 10,
  "services": [
   "petclinic-backend"
  ],
  "root": "test: response_isAnObjectWithExactlyContentAndTotalElements()",
- "at": "2026-10-05T17:53:03+00:00"
+ "at": "2026-10-06T10:05:21+00:00"
 }

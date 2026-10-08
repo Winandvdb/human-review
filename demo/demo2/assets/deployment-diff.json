@@ -19,8 +19,13 @@
       "Pet Owner \u2192 Frontend",
       "Veterinarian \u2192 Frontend"
     ],
-    "undrawn": [],
-    "unmapped": [],
+    "undrawn": [
+      "Backend \u2192 \u00abmodule\u00bb\\nCommons",
+      "NotificationService \u2192 \u00abmodule\u00bb\\nCommons"
+    ],
+    "unmapped": [
+      "\u00abmodule\u00bb\\nCommons"
+    ],
     "source": ".human-review/assets/c2/C2-Containers.json"
   },
   "linked_concepts": [],
@@ -37,7 +42,13 @@
   "tested_against": "traced sequence diagrams",
   "rerun": {
     "cwd": "/Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated",
-    "command": "/Users/victorrentea/workspace/human-review/skills/human-review/scripts/drawio-diff.py --base f78a360af2d7329451d88b900fe9b3619869e843 --diagram petclinic-backend/docs/Deployment.drawio.png --out-dir .human-review/assets --name deployment --traces .human-review/assets/c2/C2-Containers.json --tested-against 'traced sequence diagrams'"
+    "command": "/Users/victorrentea/workspace/human-review/skills/human-review/scripts/drawio-diff.py --base fe5534397311f26d4899c1812ecdd6f9e6fa4512 --diagram petclinic-backend/docs/Deployment.drawio.png --out-dir .human-review/assets --name deployment --traces .human-review/assets/c2/C2-Containers.json --tested-against 'traced sequence diagrams'"
+  },
+  "redraw": {
+    "cwd": "/Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated",
+    "command": "git checkout fe5534397311f26d4899c1812ecdd6f9e6fa4512 -- petclinic-backend/docs/Deployment.drawio.png",
+    "diagram": "petclinic-backend/docs/Deployment.drawio.png",
+    "base": "fe5534397311f26d4899c1812ecdd6f9e6fa4512"
   },
   "revert": {
     "cwd": "/Users/victorrentea/workspace/petclinic-pr-owner-grid-paginated",

@@ -1,17 +1,50 @@
 {
- "base": "f78a360af2d7329451d88b900fe9b3619869e843",
+ "base": "fe5534397311f26d4899c1812ecdd6f9e6fa4512",
  "head": "HEAD",
  "points_file": "review-points.md",
- "commits": 3,
+ "commits": 23,
  "implementation": "f242cbeec80c39c01da33a33e5a121fb975d6d41",
  "review": "810678122004a60220d5aefbcb5249793a33057a",
  "session": "e7cc9112-be45-4d7b-9c2e-741d6e6f951b",
  "fallback": false,
- "after": [],
- "after_detail": [],
+ "after": [
+  "22297bfca5b7eecf9bc3a433f5501047bb025ba1",
+  "c525977b78a1c8a20286e896c7a208872fb7bf79",
+  "806e3de6fa71eb272b3b45d4958485af36ba3737"
+ ],
+ "after_detail": [
+  {
+   "sha": "22297bfca5b7eecf9bc3a433f5501047bb025ba1",
+   "when": "2026-10-06T11:33:08+02:00",
+   "subject": "Merge remote-tracking branch 'origin/main' into hr-claude-18",
+   "auto_fix": false
+  },
+  {
+   "sha": "c525977b78a1c8a20286e896c7a208872fb7bf79",
+   "when": "2026-10-06T11:34:51+02:00",
+   "subject": "Merge remote-tracking branch 'origin/main' into hr-claude-18",
+   "auto_fix": false
+  },
+  {
+   "sha": "806e3de6fa71eb272b3b45d4958485af36ba3737",
+   "when": "2026-10-06T12:08:30+02:00",
+   "subject": "Owners grid: diagrams re-traced after merging main, review-points base moves to fe553439",
+   "auto_fix": false
+  }
+ ],
  "review_when": "2026-10-05T21:20:27+03:00",
  "takeover": null,
  "auto_fixes": [
+  {
+   "sha": "44c8da18a26129ea683df492beed502b1a54b285",
+   "when": "2026-10-05T19:19:33+03:00",
+   "subject": "[auto-fix] Owners grid review: consistent controls after a failed load, no echoed input in 400s, firmer tests"
+  },
+  {
+   "sha": "6294d366faabe26897f0f4595f0beb8e361525ac",
+   "when": "2026-10-05T19:59:56+03:00",
+   "subject": "Revert \"[auto-fix] Owners grid review: consistent controls after a failed load, no echoed input in 400s, firmer tests\""
+  },
   {
    "sha": "810678122004a60220d5aefbcb5249793a33057a",
    "when": "2026-10-05T21:20:27+03:00",
@@ -19,7 +52,10 @@
   }
  ],
  "review_commits": [
+  "44c8da18a26129ea683df492beed502b1a54b285",
   "810678122004a60220d5aefbcb5249793a33057a"
  ],
- "warnings": []
+ "warnings": [
+  "2 commits carry a Review-Points trailer (44c8da18, 81067812); taking the last one as the review commit. The fixes are read from the implementation to it, so every one of them counts as a fix commit \u2014 one round recorded in 2 commits, or several rounds; record-review's finish now amends its own unpushed commit instead."
+ ]
 }

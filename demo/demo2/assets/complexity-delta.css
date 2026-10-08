@@ -6,11 +6,19 @@
 .cx-lede a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
 .cx-lede a:hover { color:var(--link); }
 .cx-lede { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; }
-.cx-group { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; }
+/* The last two columns of a row — the delta and the score — are named once, on the
+    group's header line, so their widths live here and both grids read them: a label that
+    copied the numbers would drift off its column the day one of them is widened. */
+.cx-group { --cx-added:#2e9e5b; --cx-removed:#5b6b8c; --cx-col-added:4.4rem; --cx-col-total:2.2rem; }
 .cx-group + .cx-group { margin-top:1.1rem; }
 .cx-kind { font:600 11px/1 system-ui,sans-serif; text-transform:uppercase; letter-spacing:.07em;
             color:var(--muted); margin:0 0 .35rem .15rem; }
 .cx-count { opacity:.65; font-weight:400; }
+/* Same tracks and the same right edge as `.cx-head`: its .8rem right padding plus the
+    list's 1px border. */
+.cx-kind-cols { display:grid; grid-template-columns:1fr var(--cx-col-added) var(--cx-col-total);
+    gap:.4rem; align-items:baseline; padding-right:calc(.8rem + 1px); }
+.cx-kind-cols .cx-colh { text-align:right; }
 .cx-key { font-weight:700; }
 .cx-list { border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--card); }
 /* The grid moved off the row and onto `.cx-head`, because the row now has a second thing
@@ -26,7 +34,8 @@
     one: at 3.6rem + .55rem a `GET` sat 46px from its own path and read as two columns of
     unrelated things. The caret column in front is the fold's second handle, next to the
     word a reader looks at first. */
-.cx-head { display:grid; grid-template-columns:1.1rem 2.45rem minmax(9rem,17rem) 1fr 4.4rem 2.2rem;
+.cx-head { display:grid; grid-template-columns:1.1rem 2.45rem minmax(9rem,17rem) 1fr
+              var(--cx-col-added) var(--cx-col-total);
           align-items:center; gap:.4rem; padding:.3rem .8rem .3rem .5rem; font-size:.84rem;
           cursor:default; list-style:none; }
 /* The full-size triangles (U+25B6/U+25BC, forced to text with U+FE0E so macOS does not
@@ -69,6 +78,11 @@ details.cx-row.cx-same:hover { opacity:.9; }
 .cx-cell { display:flex; align-items:center; gap:3px; min-width:0; overflow:hidden; }
 .cx-cell .cx-path { flex:0 1 auto; min-width:0; }
 .cx-cell a.cg-go { flex:none; }
+/* Calls the engine could not bind: not in the number, so the row says so, in amber — a
+    caveat about the measurement, not about the code. */
+.cx-nf { flex:none; margin-left:4px; padding:1px 5px; border-radius:8px; white-space:nowrap;
+         font:600 10px/1.3 system-ui,sans-serif; color:#8a5300; background:#fff3dc;
+         border:1px solid #e9c784; cursor:help; }
 /* `display:block` is what makes the ellipsis appear. `text-overflow` only applies to a
     block container, and <code> is inline — so the rule was there, doing nothing, while the
     link's own `overflow:hidden` chopped the path mid-token. `POST /api/owners/{ownerId}
@@ -262,6 +276,7 @@ a.cx-why-new .cx-why-inc { color:var(--cx-added); }
      red invented here. */
   .cx-get{color:#8fd39c}.cx-post{color:#8ab4f8}.cx-put{color:#e0a33c}.cx-delete{color:#f08a8a}
   .cx-patch{color:#c9a0ff}.cx-mcp{color:#b39dff}.cx-job{color:#e0a33c}
+  .cx-nf { background:#3a2d12; color:#f0c069; border-color:#6b5423; }
   .cx-kafka,.cx-rabbit,.cx-jms{color:#4dd0e1}
 }
 

@@ -61,6 +61,60 @@
    "left": "no traced suite runs this file"
   },
   {
+   "path": "petclinic-commons/src/test/java/victor/training/commons/PhoneNumbersTest.java",
+   "name": "keepsOnlyTheDigitsAndAnInternationalPlus",
+   "line": 16,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "petclinic-commons/src/test/java/victor/training/commons/PhoneNumbersTest.java",
+   "name": "givesANationalNumberTheHomeDialCode",
+   "line": 25,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "petclinic-commons/src/test/java/victor/training/outside/ModuleBoundaryTracingTest.java",
+   "name": "aCallIntoCommonsIsASpanOnTheModuleLifelineButTheCallsInsideItAreNot",
+   "line": 28,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "petclinic-commons/src/test/java/victor/training/outside/ModuleBoundaryTracingTest.java",
+   "name": "aCallFromCommonsBackOutIsASpanNestedInTheOneThatEntered",
+   "line": 43,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "petclinic-commons/src/test/java/victor/training/outside/ModuleBoundaryTracingTest.java",
+   "name": "reEnteringCommonsFromAppCodeIsACrossingAgain",
+   "line": 55,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "petclinic-commons/src/test/java/victor/training/outside/ModuleBoundaryTracingTest.java",
+   "name": "readingASharedRecordIsNotACallIntoTheModule",
+   "line": 65,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
    "path": "petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts",
    "name": "asks once for the first page of 10 by name ascending",
    "line": 92,
@@ -268,6 +322,177 @@
    "left": "no traced suite runs this file"
   },
   {
+   "path": "petclinic-test/src/genseq/code-location.spec.ts",
+   "name": "a class from the shared library links into the library, whichever service ran it",
+   "line": 108,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "petclinic-test/src/genseq/trace-to-puml.spec.ts",
+   "name": "a lifeline declared with a stereotype names its kind above it",
+   "line": 767,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "inlinesSingleUseIntoReturn",
+   "line": 29,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "inlinesNewClassInitializer",
+   "line": 54,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "inlinesIntoFollowingCallStatement",
+   "line": 83,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "inlinesTwoIndependentVariablesAcrossCycles",
+   "line": 108,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "keepsVariableUsedTwice",
+   "line": 143,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "keepsVariableUsedAsReceiverThenArgument",
+   "line": 161,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "keepsUnusedVariable",
+   "line": 179,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "keepsVariableWhoseOnlyMentionIsAReassignment",
+   "line": 194,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "keepsWhenUseIsNotTheAdjacentStatement",
+   "line": 210,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "keepsWhenSingleUseIsInsideALoop",
+   "line": 228,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "keepsWhenSingleUseIsInsideALambda",
+   "line": 246,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "keepsPrecedenceUnsafeBinaryInitializer",
+   "line": 262,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+   "name": "keepsTernaryInitializer",
+   "line": 276,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/ListGetFirstTest.java",
+   "name": "rewritesGetZeroToGetFirst",
+   "line": 21,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/ListGetFirstTest.java",
+   "name": "rewritesGetZeroOnAChainedReceiver",
+   "line": 43,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/ListGetFirstTest.java",
+   "name": "leavesOtherIndexesAlone",
+   "line": 67,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
+   "path": "refactoring-tools/src/test/java/victor/training/petclinic/rewrite/ListGetFirstTest.java",
+   "name": "leavesNonListGetAlone",
+   "line": 81,
+   "status": "added",
+   "why": "written by this branch",
+   "suite": null,
+   "left": "no traced suite runs this file"
+  },
+  {
    "path": "petclinic-backend/src/test/java/victor/training/petclinic/rest/OwnerListTest.java",
    "name": "allowedSizes_returnThatManyRows",
    "line": 86,
@@ -457,6 +682,24 @@
    "left": "over the cap of 6 traced tests"
   },
   {
+   "path": "petclinic-backend/src/test/java/victor/training/petclinic/guardrail/DeploymentDiagramTest.java",
+   "name": "everyArrowTheDiagramCallsTracedReallyHappened",
+   "line": 85,
+   "status": "modified",
+   "why": "edited by this branch",
+   "suite": "java",
+   "left": "over the cap of 6 traced tests"
+  },
+  {
+   "path": "petclinic-backend/src/test/java/victor/training/petclinic/guardrail/DeploymentDiagramTest.java",
+   "name": "everyCallTheTracesRecordedIsOnTheDiagram",
+   "line": 97,
+   "status": "modified",
+   "why": "edited by this branch",
+   "suite": "java",
+   "left": "over the cap of 6 traced tests"
+  },
+  {
    "path": "petclinic-backend/src/test/java/victor/training/petclinic/perf/OwnerSearchThroughLatencyProxyTest.java",
    "name": "ownerSearchThroughProxy",
    "line": 54,
@@ -523,20 +766,20 @@
  "runs": [
   {
    "command": "cd petclinic-test && GENSEQ_SELECT={tests.e2e} ./run-tests-with-tracing.sh",
-   "seconds": 35.7
+   "seconds": 115.4
   },
   {
    "command": "cd petclinic-backend && mvn -o -Pgenseq test -Dgroups=genseq",
-   "seconds": 17.2
+   "seconds": 78.4
   },
   {
    "command": "cd petclinic-backend && GENSEQ_SELECT={tests.java} mvn -o -Pgenseq test -Dtest={tests.java} -Dsurefire.failIfNoSpecifiedTests=false",
-   "seconds": 19.1
+   "seconds": 17.7
   },
   {
    "command": "cd petclinic-test && GENSEQ_REFRESH=1 npm run trace:diagram",
-   "seconds": 5.4
+   "seconds": 9.2
   }
  ],
- "at": "2026-10-05T17:53:08+00:00"
+ "at": "2026-10-06T10:05:26+00:00"
 }

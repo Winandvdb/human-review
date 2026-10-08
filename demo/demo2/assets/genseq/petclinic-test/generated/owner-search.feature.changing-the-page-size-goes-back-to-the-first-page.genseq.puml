@@ -19,7 +19,7 @@ Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petc
 activate Backend
 Backend -> DB: [[genseq://075m496{Click for the statement behind this call} SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type … ⊕]]
 deactivate Backend
-Backend --> Browser: [[genseq://0zske0a{Click for this call’s JSON body} 200 ⊕]]
+Backend --> Browser: [[genseq://159qzfj{Click for this call’s JSON body} 200 ⊕]]
 deactivate Backend
 Browser -> Backend: List owners\nGET /api/owners
 activate Backend
@@ -32,7 +32,7 @@ Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petc
 activate Backend
 Backend -> DB: [[genseq://13u55dm{Click for the statement behind this call} SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type … ⊕]]
 deactivate Backend
-Backend --> Browser: [[genseq://08ivfs9{Click for this call’s JSON body} 200 ⊕]]
+Backend --> Browser: [[genseq://0m06vkh{Click for this call’s JSON body} 200 ⊕]]
 deactivate Backend
 Browser -> Backend: List owners\nGET /api/owners
 activate Backend
@@ -45,6 +45,6 @@ Backend -> Backend: [[src://petclinic-backend/src/main/java/victor/training/petc
 activate Backend
 Backend -> DB: [[genseq://124lm32{Click for the statement behind this call} SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type … ⊕]]
 deactivate Backend
-Backend --> Browser: [[genseq://1171ft9{Click for this call’s JSON body} 200 ⊕]]
+Backend --> Browser: [[genseq://1r86arc{Click for this call’s JSON body} 200 ⊕]]
 deactivate Backend
 @enduml

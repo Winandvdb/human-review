@@ -1,5 +1,5 @@
   * reviewpoints -> review
-    $ /Users/victorrentea/.claude/plugins/cache/human-review/human-review/15f042eb4922/skills/human-review/scripts/review-points.py --root . --out .human-review/review-points.json
+    $ /Users/victorrentea/.claude/plugins/cache/human-review/human-review/ca04dd2071fd/skills/human-review/scripts/review-points.py --root . --out .human-review/review-points.json
 review-points.md: 20 item(s) in 4 fixed, 10 ignored, 6 assumptions
   Fixed        (Fixed)
       · Line over 119 chars blocked the push   [2 ref, 2 snippet, medium, from pre-push hook]
@@ -25,9 +25,9 @@ review-points.md: 20 item(s) in 4 fixed, 10 ignored, 6 assumptions
       · A failure hides the grid instead of keeping stale rows   [1 ref, 1 snippet, confidence 0.55]
       · An empty page within a non-empty result shows a &quot;go back&quot; ro   [1 ref, 1 snippet, confidence 0.65]
   fixed in     HEAD
-  base: 7a75ccf2148c7e0df6600ca8141bac46ea40400c · implementation: 97e09d9a0c4d64e4a8ae1f0d5c2b1dc7d2c19d86 · reviewers: 4 read-only Sonnet subagents (correctness, security, ticket-fit, tests) on the RR briefs · session: e7cc9112-be45-4d7b-9c2e-741d6e6f951b
+  base: fe5534397311f26d4899c1812ecdd6f9e6fa4512 · implementation: f242cbeec80c39c01da33a33e5a121fb975d6d41 · reviewers: 4 read-only Sonnet subagents (correctness, security, ticket-fit, tests) on the RR briefs · session: e7cc9112-be45-4d7b-9c2e-741d6e6f951b
   wrote  .human-review/review-points.json
 [review-points] WARNING: Fixed: "A failed load dropped the user's place with no retry" (line 32) — `file: petclinic-frontend/src/app/owners/owner-list/owner-list.component.spec.ts:244-256` spans 13 lines; anchor the lines that do the thing (the page opens 12 and folds the rest).
 [review-points] WARNING: Ignored: 'Issue #25 comment and Bizu notification not done' (line 78) — `why:` rests on 'tasks.md' without the file:line it cites. Give it (`openspec/changes/<change>/design.md:50`, `Q&A.md:28`) so the page can link the line and quote it.
-    $ git merge-base 7a75ccf2148c7e0df6600ca8141bac46ea40400c HEAD
-    $ /Users/victorrentea/.claude/plugins/cache/human-review/human-review/15f042eb4922/skills/human-review/scripts/review-commits.py --base 7a75ccf2148c7e0df6600ca8141bac46ea40400c --json
+    $ git merge-base fe5534397311f26d4899c1812ecdd6f9e6fa4512 HEAD
+    $ /Users/victorrentea/.claude/plugins/cache/human-review/human-review/ca04dd2071fd/skills/human-review/scripts/review-commits.py --base fe5534397311f26d4899c1812ecdd6f9e6fa4512 --json

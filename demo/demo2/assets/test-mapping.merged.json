@@ -1095,5 +1095,9 @@
    "gap": "No test shows that the chatbot or MCP tools and the other in-repository consumers read the page envelope.",
    "by": "model"
   }
- ]
+ ],
+ "stale": {
+  "why": "test-mapping.json (05 Oct 19:00) is older than test-coverage.json (05 Oct 20:09)",
+  "command": "rerun-model.py"
+ }
 }

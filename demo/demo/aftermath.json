@@ -1,7 +1,7 @@
 {
  "review": "be762955d5f477feeca0f7db55e32fa1c2fb8db5",
  "review_short": "be762955",
- "head": "44689ad3e4b358abf0aff2baba66859b5565cd5a",
+ "head": "10d7ced178746ad377c81e79184b580338c39bee",
  "takeover": null,
  "generated_globs": [
   "**/generated/**",
@@ -467,22 +467,133 @@
    "measured": false,
    "taken_over": false,
    "takeover": false
+  },
+  {
+   "sha": "db57f1b45fa37949f9e14a04f930178b6f898877",
+   "short": "db57f1b4",
+   "when": "2026-10-08T06:40:21+01:00",
+   "subject": "C4: add notification-service and SMS gateway to C2, wire Notification component, theme default",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/c4model.c1+c2.dsl",
+     "added": 7,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 7,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "24af8d668bdf9fb606baa62f5e5cadc0f2b662d3",
+   "short": "24af8d66",
+   "when": "2026-10-08T06:40:21+01:00",
+   "subject": "Merge origin/main into test-pr",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C1-Context.puml",
+     "added": 2,
+     "deleted": 0,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C2-BackendOutbound.puml",
+     "added": 2,
+     "deleted": 0,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C2-Containers.puml",
+     "added": 4,
+     "deleted": 0,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C3-Components-All.puml",
+     "added": 3,
+     "deleted": 0,
+     "binary": false,
+     "generated": true
+    }
+   ],
+   "added": 11,
+   "deleted": 0,
+   "generated_only": true,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "37aa569cc272355e72c4eed73d92c1e81d4bc474",
+   "short": "37aa569c",
+   "when": "2026-10-08T06:42:39+01:00",
+   "subject": "C4: inline styles instead of the defunct cloud 'theme default'",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/c4model.c1+c2.dsl",
+     "added": 32,
+     "deleted": 3,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C2-BackendOutbound.puml",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C2-Containers.puml",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": true
+    }
+   ],
+   "added": 34,
+   "deleted": 5,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "10d7ced178746ad377c81e79184b580338c39bee",
+   "short": "10d7ced1",
+   "when": "2026-10-08T06:42:39+01:00",
+   "subject": "Merge origin/main into test-pr",
+   "files": [],
+   "added": 0,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": false,
+   "taken_over": false,
+   "takeover": false
   }
  ],
  "totals": {
-  "commits": 12,
-  "files": 36,
-  "added": 613,
-  "deleted": 178,
+  "commits": 16,
+  "files": 41,
+  "added": 663,
+  "deleted": 181,
   "code": {
-   "files": 30,
-   "added": 492,
-   "deleted": 51
+   "files": 31,
+   "added": 529,
+   "deleted": 52
   },
   "generated": {
-   "files": 6,
-   "added": 121,
-   "deleted": 127
+   "files": 10,
+   "added": 134,
+   "deleted": 129
   }
  },
  "clean": false

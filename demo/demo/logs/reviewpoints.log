@@ -27,4 +27,4 @@ review-points.md: 19 item(s) in 4 fixed, 9 ignored, 6 assumptions
   base: 2f17c04983ba84ecf38cf0b1515de0bf3af88b7a · implementation: 1bcf74d4f14a165cabaaa7e9cd1cc5faaa3311b1 · reviewers: 4 read-only Sonnet subagents (correctness, security, ticket-fit, tests briefs) · session: 82329d0a-55d2-448f-aff5-0363cf80b32f
   wrote  .human-review/review-points.json
     $ git merge-base origin/main HEAD
-    $ /Users/victorrentea/workspace/human-review/skills/human-review/scripts/review-commits.py --base a02544760c34305833f81a6ee2908decd39cf907 --json
+    $ /Users/victorrentea/workspace/human-review/skills/human-review/scripts/review-commits.py --base b6b53c658bce43a871a327f4feffb94cedd79723 --json

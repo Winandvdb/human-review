@@ -1,8 +1,8 @@
 {
- "base": "a02544760c34305833f81a6ee2908decd39cf907",
+ "base": "b6b53c658bce43a871a327f4feffb94cedd79723",
  "head": "HEAD",
  "points_file": "review-points.md",
- "commits": 78,
+ "commits": 82,
  "implementation": "1bcf74d4f14a165cabaaa7e9cd1cc5faaa3311b1",
  "review": "be762955d5f477feeca0f7db55e32fa1c2fb8db5",
  "session": "82329d0a-55d2-448f-aff5-0363cf80b32f",
@@ -19,7 +19,11 @@
   "c31ba5ec7721e7417cd0c0c4b46dcd848078ec56",
   "1114f3ba5289e808a7839807c8348a417a5ab302",
   "6b4b63bef60f0902fa253b495c5cafec2a62746d",
-  "44689ad3e4b358abf0aff2baba66859b5565cd5a"
+  "44689ad3e4b358abf0aff2baba66859b5565cd5a",
+  "db57f1b45fa37949f9e14a04f930178b6f898877",
+  "24af8d668bdf9fb606baa62f5e5cadc0f2b662d3",
+  "37aa569cc272355e72c4eed73d92c1e81d4bc474",
+  "10d7ced178746ad377c81e79184b580338c39bee"
  ],
  "after_detail": [
   {
@@ -91,6 +95,30 @@
   {
    "sha": "44689ad3e4b358abf0aff2baba66859b5565cd5a",
    "when": "2026-10-07T21:13:55+02:00",
+   "subject": "Merge origin/main into test-pr",
+   "auto_fix": false
+  },
+  {
+   "sha": "db57f1b45fa37949f9e14a04f930178b6f898877",
+   "when": "2026-10-08T06:40:21+01:00",
+   "subject": "C4: add notification-service and SMS gateway to C2, wire Notification component, theme default",
+   "auto_fix": false
+  },
+  {
+   "sha": "24af8d668bdf9fb606baa62f5e5cadc0f2b662d3",
+   "when": "2026-10-08T06:40:21+01:00",
+   "subject": "Merge origin/main into test-pr",
+   "auto_fix": false
+  },
+  {
+   "sha": "37aa569cc272355e72c4eed73d92c1e81d4bc474",
+   "when": "2026-10-08T06:42:39+01:00",
+   "subject": "C4: inline styles instead of the defunct cloud 'theme default'",
+   "auto_fix": false
+  },
+  {
+   "sha": "10d7ced178746ad377c81e79184b580338c39bee",
+   "when": "2026-10-08T06:42:39+01:00",
    "subject": "Merge origin/main into test-pr",
    "auto_fix": false
   }

@@ -455,8 +455,13 @@
    one line. */
 .reqmap .rm-tgroup[data-sec=yes]{text-transform:none;letter-spacing:0;font-size:12px;
   color:var(--fg,#1c1c1c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.reqmap .rm-rej{margin:.2em 0 0;padding-left:1.2em;font-size:12.5px}
-.reqmap .rm-rid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
+/* The "!" that holds the keyword matches a model turned down for the selected sentence:
+   a round amber mark at the end of the legend, the blind spot's own orange. */
+.reqmap .rm-rejmark{display:inline-flex;align-items:center;justify-content:center;
+  width:1.5em;height:1.5em;padding:0;border:1px solid var(--rm-o-edge);border-radius:50%;
+  background:rgba(214,122,10,.12);color:var(--rm-o-edge);font-family:inherit;font-size:1em;font-weight:700;
+  line-height:1;cursor:pointer}
+.reqmap .rm-rejmark[hidden]{display:none}
 .reqmap .rm-dec{margin:.2em 0 0;font-size:12.5px;color:var(--muted,#6b6b6b)}
 /* The two "untouched and unpaired" groups, folded behind one button that counts them: tests
    about something else that only happen to run a changed line. A row-wide quiet control in
@@ -956,7 +961,7 @@
       delete row.dataset.hit;
       var b=row.querySelector('.rm-cat');if(b)delete b.dataset.strength;
       row.querySelector('.rm-thead').removeAttribute('data-tip');});
-    gap.innerHTML='';gap.hidden=true;
+    gap.innerHTML='';gap.hidden=true;rejMark(null);
   }
   list.addEventListener('click',function(e){
     var fb=e.target.closest('.rm-fold');                // semcov: show/hide the folded rest
@@ -981,6 +986,22 @@
       +'" data-tip="Open in VS Code" target="_blank" rel="noopener">'+esc(s.decisionWhere)+'</a>'
       :esc(s.decisionWhere);
     return 'Recorded in '+w+': '+esc(s.decisionQuote||s.decision);
+  }
+  // semcov: the links a model read and turned down. They were a second box under the
+  // blind spot, and on a short screen that box ate the ticket the reader was selecting
+  // from (Victor, 8 Oct 2026: "it obscures the vision"). Now one "!" at the end of the
+  // colour legend, there only when the selected sentence has any; the list is its tip.
+  function rejMark(rej){
+    var lg=root.querySelector('.rm-legend');if(!lg)return;
+    var b=lg.querySelector('.rm-rejmark');
+    if(!rej||!rej.length){if(b)b.hidden=true;return;}
+    if(!b){b=document.createElement('button');b.type='button';b.className='rm-rejmark';
+      b.textContent='!';lg.appendChild(b);}
+    b.setAttribute('aria-label',rej.length+' keyword matches rejected by AI');
+    b.setAttribute('data-tip-html','<p class="tipfoot">Matched on words, rejected by 🤖</p>'
+      +'<ul class="tiplist prose">'+rej.map(function(r){
+        return '<li><code>'+esc(where(r.id))+'</code> \u2014 '+esc(r.why)+'</li>';}).join('')+'</ul>');
+    b.hidden=false;
   }
   function open(sid){
     var s=D.sentences[sid];if(!s)return;
@@ -1013,16 +1034,12 @@
     // The two are different findings and go to different people.
     var kind=s.gapKind==='requirement'?'in the requirement':'in the tests';
     gap.dataset.kind=s.gapKind||'tests';
-    // semcov: the links a model read and turned down, under the blind spot - the keyword
-    // match that would have painted this sentence, and the one line on why it does not count.
-    var rej=(s.rejected||[]).map(function(r){
-      return '<li><span class="rm-rid">'+esc(where(r.id))+'</span> \u2014 '+esc(r.why)+'</li>';}).join('');
     var head=s.cov==='narrowed'?'Narrowed on purpose':'Blind spot';
-    gap.innerHTML=(s.gap?'<h4>'+head+' <span class="rm-gapkind">'+kind+'</span>'
+    gap.innerHTML=s.gap?'<h4>'+head+' <span class="rm-gapkind">'+kind+'</span>'
       +(s.by==='model'?'<sup class="rm-ai" data-tip="as inferred by AI">🤖</sup>':'')+'</h4><p>'+esc(s.gap)+'</p>'
-      +(s.decision?'<p class="rm-dec">'+recorded(s)+'</p>':''):'')
-      +(rej?'<h4>Matched on words, rejected by AI <sup class="rm-ai">🤖</sup></h4><ul class="rm-rej">'+rej+'</ul>':'');
-    gap.hidden=!(s.gap||rej);
+      +(s.decision?'<p class="rm-dec">'+recorded(s)+'</p>':''):'';
+    gap.hidden=!s.gap;
+    rejMark(s.rejected);
     bringIn(sideCol,Array.prototype.filter.call(list.querySelectorAll('.rm-t[data-hit=yes]'),
       function(r){return r.dataset.catoff!=='yes';}));
   }

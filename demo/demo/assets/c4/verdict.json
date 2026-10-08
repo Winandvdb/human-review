@@ -1,18 +1,8 @@
 {
- "state": "drawn",
- "reason": "",
- "fingerprint": "2a24cdfba0054edb51f8",
+ "state": "unavailable",
+ "reason": "Python Playwright is not installed (pip install playwright && playwright install chromium)",
+ "fingerprint": "79cb98df8e7e78acbd1f",
  "workspaces": [
   "petclinic-backend/docs/c4model.c1+c2.dsl"
- ],
- "image": "structurizr/structurizr",
- "base": "a02544760c34305833f81a6ee2908decd39cf907",
- "views": {
-  "C2-Containers": "unchanged",
-  "C2-BackendOutbound": "unchanged",
-  "C3-Components-All": "unchanged",
-  "C3-Repository": "unchanged",
-  "C3-Mapper": "unchanged",
-  "C1-Context": "unchanged"
- }
+ ]
 }

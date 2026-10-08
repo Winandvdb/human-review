@@ -312,7 +312,7 @@ def warn_stale_pairing(stale: dict) -> None:
     runs the model: the pairing is the one paid step, and only a human starts it."""
     bar = "!" * 78
     print(f"[refresh] {bar}\n[refresh] WARNING: the Tests tab's pairing predates the coverage "
-          f"run — {stale['why']}.\n[refresh] The page says so over the ticket. Re-run the "
+          f"run — {stale['why']}.\n[refresh] The page says so, as a !🤖 pill after the ticket checkbox. Re-run the "
           f"pairing step (a paid model call), then refresh:\n[refresh]   "
           f"{stale.get('command') or 'rerun-model.py'}\n[refresh] {bar}", file=sys.stderr)
 

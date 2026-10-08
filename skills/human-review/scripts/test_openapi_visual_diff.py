@@ -565,6 +565,19 @@ def test_an_operation_reads_as_a_diff_not_as_a_console():
     assert "tr.response.dv-folded td.response-col_description > :not(" in t
 
 
+def test_the_changes_badge_is_the_tab_of_a_box_around_the_change_lines():
+    """Victor, 8 Oct 2026: the change list was mysterious once the operation opened. The
+    "N CHANGES" badge is now the folder tab of a tinted box around the lines, joined by
+    concave arcs; the blue rule under an open header is gone; status lines are tinted
+    (2xx green, 4xx/5xx red) with one font size; an empty "Default value :" is hidden."""
+    t = ovd.TEMPLATE
+    assert "function dressNote(op)" in t and "dressNote(op);" in t
+    assert ".dv-rail-fil" in t and ".dv-note > .dv-rail" in t and ".dv-rail > .dv-badge" in t
+    assert ".swagger-ui .opblock.is-open .opblock-summary { border-bottom: 0 !important; }" in t
+    assert 'tr.response[data-code^="2"]' in t and 'tr.response:is([data-code^="4"], [data-code^="5"])' in t
+    assert "function hideEmptyDefaults()" in t and ".parameter__default.dv-empty" in t
+
+
 def test_the_skill_copy_and_the_public_repo_copy_have_not_drifted():
     """`openapi-visual-diff.py` lives twice: here, and as its own public repo. A fix in
     one and not the other is a trap for whoever reads the other one."""

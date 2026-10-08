@@ -102,6 +102,13 @@
     });
   }
   function run() { document.querySelectorAll('button.hrx-i[data-explain]').forEach(wire); }
+  // A draw.io card redrawn in place (`rerun.js`) brings a new (i) with it; an open panel is
+  // put back open, the stored state being the reader's.
+  document.addEventListener('hr:swapped', function (ev) {
+    if (ev.detail && ev.detail.querySelectorAll) {
+      ev.detail.querySelectorAll('button.hrx-i[data-explain]').forEach(wire);
+    }
+  });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
 })();

@@ -354,6 +354,74 @@
     });
   }
 
+  // A draw.io card's own ring: redraw that one picture and put it back where it is.
+  //
+  // The tab's ring re-derives the whole tab and rebuilds the whole page, then reloads it —
+  // forty seconds on the Data tab, for a box the reader moved in draw.io, and the reload
+  // drops them at the top of the card. This one asks the server for the card alone
+  // (`refresh-card.py`); the answer comes back about a second later *with the new card in
+  // it*, and the old one is replaced where it stands. No reload, so the scroll, the open
+  // tab and every other card stay exactly as they were. The markup is what a full build
+  // writes (the server's side holds that), so the page after the swap is the page a
+  // reload would have shown.
+  //
+  // The ring itself is kept, not swapped: it is the element the probe raised and the
+  // listeners are on. Anything else in the card that needs waking up — the (i), the
+  // Revert's run mark — hears `hr:swapped`.
+  function swapCard(live, markup, btn) {
+    var tpl = document.createElement('template');
+    tpl.innerHTML = markup;
+    var fresh = tpl.content.firstElementChild;
+    if (!fresh || fresh.getAttribute('data-drawio') !== live.getAttribute('data-drawio')) {
+      return false;
+    }
+    var ring = btn.closest('.tabre'), slot = fresh.querySelector('.tabre');
+    if (ring && slot) slot.parentNode.replaceChild(ring, slot);
+    live.parentNode.replaceChild(fresh, live);
+    document.dispatchEvent(new CustomEvent('hr:swapped', {detail: fresh}));
+    return true;
+  }
+
+  function redrawCard(btn) {
+    if (fail) fail.hidden = true;
+    if (done) { done.hidden = true; done.classList.remove('going'); }
+    buttons.forEach(function (other) { other.disabled = true; });
+    btn.classList.add('running');
+    var name = btn.getAttribute('data-card');
+    // Held from the press, not from the answer: the server publishes the new stamp the
+    // moment the redraw is done, and a watch poll landing between that and the swap would
+    // reload the page out from under it.
+    window.HR.quiet(true);
+    function free() {
+      btn.classList.remove('running');
+      btn.setAttribute('data-tip', btn.getAttribute('data-idle-tip') || '');
+      buttons.forEach(function (other) { other.disabled = false; });
+    }
+    window.HR.run('__rerun__', {card: name}, function (snap) {
+      btn.setAttribute('data-tip', window.HR.tail(snap) || 'Redrawing this diagram\u2026');
+    }).then(function (snap) {
+      if (snap.state !== 'done') {
+        window.HR.quiet(false);
+        stop(btn, 'the redraw did not finish', snap);
+        return;
+      }
+      var live = btn.closest('[data-drawio]');
+      if (!snap.card || !live || !swapCard(live, snap.card, btn)) {
+        // No card came back: the redraw rebuilt the whole page instead — the drawing
+        // became the base's again (or stopped being), which strikes the tab — so load it.
+        remember();
+        location.reload();
+        return;
+      }
+      window.HR.adoptStamp(snap.stamp);
+      window.HR.quiet(false);
+      free();
+    }).catch(function (e) {
+      window.HR.quiet(false);
+      stop(btn, e.message || 'the review server could not be reached', null);
+    });
+  }
+
   // The page's own confirmation, for the one button that spends money. Not
   // `window.confirm`: it cannot say the price in this page's voice, it cannot make the
   // safe answer the default one, and it is the dialog every reader on the internet has
@@ -494,6 +562,7 @@
     var paid = btn.getAttribute('data-rerun') === '__rerun_ai__';
     btn.addEventListener('click', function () {
       if (btn.disabled) return;
+      if (btn.hasAttribute('data-card')) { redrawCard(btn); return; }
       if (!paid) { go(btn); return; }
       confirmSpend(btn).then(function (yes) { if (yes) go(btn); });
     });
@@ -526,7 +595,8 @@
     // Per button, from the probe's own answer for that verb. Inferring the paid one from
     // the free one would draw a $5 control over a server that has no model step beside it.
     buttons.forEach(function (btn) {
-      if (!window.HR.can(btn.getAttribute('data-rerun'), btn.getAttribute('data-tab'))) return;
+      if (!window.HR.can(btn.getAttribute('data-rerun'), btn.getAttribute('data-tab'),
+                         btn.getAttribute('data-card'))) return;
       btn.hidden = false;
       btn.removeAttribute('aria-disabled');
       // The `Served` badge stays beside it: Victor wants the badge to say what this copy
@@ -548,7 +618,8 @@
       var mine = null;
       buttons.forEach(function (b) {
         b.disabled = true;
-        if (!mine && b.getAttribute('data-rerun') === id && !b.hasAttribute('data-tab')) {
+        if (!mine && b.getAttribute('data-rerun') === id && !b.hasAttribute('data-tab')
+            && !b.hasAttribute('data-card')) {
           mine = b; b.classList.add('running');
         }
       });

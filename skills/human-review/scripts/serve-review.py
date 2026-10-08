@@ -993,6 +993,20 @@ class Watcher:
         with self._lock:
             self._holds = max(0, self._holds - 1)
 
+    def settle(self) -> str:
+        """Publish the tree as it is now, without waiting for it to be quiet.
+
+        For a run that has changed the page *and* told the open page what changed — a
+        draw.io card's redraw hands its new markup back in the response, and the page swaps
+        it in place. The stamp moving a second later would reload that page anyway, out
+        from under the card it just swapped; so the run says it is finished, the stamp moves
+        now, and the page that pressed is handed the new stamp along with the card."""
+        found = fingerprint(self.root)
+        with self._lock:
+            self._stamp = self._seen = found
+            self._since = time.time()
+            return found
+
     def tick(self, now=None) -> str:
         now = time.time() if now is None else now
         found = fingerprint(self.root)
@@ -1012,6 +1026,95 @@ class Watcher:
                 # A watcher is a convenience; a watcher that can take the server down
                 # with it is not. Whatever went wrong, the next tick tries again.
                 pass
+            time.sleep(interval)
+
+
+class DrawioWarmer:
+    """Draw a saved draw.io diagram's pictures before anybody asks for them.
+
+    The card's green ring redraws one diagram (`refresh-card.py`), and nearly all of that
+    second is draw.io's desktop app starting up to export two SVGs. The reader's own
+    sequence gives that time away for free: they save in draw.io, switch to the browser,
+    find the card, press — several seconds in which nothing is happening. So this watches
+    the files the page's draw.io cards were drawn from (each `assets/<name>-diff.json`
+    names its `diagram` and the `drawio-diff.py` line that drew it), and when one is saved
+    and has held still for a moment it runs that same line with `--warm`: the exports go
+    into draw.io's render cache and nothing else is written. The press then finds them
+    there — or, if it lands while the export is still going, waits for that one rather
+    than starting a second (`drawio-diff.drawio_export` holds a lock per picture).
+
+    Nothing on the page changes until the reader presses: warming writes no asset and no
+    page, so it cannot move the watcher's stamp. A file that changes again while it is
+    being warmed is warmed again after."""
+
+    def __init__(self, served_root, root, settle=0.25):
+        self.assets = Path(served_root) / "assets"
+        self.root = Path(root)
+        self.settle = settle
+        self._verdicts = {}             # verdict path -> (mtime_ns, (diagram, command))
+        self._seen = {}                 # diagram path -> (mtime_ns, size)
+        self._pending = {}              # diagram path -> (command, when it last moved)
+        self._running = {}              # diagram path -> Popen
+        self.started = 0
+
+    def diagrams(self) -> list[tuple[Path, str]]:
+        out = []
+        for vfile in sorted(self.assets.glob("*-diff.json")):
+            try:
+                mtime = vfile.stat().st_mtime_ns
+            except OSError:
+                continue
+            held = self._verdicts.get(vfile)
+            if not held or held[0] != mtime:
+                found = None
+                try:
+                    doc = json.loads(vfile.read_text(encoding="utf-8"))
+                    cmd, rel = doc["rerun"]["command"], doc["diagram"]
+                    first = shlex.split(cmd)[0]
+                    if first.endswith("drawio-diff.py") and isinstance(rel, str) and rel:
+                        found = (self.root / rel, cmd)
+                except Exception:
+                    found = None
+                held = self._verdicts[vfile] = (mtime, found)
+            if held[1]:
+                out.append(held[1])
+        return out
+
+    def tick(self, now=None) -> None:
+        now = time.time() if now is None else now
+        for path, cmd in self.diagrams():
+            try:
+                st = path.stat()
+                mark = (st.st_mtime_ns, st.st_size)
+            except OSError:
+                mark = None
+            if path not in self._seen:
+                self._seen[path] = mark     # the baseline: what the page was drawn from
+                continue
+            if mark != self._seen[path]:
+                self._seen[path] = mark
+                if mark is not None:
+                    self._pending[path] = (cmd, now)
+        for path, (cmd, when) in list(self._pending.items()):
+            proc = self._running.get(path)
+            if now - when < self.settle or (proc and proc.poll() is None):
+                continue
+            del self._pending[path]
+            try:
+                self._running[path] = subprocess.Popen(
+                    ["/bin/sh", "-c", f"{cmd} --warm"], cwd=str(self.root),
+                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL, start_new_session=True)
+                self.started += 1
+            except OSError:
+                pass
+
+    def run(self, interval=0.2):
+        while True:
+            try:
+                self.tick()
+            except Exception:
+                pass                    # a convenience; never the reason the server dies
             time.sleep(interval)
 
 
@@ -1155,6 +1258,9 @@ class Run:
             self._timeout = float(self.DEFAULT_TIMEOUT)
         self._lines = collections.deque(maxlen=self.KEEP)
         self._lock = threading.Lock()
+        # Set once the run is over *and* its `on_done` has run — the moment a caller that
+        # waits for the run (a draw.io card's redraw, `wait`) can read the tree it left.
+        self.finished = threading.Event()
         # What `docker compose` has said so far about the stack this run is bringing up —
         # see `compose_scrape`. Empty for every command that is not a compose up.
         self.compose = {}
@@ -1201,6 +1307,7 @@ class Run:
                     self._on_done(self)
                 except Exception:
                     pass
+            self.finished.set()
 
     def _kill(self):
         with self._lock:
@@ -1560,6 +1667,37 @@ def tab_rerun_plan(served_root, ai: bool, tab: str, mode: str | None = None):
     return (["/bin/sh", "-c", entry["command"]], ROOT)
 
 
+#: How long `POST /__rerun__ {card}` holds the request open for the redraw to finish, so
+#: the answer *is* the new card — about a second when it goes the fast way. Past this the
+#: page is handed the running run and polls it like any other.
+CARD_WAIT = 20.0
+
+# What a draw.io card redraw leaves for the page: the card's new markup, as spliced into
+# `review.html` (`refresh-card.py`).
+CARD_FILE = ".card-{name}.html"
+
+
+def card_rerun_plan(served_root, card: str):
+    """`(argv, cwd)` for one draw.io card's own ring, or None when the build declared none.
+
+    Out of the manifest like a tab's (`diagrams.card_rerun_html` declares it as
+    `__rerun__:card:<name>`): the name is a key, never a command."""
+    if ROOT is None or not TAB_ID.match(card or ""):
+        return None
+    entry = actions(served_root).get(f"{RERUN_ACTION}:card:{card}")
+    if not entry:
+        return None
+    return (["/bin/sh", "-c", entry["command"]], ROOT)
+
+
+def card_markup(served_root, card: str) -> str | None:
+    """The card a finished redraw left beside the page, or None (it rebuilt the page)."""
+    try:
+        return (Path(served_root) / CARD_FILE.format(name=card)).read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+
 def rerun_tests_plan(served_root):
     """`(argv, cwd)` for the masthead's ↺⏳, or None when the build declared none.
 
@@ -1574,7 +1712,8 @@ def rerun_tests_plan(served_root):
     return (["/bin/sh", "-c", entry["command"]], ROOT)
 
 
-def start_rerun(served_root, ai=False, tab: str | None = None, mode: str | None = None):
+def start_rerun(served_root, ai=False, tab: str | None = None, mode: str | None = None,
+                card: str | None = None):
     """`(Run, problem, status)` for `POST /__rerun__` and `POST /__rerun_ai__`.
 
     One rerun at a time — **across both endpoints** — and a second click joins the first
@@ -1592,7 +1731,11 @@ def start_rerun(served_root, ai=False, tab: str | None = None, mode: str | None 
     running Run, it does not launch anything — so the worst case is a reader who gets more
     than they asked for and is told so by the tail they are watching.
     """
-    if tab:
+    if card and not ai and mode is None:
+        plan = card_rerun_plan(served_root, card)
+        if plan is None:
+            return None, f"the {card} card has no redraw here", 404, False
+    elif tab:
         plan = tab_rerun_plan(served_root, ai, tab, mode)
         if plan is None:
             what = ("paid rerun" if ai else "test run" if mode == "tests" else "rerun")
@@ -1820,15 +1963,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # It names a manifest entry the build wrote, never a command, so the paid verb
             # is still only reachable through its own URL.
             # And `mode: "tests"` on the free one only: run the suites before re-deriving.
+            # And `card`, on the free one only: one draw.io card's own ring, which redraws
+            # that picture and splices it into the page — answered when it is done.
             try:
                 req = json.loads(raw) or {}
-                tab, mode = req.get("tab"), req.get("mode")
+                tab, mode, card = req.get("tab"), req.get("mode"), req.get("card")
             except Exception:
-                tab = mode = None
+                tab = mode = card = None
             tab = tab if isinstance(tab, str) and tab else None
             mode = "tests" if mode == "tests" and route == RERUN else None
+            card = card if isinstance(card, str) and card and route == RERUN else None
             run, problem, status, joined = start_rerun(Handler.root, ai=route == RERUN_AI,
-                                                       tab=tab, mode=mode)
+                                                       tab=tab, mode=mode, card=card)
             if problem:
                 # The refusal carries the run it is refusing for. A sentence alone would
                 # leave the page unable to show the reader *what* is going on, which is
@@ -1837,7 +1983,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.reply_json(body, status)
                 return
         else:
-            joined = False
+            joined, card = False, None
             try:
                 body = json.loads(raw)
                 action_id, params = body["id"], body.get("params") or {}
@@ -1851,6 +1997,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.reply_text(problem, status)
             return
         Handler.runs += 1
+        if card and not joined and run.finished.wait(CARD_WAIT):
+            # The card's redraw is a second or so: answered with its outcome rather than a
+            # handle to poll, which would add up to a poll interval to every press. The new
+            # card rides along, and the watcher's stamp is moved now and handed over too, so
+            # the page that swaps the card in is not then reloaded for the same change.
+            out = dict(run.snapshot(), joined=False)
+            fresh = card_markup(Handler.root, card) if run.state == "done" else None
+            if fresh is not None:
+                out["card"] = fresh
+            if WATCHER:
+                out["stamp"] = WATCHER.settle()
+            self.reply_json(out)
+            return
         # `joined` and not silence: a press that handed back somebody else's run looks
         # exactly like a press that started one, and the page has to be able to say which.
         self.reply_json(dict(run.snapshot(), joined=joined))
@@ -2152,6 +2311,8 @@ def serve(directory, port, idle_minutes, watch=True):
     if watch:
         WATCHER = Watcher(directory)
         threading.Thread(target=WATCHER.run, daemon=True).start()
+        if ROOT is not None:
+            threading.Thread(target=DrawioWarmer(directory, ROOT).run, daemon=True).start()
 
     def reaper():
         # Idle *and* quiet. The idle clock is fed by requests, and a reader who clicked

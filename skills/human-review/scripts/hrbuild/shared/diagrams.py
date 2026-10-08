@@ -4,11 +4,13 @@ from __future__ import annotations
 import html
 import json
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
 
-from .commands import rerun_html
+from .actions import declare_action
+from .commands import RERUN_MARK_SCRIPT, TAB_RERUN_TIP, rerun_face, rerun_html
 from .folders import link_folders
 from .genseq import genseq_details_at_base, genseq_details_at_render, test_of_genseq
 from .svg import inline_svg
@@ -178,6 +180,51 @@ def drawio_unchanged_at(name: str, assets: Path) -> bool:
         return False
 
 
+#: The manifest key of one draw.io card's own green ring: `serve-review.py` answers
+#: `POST /__rerun__ {card: <name>}` with the command declared under it, and nothing else.
+def card_rerun_id(name: str) -> str:
+    return f"__rerun__:card:{name}"
+
+
+#: Beside this module's package: the program the card's ring runs (`refresh-card.py`).
+REFRESH_CARD = Path(__file__).resolve().parents[2] / "refresh-card.py"
+
+CARD_NAME = re.compile(r"^[a-z][a-z0-9_-]{0,40}$")
+
+
+def card_rerun_html(name: str, assets: Path, root: Path) -> str:
+    """The green ring on a draw.io card's own title: redraw *this* picture and nothing else.
+
+    The tab's ring re-runs the tab's whole producer — on the Data tab that is every
+    PlantUML delta as well, then the whole page: forty seconds for one dragged box. This one
+    re-runs the one `drawio-diff.py` the card was drawn by (the command its verdict
+    recorded) and splices the card back into the page in place (`refresh-card.py`), so the
+    reader is looking at the new layout about a second after pressing, scrolled where they
+    were. The same face and the same words as the tab's ring: to the reader it is the same
+    press, it is only narrower.
+
+    Declared here, where the card is drawn, so the build and `refresh-card.py` put the same
+    line in the manifest. Empty — and the tab's ring takes the title, as it always did —
+    when the program is not beside us or the review directory is not inside the checkout."""
+    if not CARD_NAME.match(name) or not REFRESH_CARD.is_file():
+        return ""
+    try:
+        rel = str(assets.parent.resolve().relative_to(Path(root).resolve()))
+    except ValueError:
+        return ""
+    declare_action(card_rerun_id(name),
+                   f"cd {shlex.quote(str(Path(root).resolve()))} && "
+                   f"{shlex.quote(sys.executable)} {shlex.quote(str(REFRESH_CARD))}"
+                   f" --dir {shlex.quote(rel)} --name {shlex.quote(name)}",
+                   reload=True, label=f"Redraw the {name} diagram and put it back in place")
+    tip = html.escape(TAB_RERUN_TIP, quote=True)
+    return ('<span class="tabre">'
+            '<button type="button" class="chip chip-rerun chip-served tabrerun" hidden '
+            f'aria-disabled="true" data-rerun="__rerun__" data-card="{name}" '
+            f'aria-label="Redraw this diagram" data-tip="{tip}">'
+            f'{rerun_face(RERUN_MARK_SCRIPT)}</button></span>')
+
+
 def _drawio_unchanged_card(name: str, verdict: dict, assets: Path, root: Path) -> str:
     """The hand-drawn diagram, when the branch did not touch it: the card a `puml`
     context diagram gets — title, UNCHANGED, the file, the whole picture.
@@ -193,8 +240,11 @@ def _drawio_unchanged_card(name: str, verdict: dict, assets: Path, root: Path) -
                 f'write <code>{html.escape(name)}-new.svg</code></p>')
     rel = verdict.get("diagram") or ""
     title = _pretty(Path(rel).name.split(".")[0]) if rel else _pretty(name)
-    return ('<div class="diagram"><div class="head">'
-            f'<b>{html.escape(title)}</b>{UNCHANGED_BADGE}'
+    # `data-drawio` names the card, for `refresh-card.py` to find it in the finished page and
+    # for the page to swap it in place; the ring after the title is the card's own.
+    return (f'<div class="diagram" data-drawio="{html.escape(name, quote=True)}">'
+            f'<div class="head"><b>{html.escape(title)}</b>'
+            + card_rerun_html(name, assets, root) + UNCHANGED_BADGE
             + (_source_link(rel, root) if rel else "") + '</div>'
             f'<div class="svgbox">{inline_svg(svg, root)}</div>'
             + trace_legend(verdict) + '</div>')
@@ -258,8 +308,9 @@ def drawio_widget_html(name: str, assets: Path, root: Path, rebuild: str = "") -
                              verdict.get("redraw"), verdict.get("revert"),
                              verdict.get("reveal"), verdict.get("tested_against") or "",
                              verdict.get("tested_against_path") or "")
-    return ('<div class="diagram dgm-toggles"><div class="head">'
-            f'<b>{html.escape(title)}</b>' + acts
+    return (f'<div class="diagram dgm-toggles" data-drawio="{html.escape(name, quote=True)}">'
+            f'<div class="head"><b>{html.escape(title)}</b>'
+            + card_rerun_html(name, assets, root) + acts
             + (_source_link(rel, root) if rel else "") + '</div>'
             + under
             + dgm_views_html(panes, initial="new" if red else "diff")

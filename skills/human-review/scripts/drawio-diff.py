@@ -42,13 +42,18 @@ Requires: nothing. draw.io.app is used when present.
 import argparse
 import base64
 import binascii
+import concurrent.futures
+import fcntl
+import hashlib
 import json
+import os
 import re
 import shlex
 import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import urllib.parse
 import xml.etree.ElementTree as ET
 import zlib
@@ -891,21 +896,125 @@ def dual_href(svg: str) -> str:
                                      f'href="{m.group(2)}"', svg)
 
 
-def render_with_drawio(xml: str, out: Path) -> bool:
+#: What the desktop app is asked for, every time. Part of the cache key below, so a change
+#: to these flags can never be answered out of an export made with the old ones.
+EXPORT_ARGS = ("-x", "-f", "svg", "--theme", "auto", "-b", "8")
+
+# Where draw.io's own exports are kept, keyed by exactly what produced them. The desktop
+# app is an Electron start-up per picture — 0.8 s each, three per run — and it is the whole
+# of this tool's wall clock: the base drawing is re-exported on every run although it is
+# fixed for the life of the branch, and the card's green ring is pressed after an edit that
+# moved one box. A content-addressed store makes the answer to "the same XML, the same
+# flags, the same app" the file the app wrote last time, byte for byte, so a hit and a
+# miss cannot differ — which is the property the review page's fast refresh leans on.
+# Per user rather than per checkout: the key already says everything the picture depends
+# on, and a second checkout of the same branch is the same picture.
+RENDER_CACHE = Path(os.environ.get("HUMAN_REVIEW_DRAWIO_CACHE")
+                    or Path.home() / ".cache" / "human-review" / "drawio-svg")
+RENDER_CACHE_KEEP = 400
+
+
+def _app_identity() -> str:
+    """Which draw.io answered: an upgrade must not be served the old version's exports."""
+    plist = DRAWIO_APP.parent.parent / "Info.plist"
+    try:
+        st = plist.stat()
+        return f"{DRAWIO_APP.resolve()}\0{st.st_size}\0{st.st_mtime_ns}"
+    except OSError:
+        return str(DRAWIO_APP)
+
+
+def export_key(xml: str) -> str:
+    h = hashlib.sha256()
+    for part in (_app_identity(), "\0".join(EXPORT_ARGS), xml):
+        h.update(part.encode("utf-8"))
+        h.update(b"\0\1\0")
+    return h.hexdigest()
+
+
+def drawio_export(xml: str) -> str | None:
+    """draw.io's own SVG for `xml`, untouched — out of the cache when it has been asked
+    for before, else from the desktop app (and then kept). None when the app is absent or
+    the export failed; the caller falls back to the built-in renderer."""
     if not DRAWIO_APP.exists():
-        return False
+        return None
+    key = export_key(xml)
+    hit = RENDER_CACHE / f"{key}.svg"
+    svg = _cached(hit)
+    if svg is not None:
+        return svg
+    # One export per picture at a time, across processes: the review server starts this
+    # picture's export the moment the drawing is saved (`--warm`), and a press on the card
+    # that lands while it is still going waits for that one rather than starting a second
+    # Electron beside it.
+    lock = None
+    try:
+        RENDER_CACHE.mkdir(parents=True, exist_ok=True)
+        lock = open(RENDER_CACHE / f".{key}.lock", "w")
+        fcntl.flock(lock, fcntl.LOCK_EX)
+    except OSError:
+        pass
+    try:
+        svg = _cached(hit)
+        return svg if svg is not None else _export(xml, key, hit)
+    finally:
+        if lock:
+            lock.close()
+            try:
+                (RENDER_CACHE / f".{key}.lock").unlink()
+            except OSError:
+                pass
+
+
+def _cached(hit: Path) -> str | None:
+    try:
+        svg = hit.read_text(encoding="utf-8")
+        os.utime(hit)               # recently used: the pruning keeps it
+        return svg
+    except OSError:
+        return None
+
+
+def _export(xml: str, key: str, hit: Path) -> str | None:
     with tempfile.TemporaryDirectory() as tmp:
-        src = Path(tmp) / "in.drawio"
+        src, out = Path(tmp) / "in.drawio", Path(tmp) / "out.svg"
         src.write_text(xml)
         proc = subprocess.run(
-            [str(DRAWIO_APP), "-x", "-f", "svg", "--theme", "auto", "-b", "8",
-             "-o", str(out), str(src), "--no-sandbox"],
+            [str(DRAWIO_APP), *EXPORT_ARGS, "-o", str(out), str(src), "--no-sandbox"],
             capture_output=True, text=True)
-    if proc.returncode != 0 or not out.exists():
-        print(f"draw.io export failed, falling back to the built-in renderer:\n"
-              f"{proc.stderr.strip()}", file=sys.stderr)
+        if proc.returncode != 0 or not out.exists():
+            print(f"draw.io export failed, falling back to the built-in renderer:\n"
+                  f"{proc.stderr.strip()}", file=sys.stderr)
+            return None
+        svg = out.read_text(encoding="utf-8")
+    try:
+        RENDER_CACHE.mkdir(parents=True, exist_ok=True)
+        part = RENDER_CACHE / f".{key}.{os.getpid()}.{threading.get_ident()}.tmp"
+        part.write_text(svg, encoding="utf-8")
+        os.replace(part, hit)       # atomic: a reader never sees half an export
+        _prune_cache()
+    except OSError:
+        pass                        # a cache that cannot be written is only a slower run
+    return svg
+
+
+def _prune_cache() -> None:
+    try:
+        files = sorted(RENDER_CACHE.glob("*.svg"), key=lambda p: p.stat().st_mtime)
+    except OSError:
+        return
+    for old in files[:max(0, len(files) - RENDER_CACHE_KEEP)]:
+        try:
+            old.unlink()
+        except OSError:
+            pass
+
+
+def render_with_drawio(xml: str, out: Path) -> bool:
+    svg = drawio_export(xml)
+    if svg is None:
         return False
-    out.write_text(dual_href(pin_added_dark(slim(out.read_text()))))
+    out.write_text(dual_href(pin_added_dark(slim(svg))))
     return True
 
 
@@ -1040,6 +1149,33 @@ def read_at(ref: str, path: str) -> str:
     return extract_xml(blob.stdout)
 
 
+def read_many(refs: list[tuple[str, str]]) -> dict[str, str]:
+    """`{ref: diagram XML}` for every `(ref, path)`, out of one `git cat-file --batch` —
+    what `read_at` says for each, with an absent or unreadable blob as an empty diagram."""
+    out: dict[str, str] = {}
+    if not refs:
+        return out
+    proc = subprocess.run(["git", "cat-file", "--batch"], capture_output=True,
+                          input="".join(f"{ref}:{path}\n" for ref, path in refs).encode())
+    data, off = proc.stdout if proc.returncode == 0 else b"", 0
+    for ref, _ in refs:
+        nl = data.find(b"\n", off)
+        if nl < 0:
+            break
+        head = data[off:nl].split()
+        off = nl + 1
+        if len(head) != 3 or head[1] != b"blob":
+            out[ref] = EMPTY_MODEL          # `<name> missing`: absent at that revision
+            continue
+        size = int(head[2])
+        blob, off = data[off:off + size], off + size + 1
+        try:
+            out[ref] = extract_xml(blob)
+        except ValueError:
+            out[ref] = EMPTY_MODEL
+    return out
+
+
 HISTORY_DEPTH = 60
 
 
@@ -1080,10 +1216,14 @@ def last_distinct_revision(path: str, current: str) -> dict | None:
     if log.returncode != 0:
         return None
     entries = []
-    for line in log.stdout.splitlines():
+    rows = [line for line in log.stdout.splitlines() if line.strip()]
+    # Every revision's bytes in one `git cat-file --batch`, not one `git show` each: sixty
+    # processes were half a second of the green ring's wait, for the same blobs.
+    blobs = read_many([(line.partition("\t")[0], path) for line in rows])
+    for line in rows:
         sha, _, rest = line.partition("\t")
         date, _, subject = rest.partition("\t")
-        xml = read_at(sha, path)
+        xml = blobs.get(sha, EMPTY_MODEL)
         if xml != EMPTY_MODEL:
             entries.append(({"sha": sha, "short": sha[:8], "date": date,
                              "subject": subject}, xml))
@@ -1174,6 +1314,10 @@ def main():
                          "inferred: only the project knows which guardrail keeps it honest")
     ap.add_argument("--json", action="store_true",
                     help="print the verdict as JSON instead of a summary line")
+    ap.add_argument("--warm", action="store_true",
+                    help="export the three pictures into draw.io's render cache and write "
+                         "nothing else — what the review server runs when it sees the "
+                         "drawing saved, so the card's refresh finds them ready")
     args = ap.parse_args()
     if not args.concepts and not args.traces:
         ap.error("--concepts is required (or --traces, for a diagram of containers)")
@@ -1218,14 +1362,27 @@ def main():
                                             args.trace_attr)
         return out
 
-    written = {
-        "original": render(linked(traced(old_xml, "old")),
-                           out_dir / f"{stem}-original.svg", args.renderer),
-        "new": render(linked(traced(new_xml, "new")),
-                      out_dir / f"{stem}-new.svg", args.renderer),
-        "diff": render(linked(traced(paint_added(new_xml, verdict), "new")),
-                       out_dir / f"{stem}-diff.svg", args.renderer),
-    }
+    # The three pictures' XML first, here, in order — `linked` gathers the concepts it could
+    # not resolve, and that set is the verdict's — then the three exports side by side. Each
+    # one is a draw.io start-up of its own, so in a row they were the whole of this tool's
+    # wall clock; in parallel they cost about one. `last_distinct_revision` (a walk through
+    # the file's history) runs beside them for the same reason.
+    panes = {"original": linked(traced(old_xml, "old")),
+             "new": linked(traced(new_xml, "new")),
+             "diff": linked(traced(paint_added(new_xml, verdict), "new"))}
+    if args.warm:
+        # Put the pictures in the export cache and touch nothing else: the review server
+        # runs this when it sees the drawing saved, so the press that follows finds them.
+        with concurrent.futures.ThreadPoolExecutor(len(panes)) as pool:
+            list(pool.map(drawio_export, panes.values()))
+        return
+    with concurrent.futures.ThreadPoolExecutor(len(panes) + 1) as pool:
+        history = (pool.submit(last_distinct_revision, args.diagram, new_xml)
+                   if args.base else None)
+        jobs = {view: pool.submit(render, xml, out_dir / f"{stem}-{view}.svg", args.renderer)
+                for view, xml in panes.items()}
+        written = {view: job.result() for view, job in jobs.items()}
+        revision = history.result() if history else None
     if args.traces:
         verdict["traces"] = {**reports["new"], "source": str(args.traces)}
     verdict["linked_concepts"] = sorted(sources)
@@ -1284,7 +1441,6 @@ def main():
     # The stash is a no-op when there is nothing loose, which is the case that broke the
     # first version of this offer: the hand edit had already been committed, so "back to
     # HEAD" was "back to the mess".
-    revision = last_distinct_revision(args.diagram, new_xml) if args.base else None
     if revision:
         stash = shlex.quote(f"human-review: hand edits to {args.diagram}")
         verdict["revert"] = {

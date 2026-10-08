@@ -137,6 +137,7 @@ from hrbuild.shared.folders import (
     _STEREO, _tree_base
 )
 from hrbuild.shared.diagrams import (
+    CARD_NAME, card_rerun_html, card_rerun_id, REFRESH_CARD,
     CM_LEGEND_NEW, CM_LEGEND_TODO, DEFAULT_FOCUS, DGM_SRC_ANCHOR, dgm_views_html, DRAWIO_TOKEN,
     drawio_unchanged, drawio_unchanged_at, drawio_widget_html, expand_drawio,
     find_diagram_source, read_manifest, render_diagrams, render_puml, schema_unseen_note,

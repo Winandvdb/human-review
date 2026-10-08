@@ -103,9 +103,8 @@ def resolve_review_points(spec: dict, out_dir: Path) -> dict | None:
     carried from the commit it was written at to the tree the page quotes
     (`reanchor_refs`); the grade's reasons
     are computed from what the page measured and its number capped by them
-    (`grade_signals`, `cap_grade`); and the content file's prose `summary`, which opened
-    this tab above the grade, is dropped (`drop_model_summary`)."""
-    drop_model_summary(spec)
+    (`grade_signals`, `cap_grade`). The content file's `summary` is kept: it says what
+    changed, and the page opens on that."""
     points = resolve_piles(spec, out_dir)
     attribute_fix_hunks(spec, out_dir)
     reanchor_refs(spec, out_dir)
@@ -113,21 +112,6 @@ def resolve_review_points(spec: dict, out_dir: Path) -> dict | None:
     grade_signals(spec, out_dir)
     cap_grade(spec)
     return points
-
-
-def drop_model_summary(spec: dict) -> None:
-    """Drop `summary` when it would open the Review tab, and say so on stderr.
-
-    It rendered as a bordered paragraph of the model's prose above the grade, where the
-    reader arriving from the score expects the computed reasons. Everything it can say
-    honestly the page now measures; what it says beyond that nobody checked."""
-    tabs = spec.get("tabs") or []
-    first = tabs[0] if tabs else {}
-    if spec.get("summary") and any(b.get("type") in POINTS_PILES
-                                    for b in first.get("blocks") or []):
-        print("[review] content.json's `summary` is not rendered — the Review tab opens on "
-              "the computed grade reasons, not on prose", file=sys.stderr)
-        spec.pop("summary", None)
 
 
 def resolve_piles(spec: dict, out_dir: Path) -> dict | None:
@@ -3307,8 +3291,8 @@ def snippet_card(ref: str, caption: str | None, root: Path) -> str:
 # on a conclusion, so the list of findings the reader came for started below the fold. The
 # `verdict` block in the content file is still read: its `score` is the pill's number and
 # its band its colour, once `cap_grade` has lowered it to what the computed signals allow.
-# Up to two of its `bullets` join the computed reasons in the grade panel; `summary` is
-# dropped from this tab (`drop_model_summary`).
+# Up to two of its `bullets` join the computed reasons in the grade panel; `summary` opens
+# this tab, because the page answers "what changed?" first.
 
 
 def _score_target(spec) -> tuple[str, str]:

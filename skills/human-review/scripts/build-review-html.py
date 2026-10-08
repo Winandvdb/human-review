@@ -210,7 +210,7 @@ from hrbuild.tabs.review import (
     _evidence_signal, _git_out, _git_root, _out_of_range_signal, _pile_signals, _plain_text,
     _read_json, _signal, cap_grade, grade_signals,
     FIX_BOOKKEEPING, FIX_HUNK_REACH, _fix_range, _gap, _ref_spans, attribute_fix_hunks,
-    fix_hunks, _assumption_why, drop_model_summary, pr_exists, resolve_piles,
+    fix_hunks, _assumption_why, pr_exists, resolve_piles,
     _reviewers, CLAUSE_CAP, _CODE_SPAN, TEST_MAPPING_FILES, REQMAP_HTML, NARROWED_LINES,
     NARROWED_QUOTE, _quote, _decision_link, _narrowed_signals, _grade_rows, fix_commit,
     ANCHORS_KEY, ANCHORS_AT_REVIEW, _written_at, reanchor_refs, _anchor_note,

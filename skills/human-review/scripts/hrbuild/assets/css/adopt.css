@@ -108,15 +108,21 @@ button.hrx-i::before{content:"i";display:block;transform:translateY(.5px)}
 }
 button.hrx-i:hover{background:var(--hrx-i-on)}
 button.hrx-i:focus-visible{outline:2px solid var(--hrx-i-on);outline-offset:2px}
-button.hrx-i[aria-pressed="true"]{background:var(--hrx-i-on);
-  box-shadow:0 0 0 3px var(--hrx-ring),0 0 12px var(--hrx-ring)}
-/* The explainer itself. */
-.hrx-box{box-sizing:border-box;max-width:52rem;margin:.4rem 0 .8rem;padding:.5rem .85rem .55rem;
-  border:1px solid color-mix(in srgb,var(--link) 40%,var(--line));border-left:3px solid var(--link);
-  border-radius:8px;background:color-mix(in srgb,var(--link) 7%,var(--card));color:var(--fg);
+button.hrx-i[aria-pressed="true"]{background:var(--hrx-i-on);position:relative;z-index:61;
+  margin:0 3.75px 0 4px;box-shadow:none}
+/* The explainer itself: full row width, blue like its (i). Open, its (i) sits in a folder
+   tab that grows out of the panel's top-right: panel and tab are ONE outline, a single SVG
+   path drawn by explain.js (one radius for every corner, the inner one concave). */
+.hrx-box{--hrx-bg:color-mix(in srgb,var(--link) 9%,var(--card));--hrx-bd:#3b82f6;
+  position:relative;isolation:isolate;box-sizing:border-box;width:100%;margin:.75rem 0 .8rem;
+  padding:calc(.5rem + 1.5px) calc(.85rem + 1.5px) calc(.55rem + 1.5px);
+  border:0;border-radius:8px;background:var(--hrx-bg);color:var(--fg);
   font:400 .86rem/1.45 -apple-system,system-ui,"Segoe UI",sans-serif;text-align:left;white-space:normal}
+@media (prefers-color-scheme: dark){ .hrx-box{--hrx-bd:#60a5fa} }
+.hrx-box.hrx-tabbed{background:none;margin-top:var(--hrx-gap,.75rem)}
+.hrx-box .hrx-outline{position:absolute;left:0;top:0;overflow:visible;z-index:-1;pointer-events:none}
+.hrx-box .hrx-outline path{fill:var(--hrx-bg);stroke:var(--hrx-bd);stroke-width:1.5;stroke-linejoin:round}
 .hrx-box[hidden]{display:none!important}
-.hrx-box.hrx-right{margin-left:auto}
 .hrx-box ul{margin:0;padding-left:1.05rem}
 .hrx-box li{margin:.08rem 0}
 .hrx-box code{font:.8rem ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code-bg);padding:0 .2rem;border-radius:3px}
@@ -132,7 +138,12 @@ button.hrx-i[aria-pressed="true"]{background:var(--hrx-i-on);
 /* Tests: the tab fills the window exactly, so the explainer floats over it instead of
    pushing the grid (and the page) down. */
 .adopthead:has(> .hrx-box.hrx-float){position:relative}
-.hrx-box.hrx-float{position:absolute;top:100%;right:0;z-index:60;width:min(30rem,100%);margin:.3rem 0 0;
-  background:color-mix(in srgb,var(--link) 9%,var(--card));box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.hrx-box.hrx-float{position:absolute;top:100%;right:0;z-index:60;width:min(30rem,100%);margin:.6rem 0 0}
+.hrx-box.hrx-float .hrx-outline{filter:drop-shadow(0 8px 14px rgba(0,0,0,.35))}
 /* Moved into the explainer: the tab's own "how this was made" line. */
 .hrx-moved-away{display:none!important}
+
+/* A diagram card's (i) sits in its header, right after the source file name. */
+.diagram .head > button.hrx-i{align-self:center;margin-left:-.3rem}
+.diagram .head:has(> button.hrx-i){justify-content:flex-start}
+.diagram .head > .dgm-src:has(+ button.hrx-i){margin-left:auto}

@@ -60,6 +60,16 @@ def _card(title, src, inner=""):
             f'<span>{src}</span></div><div class="svgbox"><svg></svg></div>{inner}</div>')
 
 
+def test_a_diagram_cards_i_sits_in_its_header_after_the_file_name_not_beside_the_pill():
+    card = ('<div class="diagram"><div class="head"><b>Domain Model</b>'
+            '<a class="dgm-src" href="x">DomainModel.puml</a></div><div class="svgbox"></div></div>')
+    out = place_prompts("data", card)
+    head = out[out.index('<div class="head">'):out.index('<div class="svgbox">')]
+    assert head.count('class="hrx-i"') == 1 and head.index("</a>") < head.index('class="hrx-i"')
+    foot = out[out.index('<div class="adoptline'):]
+    assert "hrx-i" not in foot and "Prompt to get this" in foot
+
+
 def test_each_data_card_gets_its_own_button_inside_its_border_with_its_own_prompt():
     body = (_card("Domain Model", "DomainModel.puml")
             + _card("DB", "DB.puml", '<p class="sub dgm-unseen">Also changed</p>')
@@ -231,13 +241,15 @@ def test_every_piece_with_a_prompt_explains_itself(piece):
 
 
 @pytest.mark.parametrize("key", sorted(EXPLAIN))
-def test_each_explainer_is_one_to_three_short_lines_and_names_a_real_piece(key):
+def test_each_explainer_is_a_few_one_sentence_bullets_and_names_a_real_piece(key):
     """Victor, 7 Oct 2026: "be brief in the details you give in the (i) modals"."""
     t = EXPLAIN[key]
     assert key.split(":")[0] in PIECES
-    assert 1 <= len(t["li"]) <= 3, "ADHD-friendly: 1-3 lines"
+    assert 1 <= len(t["li"]) <= 6, "ADHD-friendly: a few bullets"
     for line in t["li"]:
-        assert len(re.sub(r"<[^>]+>", "", line)) <= 90, line
+        plain = re.sub(r"<[^>]+>", "", line)
+        assert len(plain) <= 90, line
+        assert not re.search(r"[.!?]\s+[A-Z$]", plain), f"one sentence per bullet: {line}"
     assert set(t) <= {"li", "ex", "code", "move"}
     assert not ("ex" in t and "code" in t), "at most one tiny example"
     if "ex" in t:

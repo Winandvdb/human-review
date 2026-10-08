@@ -116,7 +116,7 @@ PIECES: dict[str, tuple[str, str]] = {
 #: it (7 Oct 2026, Victor: "whoever goes to click Prompt to get this should first
 #: understand what they're looking at"). Worded as Victor explained each tab at Devoxx
 #: Belgium the same day, and kept brief ("be brief in the details you give in the (i)
-#: modals"): 1-3 short lines, then at most one tiny example. Static, the same on every PR,
+#: modals"): one sentence per bullet (8 Oct 2026), then at most one tiny example. Static, the same on every PR,
 #: so no line may state what only one PR shows; an example is marked "e.g.".
 #: Keyed by piece, or by "piece:Card title" when one piece covers unlike cards (the two
 #: draw.io diagrams). `move`: the tab's own "how this was made" line, a CSS selector,
@@ -125,21 +125,26 @@ PIECES: dict[str, tuple[str, str]] = {
 EXPLAIN: dict[str, dict[str, object]] = {
     'review.assumed': {
         "li": [
-            'Where the ticket was vague, the coder guessed. Each guess, and how sure it was.',
-            'Read these first: a wrong guess is a wrong feature. Next time, ask questions.',
+            'Where the ticket was vague, the coder guessed.',
+            'Each guess, and how sure it was.',
+            'Read these first: a wrong guess is a wrong feature.',
+            'Next time, ask questions.',
         ],
         "ex": 'e.g. "link a vet to a visit": can the vet be left empty?',
     },
     'review.open': {
         "li": [
-            'A quorum of adversarial reviewers criticised the code. These the coder refused or left.',
-            'Mostly nits. You decide: <b>must look</b> › <b>worth a look</b> › <b>nit</b>.',
+            'A quorum of adversarial reviewers criticised the code.',
+            'These the coder refused or left.',
+            'Mostly nits.',
+            'You decide: <b>must look</b> › <b>worth a look</b> › <b>nit</b>.',
         ],
     },
     'review.fixed': {
         "li": [
             'What the reviewers raised and the coder already fixed, one diff each.',
-            'Skim them: ask reviewers for issues and they find some. Not all deserved a fix.',
+            'Skim them: ask reviewers for issues and they find some.',
+            'Not all deserved a fix.',
         ],
     },
     'behaviour': {
@@ -151,8 +156,10 @@ EXPLAIN: dict[str, dict[str, object]] = {
     },
     'api': {
         "li": [
-            'The REST contract, main vs this branch, diffed by oasdiff. No AI.',
-            '<b>Breaking</b>: a client of main can fail. One DTO change can break many endpoints.',
+            'The REST contract, main vs this branch, diffed by oasdiff.',
+            'No AI.',
+            '<b>Breaking</b>: a client of main can fail.',
+            'One DTO change can break many endpoints.',
         ],
         "code": (
             '<span class="c">e.g. GET /api/owners/1</span>\n'
@@ -162,22 +169,26 @@ EXPLAIN: dict[str, dict[str, object]] = {
     },
     'diagram.domain': {
         "li": [
-            'The entities, generated from the Java classes by reflection. No AI, so no drift.',
+            'The entities, generated from the Java classes by reflection.',
+            'No AI, so no drift.',
             'Main vs this branch: green = added by this PR.',
         ],
         "ex": 'e.g. <code>Owner 1─* Pet 1─* Visit</code>',
     },
     'diagram.db': {
         "li": [
-            'The tables: migrations run on an empty DB in a Testcontainer, then dumped. No AI.',
-            'Green = added by this PR. Indexes and constraints it can\'t draw are listed under it.',
+            'The tables: migrations run on an empty DB in a Testcontainer, then dumped.',
+            'No AI.',
+            'Green = added by this PR.',
+            "Indexes and constraints it can't draw are listed under it.",
         ],
         "ex": 'e.g. <code>pets.owner_id «FK» → owners.id</code>',
     },
     'diagram.drawio': {
         "li": [
             'The same concepts, laid out by hand in draw.io, so they stay where you remember them.',
-            'A unit test checks the boxes and lines against the code. Layout is yours.',
+            'A unit test checks the boxes and lines against the code.',
+            'Layout is yours.',
         ],
         "ex": 'e.g. a new red line: the test wants it. Place it in draw.io, then commit.',
     },
@@ -190,7 +201,8 @@ EXPLAIN: dict[str, dict[str, object]] = {
     },
     'diagram.packages': {
         "li": [
-            'The Java packages and who depends on whom. ArchUnit checks the classes against it.',
+            'The Java packages and who depends on whom.',
+            'ArchUnit checks the classes against it.',
             'Zero drift: an import the drawing lacks fails the build.',
         ],
         "ex": 'e.g. <code>..domain</code> → <code>..rest</code>: not drawn, so a test fails.',
@@ -222,16 +234,20 @@ EXPLAIN: dict[str, dict[str, object]] = {
     },
     'requirements': {
         "li": [
-            'Left: the ticket. Right: every test that ran through a line this PR changed.',
-            'AI matched them by meaning, so it can be wrong. Click either side: what covers what.',
-            '<b>green</b> = proven · <b>orange</b> = partly · <b>red</b> = no test. E2E/API count most.',
+            'Left: the ticket.',
+            'Right: every test that ran through a line this PR changed.',
+            'AI matched them by meaning, so it can be wrong.',
+            'Click either side: what covers what.',
+            '<b>green</b> = proven · <b>orange</b> = partly · <b>red</b> = no test.',
+            'E2E/API count most.',
         ],
     },
     'sequence': {
         "move": 'details.seqhow',
         "li": [
             'Each e2e test that ran a changed line: its OpenTelemetry trace, drawn by a script.',
-            'HTTP calls, SQL with parameters, calls across services and modules. Spot the N+1.',
+            'HTTP calls, SQL with parameters, calls across services and modules.',
+            'Spot the N+1.',
         ],
         "code": (
             'GET /api/owners?page=0\n'
@@ -241,8 +257,10 @@ EXPLAIN: dict[str, dict[str, object]] = {
     },
     'city': {
         "li": [
-            'One building per class. Area = lines of code, height = how many ifs.',
-            'Arrows up = grew in this PR. Use it on a huge PR: where is the code growing?',
+            'One building per class.',
+            'Area = lines of code, height = how many ifs.',
+            'Arrows up = grew in this PR.',
+            'Use it on a huge PR: where is the code growing?',
         ],
     },
     'dsaudit': {
@@ -256,7 +274,8 @@ EXPLAIN: dict[str, dict[str, object]] = {
         "move": 'p.cx-lede',
         "li": [
             'Cognitive complexity per endpoint: its whole call graph, walked and summed.',
-            'Nesting is what costs. Green = added by this PR.',
+            'Nesting is what costs.',
+            'Green = added by this PR.',
         ],
         "code": (
             'for (Owner o : owners) {            <span class="p">// +1</span>\n'
@@ -268,7 +287,9 @@ EXPLAIN: dict[str, dict[str, object]] = {
         "move": 'p.tabsub',
         "li": [
             'Every log line this PR adds or changes, found by parsing the Java, not by grep.',
-            'Check: right level? No personal data? Enough context to debug?',
+            'Check: right level?',
+            'No personal data?',
+            'Enough context to debug?',
         ],
         "code": (
             '<span class="c">e.g. ✗</span> log.info("Saved {}", owner);  <span class="p">// phone, address</span>'
@@ -277,13 +298,15 @@ EXPLAIN: dict[str, dict[str, object]] = {
     'owners': {
         "li": [
             'Who must approve, per <code>.github/CODEOWNERS</code>, for the files this PR touches.',
-            'Change the contract, meet the tech leads. Touch the guardrails, meet the lord.',
+            'Change the contract, meet the tech leads.',
+            'Touch the guardrails, meet the lord.',
         ],
     },
     'cost': {
         "li": [
             'What this PR cost in tokens, per stage: coding, the reviewer quorum, fixes, this page.',
-            '$ at API list price, not your subscription. Time = model + tools (builds, tests).',
+            '$ at API list price, not your subscription.',
+            'Time = model + tools (builds, tests).',
         ],
         "ex": 'e.g. coding $15 · review $5 · auto-fixes $9 · this guide $0.30.',
     },
@@ -385,7 +408,8 @@ def adopt_prompt(piece: str, title: str = "") -> str | None:
             "show me the result.")
 
 
-def adopt_html(piece: str, title: str = "", how: str = "in", page: bool = False) -> str:
+def adopt_html(piece: str, title: str = "", how: str = "in", page: bool = False,
+               explain: bool = True) -> str:
     prompt = adopt_prompt(piece, title)
     if not prompt:
         return ""
@@ -396,7 +420,7 @@ def adopt_html(piece: str, title: str = "", how: str = "in", page: bool = False)
             f'data-piece="{html.escape(piece)}" data-copy="{html.escape(prompt, quote=True)}" '
             'data-say="Copied — paste it to your coding agent" '
             'data-tip="Copy a prompt for your coding agent to get this into your project">'
-            f'{ROBOT} {label}</button>{explain_button(piece, title)}</div>')
+            f'{ROBOT} {label}</button>{explain_button(piece, title) if explain else ""}</div>')
 
 
 def explain_key(piece: str, title: str = "") -> str | None:
@@ -408,7 +432,7 @@ def explain_key(piece: str, title: str = "") -> str | None:
 
 
 def explain_button(piece: str, title: str = "") -> str:
-    """The blue (i) right after the pill. `explain.js` opens its box on click."""
+    """The blue (i) right after the pill (a diagram card: after its source file name). `explain.js` opens its box on click."""
     key = explain_key(piece, title)
     if not key:
         return ""
@@ -445,7 +469,7 @@ def place_prompts(tid: str, body: str) -> str:
             if not span:
                 continue
             taken.append((hit.start(), span[1]))
-            name, title = piece, ""
+            name, title, hbtn, hat = piece, "", "", 0
             if piece is None:       # a diagram card: its piece is read off its head
                 # The whole head, balanced: since the action buttons moved into it
                 # (16fe638) it nests a `rerun-acts` div before the file name, and a
@@ -459,14 +483,22 @@ def place_prompts(tid: str, body: str) -> str:
                 b = re.search(r"<b>(.*?)</b>", inner, re.S)
                 title = html.unescape(re.sub(r"<[^>]+>", "", b.group(1))).strip() if b else ""
                 name = next((k for k, rx in DIAGRAM_KINDS if rx.search(text)), "diagram")
+                # The (i) of a diagram card sits in its header, right after the source
+                # file name (8 Oct 2026, Victor); the pill at the foot goes without it.
+                if h1:
+                    hbtn = explain_button(name, title)
+                    src = re.search(r'<(a|span) class="dgm-src"[^>]*>[^<]*</\1>', card[:h1[0]])
+                    hat = hit.start() + (src.end() if src else h1[0])
+                    if hbtn:
+                        edits.append((hat, hat, hbtn))
             if how == "in":
                 cap = _last_caption(body, hit.start(), span[0])
                 if cap:             # the card ends on a caption line: the pill shares it
                     edits.append((cap, cap, '<div class="adoptfoot">'))
                     edits.append((span[0], span[0],
-                                  adopt_html(name, title, "title") + "</div>"))
+                                  adopt_html(name, title, "title", explain=not hbtn) + "</div>"))
                 else:
-                    edits.append((span[0], span[0], adopt_html(name, title, "in")))
+                    edits.append((span[0], span[0], adopt_html(name, title, "in", explain=not hbtn)))
             elif how == "title":
                 edits.append((hit.start(), hit.start(), '<div class="adopthead">'))
                 edits.append((span[1], span[1], adopt_html(

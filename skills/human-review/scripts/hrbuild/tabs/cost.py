@@ -898,6 +898,32 @@ def _minutes(secs) -> str:
 BUSY_TIP = ("Agent busy time: each prompt to its last reply, summed. "
             "Waiting for the next prompt is left out.")
 
+#: The "you" column's header hover (Victor, 8 Oct 2026: "collect not only tokens, but the
+#: time it took to vibe" — his own time, estimated from what he dictated).
+HUMAN_TIP = ("Your time, a floor: speaking each prompt (Wispr Flow's own duration where it "
+             "logged the dictation, else words at 121 wpm spoken / 40 wpm typed) plus "
+             "reading the agent's reply before it at 250 wpm. Looking at diffs, testing by "
+             "hand and thinking leave no trace and are not in it.")
+
+
+def _human_cell(h: dict | None, cls: str = "costtime") -> str:
+    """The "you" column: the human's estimated time, its parts on the hover. `—` when no
+    Claude conversation of this row is on disk; `none` for a `claude -p` run."""
+    if not h:
+        return "<td>—</td>"
+    if not h.get("prompts"):
+        return (f'<td><span class="{cls}" data-tip="No prompt from a person in this window '
+                '— a scripted claude -p run, or the agent working on alone.">none</span></td>')
+    n, m = h["prompts"], h.get("measured") or 0
+    parts = [f"speaking {_duration(h.get('speak'))}"
+             + (f" (Wispr-measured, {m} of {n} prompt{'s' if n != 1 else ''})" if m else ""),
+             f"{'typing / unlogged speech' if h.get('type') else 'typing'} "
+             f"{_duration(h.get('type'))} (estimated)",
+             f"reading replies {_duration(h.get('read'))} (estimated)"]
+    tip = f"{n} prompt{'s' if n != 1 else ''}: " + " · ".join(parts)
+    return (f'<td><span class="{cls}" data-tip="{html.escape(tip, quote=True)}">'
+            f'{_duration(h.get("seconds"))}</span></td>')
+
 
 def _duration(secs) -> str:
     """`45 s`, `12 min`, `3 h 05 min` — or `—` when nothing could time it."""
@@ -968,8 +994,10 @@ def _entry_row(e: dict) -> str:
     busy = e.get("busySeconds")
     when = (_time_cell(busy, e.get("modelSeconds"), "costsub costtime") if busy is not None
             else "<td></td>")
+    you = (_human_cell(e["human"], "costsub costtime") if e.get("human") is not None
+           else "<td></td>")
     return (f'<tr class="costpart"><td><span class="costsub">{_entry_line(e)}</span></td>'
-            f'{when}<td><span class="costsub">{money}</span></td></tr>')
+            f'{you}{when}<td><span class="costsub">{money}</span></td></tr>')
 
 
 
@@ -1081,10 +1109,18 @@ def voices_row_html(v: dict | None) -> str:
     model = " / ".join(v["models"]) or FISH_DEFAULT_MODEL
     return ('<tr class="costquiet" data-component="voices"><td>Voices'
             f'<span class="costsub">Fish Audio, {n} voice{"s" if n != 1 else ""}</span></td>'
-            '<td></td>'
+            '<td></td><td></td>'
             f'<td><span class="costmoney" data-tip="{html.escape("; ".join(tips), quote=True)}">'
             f'{html.escape(voice_money(v["usd"]))}</span><span class="costsub">{html.escape(model)}</span>'
             '</td></tr>')
+
+
+def _human_total(rows: list[dict]) -> dict | None:
+    """The rows' human time, added up, for the total's "you" cell."""
+    got = [r["human"] for r in rows if r.get("measured") and r.get("human")]
+    if not got:
+        return None
+    return {k: sum(h.get(k) or 0 for h in got) for k in got[0]}
 
 
 def components_html(comp: dict | None, fold: str = "", voices: dict | None = None) -> str:
@@ -1105,7 +1141,7 @@ def components_html(comp: dict | None, fold: str = "", voices: dict | None = Non
             why = html.escape(str(r.get("reason") or "not measured"))
             out.append(f'<tr class="costquiet" data-component="{html.escape(r["key"])}">'
                        f'<td>{label}<span class="costsub">unmeasured — {why}</span></td>'
-                       '<td>—</td><td>—</td></tr>')
+                       '<td>—</td><td>—</td><td>—</td></tr>')
             continue
         entries = r.get("entries") or []
         parts = len(entries) > 1
@@ -1159,13 +1195,14 @@ def components_html(comp: dict | None, fold: str = "", voices: dict | None = Non
         # Time before the cost: the money stays the last column, where the page's
         # "Prompt to get this" button sits in the header, beside `cost`.
         out.append(f'<tr data-component="{html.escape(r["key"])}"><td>{label}{sub}</td>'
+                   + _human_cell(r.get("human"))
                    + _time_cell(r.get("busySeconds"), r.get("modelSeconds"))
                    + f'<td>{_cost_cell(_component_money(r, rate), r.get("tokens") or 0, models)}'
                    '</td></tr>')
         if parts:
             out.append("".join(_entry_row(e) for e in entries))
         if folds:
-            out.append(f'<tr class="costfold" hidden><td colspan="3">{fold}</td></tr>')
+            out.append(f'<tr class="costfold" hidden><td colspan="4">{fold}</td></tr>')
     out.append(voices_row_html(voices))
     usd, aic = comp.get("usd") or 0.0, comp.get("aic") or 0.0
     total = usd + aic * rate + ((voices or {}).get("usd") or 0.0)
@@ -1181,6 +1218,7 @@ def components_html(comp: dict | None, fold: str = "", voices: dict | None = Non
     foot = (f'<tr class="costtotal"><td>Total'
             + (f'<span class="costsub">{html.escape(sub)}</span>' if sub else "")
             + '</td>'
+            + _human_cell(_human_total(rows))
             + _time_cell(comp.get("busySeconds"),
                          sum(r.get("modelSeconds") or 0 for r in rows if r.get("measured")))
             + f'<td>{_cost_cell(_cost_money(total), tokens)}</td></tr>')
@@ -1199,7 +1237,8 @@ def components_html(comp: dict | None, fold: str = "", voices: dict | None = Non
             + (f'<caption>{caption}</caption>' if caption else '') +
             # "step" (Victor, 7 Oct 2026): the rows are the steps the change went through.
             '<thead><tr><th scope="col">step</th>'
-            f'<th scope="col"><span data-tip="{html.escape(BUSY_TIP, quote=True)}">time</span>'
+            f'<th scope="col"><span data-tip="{html.escape(HUMAN_TIP, quote=True)}">you</span>'
+            f'</th><th scope="col"><span data-tip="{html.escape(BUSY_TIP, quote=True)}">agent</span>'
             '</th><th scope="col">cost</th></tr></thead>'
             f'<tbody>{"".join(out)}</tbody><tfoot>{foot}</tfoot></table>')
 

@@ -448,7 +448,7 @@
       delete row.dataset.hit;
       var b=row.querySelector('.rm-cat');if(b)delete b.dataset.strength;
       row.querySelector('.rm-thead').removeAttribute('data-tip');});
-    gap.innerHTML='';gap.hidden=true;
+    gap.innerHTML='';gap.hidden=true;rejMark(null);
   }
   list.addEventListener('click',function(e){
     var fb=e.target.closest('.rm-fold');                // semcov: show/hide the folded rest
@@ -473,6 +473,22 @@
       +'" data-tip="Open in VS Code" target="_blank" rel="noopener">'+esc(s.decisionWhere)+'</a>'
       :esc(s.decisionWhere);
     return 'Recorded in '+w+': '+esc(s.decisionQuote||s.decision);
+  }
+  // semcov: the links a model read and turned down. They were a second box under the
+  // blind spot, and on a short screen that box ate the ticket the reader was selecting
+  // from (Victor, 8 Oct 2026: "it obscures the vision"). Now one "!" at the end of the
+  // colour legend, there only when the selected sentence has any; the list is its tip.
+  function rejMark(rej){
+    var lg=root.querySelector('.rm-legend');if(!lg)return;
+    var b=lg.querySelector('.rm-rejmark');
+    if(!rej||!rej.length){if(b)b.hidden=true;return;}
+    if(!b){b=document.createElement('button');b.type='button';b.className='rm-rejmark';
+      b.textContent='!';lg.appendChild(b);}
+    b.setAttribute('aria-label',rej.length+' keyword matches rejected by AI');
+    b.setAttribute('data-tip-html','<p class="tipfoot">Matched on words, rejected by 🤖</p>'
+      +'<ul class="tiplist prose">'+rej.map(function(r){
+        return '<li><code>'+esc(where(r.id))+'</code> \u2014 '+esc(r.why)+'</li>';}).join('')+'</ul>');
+    b.hidden=false;
   }
   function open(sid){
     var s=D.sentences[sid];if(!s)return;
@@ -505,16 +521,12 @@
     // The two are different findings and go to different people.
     var kind=s.gapKind==='requirement'?'in the requirement':'in the tests';
     gap.dataset.kind=s.gapKind||'tests';
-    // semcov: the links a model read and turned down, under the blind spot - the keyword
-    // match that would have painted this sentence, and the one line on why it does not count.
-    var rej=(s.rejected||[]).map(function(r){
-      return '<li><span class="rm-rid">'+esc(where(r.id))+'</span> \u2014 '+esc(r.why)+'</li>';}).join('');
     var head=s.cov==='narrowed'?'Narrowed on purpose':'Blind spot';
-    gap.innerHTML=(s.gap?'<h4>'+head+' <span class="rm-gapkind">'+kind+'</span>'
+    gap.innerHTML=s.gap?'<h4>'+head+' <span class="rm-gapkind">'+kind+'</span>'
       +(s.by==='model'?'<sup class="rm-ai" data-tip="as inferred by AI">🤖</sup>':'')+'</h4><p>'+esc(s.gap)+'</p>'
-      +(s.decision?'<p class="rm-dec">'+recorded(s)+'</p>':''):'')
-      +(rej?'<h4>Matched on words, rejected by AI <sup class="rm-ai">🤖</sup></h4><ul class="rm-rej">'+rej+'</ul>':'');
-    gap.hidden=!(s.gap||rej);
+      +(s.decision?'<p class="rm-dec">'+recorded(s)+'</p>':''):'';
+    gap.hidden=!s.gap;
+    rejMark(s.rejected);
     bringIn(sideCol,Array.prototype.filter.call(list.querySelectorAll('.rm-t[data-hit=yes]'),
       function(r){return r.dataset.catoff!=='yes';}));
   }

@@ -453,8 +453,13 @@
    one line. */
 .reqmap .rm-tgroup[data-sec=yes]{text-transform:none;letter-spacing:0;font-size:12px;
   color:var(--fg,#1c1c1c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.reqmap .rm-rej{margin:.2em 0 0;padding-left:1.2em;font-size:12.5px}
-.reqmap .rm-rid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
+/* The "!" that holds the keyword matches a model turned down for the selected sentence:
+   a round amber mark at the end of the legend, the blind spot's own orange. */
+.reqmap .rm-rejmark{display:inline-flex;align-items:center;justify-content:center;
+  width:1.5em;height:1.5em;padding:0;border:1px solid var(--rm-o-edge);border-radius:50%;
+  background:rgba(214,122,10,.12);color:var(--rm-o-edge);font-family:inherit;font-size:1em;font-weight:700;
+  line-height:1;cursor:pointer}
+.reqmap .rm-rejmark[hidden]{display:none}
 .reqmap .rm-dec{margin:.2em 0 0;font-size:12.5px;color:var(--muted,#6b6b6b)}
 /* The two "untouched and unpaired" groups, folded behind one button that counts them: tests
    about something else that only happen to run a changed line. A row-wide quiet control in

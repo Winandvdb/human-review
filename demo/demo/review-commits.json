@@ -1,8 +1,8 @@
 {
- "base": "2f17c04983ba84ecf38cf0b1515de0bf3af88b7a",
+ "base": "a02544760c34305833f81a6ee2908decd39cf907",
  "head": "HEAD",
  "points_file": "review-points.md",
- "commits": 75,
+ "commits": 78,
  "implementation": "1bcf74d4f14a165cabaaa7e9cd1cc5faaa3311b1",
  "review": "be762955d5f477feeca0f7db55e32fa1c2fb8db5",
  "session": "82329d0a-55d2-448f-aff5-0363cf80b32f",
@@ -16,7 +16,10 @@
   "1044914d4bece7d7becbf7c3fa398ffdc1182c28",
   "5f84b2cdf4dbcbebf70b7a398bba00e9aa04e236",
   "1d6719fb81cd34b95b47a8fb55eca14f3edb474f",
-  "c31ba5ec7721e7417cd0c0c4b46dcd848078ec56"
+  "c31ba5ec7721e7417cd0c0c4b46dcd848078ec56",
+  "1114f3ba5289e808a7839807c8348a417a5ab302",
+  "6b4b63bef60f0902fa253b495c5cafec2a62746d",
+  "44689ad3e4b358abf0aff2baba66859b5565cd5a"
  ],
  "after_detail": [
   {
@@ -71,6 +74,24 @@
    "sha": "c31ba5ec7721e7417cd0c0c4b46dcd848078ec56",
    "when": "2026-10-06T11:20:23+02:00",
    "subject": "review-points: base moves to 2f17c049 after merging main",
+   "auto_fix": false
+  },
+  {
+   "sha": "1114f3ba5289e808a7839807c8348a417a5ab302",
+   "when": "2026-10-06T11:34:13+02:00",
+   "subject": "Merge remote-tracking branch 'origin/main' into test-pr",
+   "auto_fix": false
+  },
+  {
+   "sha": "6b4b63bef60f0902fa253b495c5cafec2a62746d",
+   "when": "2026-10-07T21:13:55+02:00",
+   "subject": "Fixture colours for the human-review Demo and Tests tabs",
+   "auto_fix": false
+  },
+  {
+   "sha": "44689ad3e4b358abf0aff2baba66859b5565cd5a",
+   "when": "2026-10-07T21:13:55+02:00",
+   "subject": "Merge origin/main into test-pr",
    "auto_fix": false
   }
  ],

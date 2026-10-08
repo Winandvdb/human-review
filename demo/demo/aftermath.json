@@ -1,7 +1,7 @@
 {
  "review": "be762955d5f477feeca0f7db55e32fa1c2fb8db5",
  "review_short": "be762955",
- "head": "c31ba5ec7721e7417cd0c0c4b46dcd848078ec56",
+ "head": "44689ad3e4b358abf0aff2baba66859b5565cd5a",
  "takeover": null,
  "generated_globs": [
   "**/generated/**",
@@ -363,22 +363,126 @@
    "measured": true,
    "taken_over": false,
    "takeover": false
+  },
+  {
+   "sha": "1114f3ba5289e808a7839807c8348a417a5ab302",
+   "short": "1114f3ba",
+   "when": "2026-10-06T11:34:13+02:00",
+   "subject": "Merge remote-tracking branch 'origin/main' into test-pr",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/generated/MavenModules.puml",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/scripts/mavenmodules/maven_modules_to_puml.py",
+     "added": 2,
+     "deleted": 2,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/README.md",
+     "added": 6,
+     "deleted": 6,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/pom.xml",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/src/main/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariable.java",
+     "added": 0,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/src/main/java/victor/training/petclinic/rewrite/ListGetFirst.java",
+     "added": 0,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+     "added": 0,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/src/test/java/victor/training/petclinic/rewrite/ListGetFirstTest.java",
+     "added": 0,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 10,
+   "deleted": 10,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "6b4b63bef60f0902fa253b495c5cafec2a62746d",
+   "short": "6b4b63be",
+   "when": "2026-10-07T21:13:55+02:00",
+   "subject": "Fixture colours for the human-review Demo and Tests tabs",
+   "files": [
+    {
+     "path": "petclinic-backend/src/main/resources/db/fixtures/fixture-colors.json",
+     "added": 4,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 4,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "44689ad3e4b358abf0aff2baba66859b5565cd5a",
+   "short": "44689ad3",
+   "when": "2026-10-07T21:13:55+02:00",
+   "subject": "Merge origin/main into test-pr",
+   "files": [],
+   "added": 0,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": false,
+   "taken_over": false,
+   "takeover": false
   }
  ],
  "totals": {
-  "commits": 9,
-  "files": 29,
-  "added": 599,
-  "deleted": 168,
+  "commits": 12,
+  "files": 36,
+  "added": 613,
+  "deleted": 178,
   "code": {
-   "files": 23,
-   "added": 479,
-   "deleted": 42
+   "files": 30,
+   "added": 492,
+   "deleted": 51
   },
   "generated": {
    "files": 6,
-   "added": 120,
-   "deleted": 126
+   "added": 121,
+   "deleted": 127
   }
  },
  "clean": false

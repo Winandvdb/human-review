@@ -10,3 +10,6 @@
     $ git show --numstat --format= 5f84b2cdf4dbcbebf70b7a398bba00e9aa04e236
     $ git show --numstat --format= 1d6719fb81cd34b95b47a8fb55eca14f3edb474f
     $ git show --numstat --format= c31ba5ec7721e7417cd0c0c4b46dcd848078ec56
+    $ git show --numstat --format= 1114f3ba5289e808a7839807c8348a417a5ab302
+    $ git show --numstat --format= 6b4b63bef60f0902fa253b495c5cafec2a62746d
+    $ git show --numstat --format= 44689ad3e4b358abf0aff2baba66859b5565cd5a

@@ -79,7 +79,7 @@
    the chip it sits on keeps its border so the ref itself stays the thing being read. */
 .chip.refchip .drift { font-style:normal; cursor:help; font-weight:700; color:var(--drift);
             white-space:nowrap; margin:0 .1rem 0 .3rem; }
-.chip.refchip .drift-ahead { font-weight:700; margin-right:.1rem; }
+.chip.refchip .drift-ahead { font-weight:700; margin-left:0; margin-right:.1rem; }
 .chip.refchip a.refl { text-decoration:none; }
 .chip.refchip a.refl:hover b { text-decoration:underline; }
 h1 .prref { text-decoration:none; }

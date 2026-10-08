@@ -137,6 +137,8 @@ def test_the_behind_main_mark_is_as_bold_as_the_ahead_one():
     css = _read(HERE / "hrbuild" / "assets" / "css" / "masthead.css")
     rule = _rule(css, ".chip.refchip .drift")
     assert "font-weight:700" in rule and "margin:0 .1rem 0 .3rem" in rule
+    # …and the ahead mark, which opens the chip, takes none of that left margin.
+    assert "margin-left:0" in _rule(css, ".chip.refchip .drift-ahead")
 
 
 def test_demo_transcript_pill_and_container_chips_keep_their_live_spacing():

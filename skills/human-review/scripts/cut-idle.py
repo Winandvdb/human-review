@@ -61,6 +61,10 @@ def probe(video: Path) -> float:
 
 
 def main() -> int:
+  asked = sys.argv[1:2] in (["-h"], ["--help"])
+  if asked or len(sys.argv) != 6:
+    print(__doc__, file=sys.stdout if asked else sys.stderr)
+    return 0 if asked else 2
   raw, cues_path, idle_path, out_raw, out_cues = map(Path, sys.argv[1:6])
   cues = json.loads(cues_path.read_text(encoding="utf-8"))
   try:

@@ -97,3 +97,10 @@ table.costfour { max-width:none; }
 table.costfour > thead > tr > th:first-child { width:100%; }
 table.costfour > thead > tr > th + th + th, table.costfour > tbody > tr > td + td + td,
 table.costfour > tfoot > tr > td + td + td { padding-left:2rem; }
+/* What building human-review itself cost — the tool, not this change. A muted box under
+   the table, never a row of it: its number must not be read as, or added to, the bill. */
+.costtooling { max-width:64rem; margin:2rem 0 0; padding:.5rem .75rem;
+             border:1px dashed var(--line); border-radius:6px;
+             color:var(--muted); font-size:.8rem; line-height:1.5; }
+.costtooling > span { cursor:help; }
+.costtooling b { font-weight:600; }

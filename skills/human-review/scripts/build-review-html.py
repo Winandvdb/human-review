@@ -291,7 +291,7 @@ from hrbuild.tabs.cost import (
     guide_breakdown_html, _extension_line, _instants, _stamp_s, _span, _cost_cell,
     voice_money, voices_cost, voices_row_html, FISH_PRICE_PER_M_BYTES, FISH_DEFAULT_MODEL,
     BUSY_TIP, _duration, _time_cell, COST_TITLE, _WHAT_SHORT, _cost_ledger_body, _entry_row,
-    _split
+    _split, TOOLING_INVESTMENT, tooling_investment_html
 )
 
 

@@ -504,11 +504,52 @@ def cost_ledger_html(led: dict | None, tabs: list[dict], voices: dict | None = N
     # "Prompt to get this page" pill goes at its right end, as on the other tabs
     # (`adopt.PLACES`), out of the table's header where it crowded the time column.
     body = _cost_ledger_body(led, tabs, voices)
-    return COST_TITLE + body if body else ""
+    return COST_TITLE + body + tooling_investment_html() if body else ""
 
 
 #: The tab's title row.
 COST_TITLE = '<h2 class="tabtitle">Token costs</h2>'
+
+#: What building human-review ITSELF has cost — the tool, not the change on this page.
+#: A dated baseline, hardcoded on purpose: nothing recomputes it, because a figure that
+#: crept up every build would read as this PR's bill. Measured on 8 Oct 2026 by
+#: `scripts/tools/tooling-cost.py` (re-run by hand; no build step calls it): every Claude
+#: Code transcript on Victor's Mac, deduped by `message.id`, priced per model at the API
+#: list price (platform.claude.com/docs/en/about-claude/pricing, read 8 Oct 2026). A session
+#: counts when it ran in this repo, was a `claude -p` eval run, or when at least half its
+#: tool calls (subagents included) named a human-review path. The buckets are main threads;
+#: every bucket's subagents are one line of their own. They sum to `usd`.
+TOOLING_INVESTMENT = {
+    "usd": 3528, "sessions": 183, "first": "27 Aug 2026", "asof": "8 Oct 2026",
+    "buckets": [("human-review repo", 992), ("workspace sessions", 711),
+                ("subagents", 1567), ("eval runs (claude -p)", 224),
+                ("petclinic checkouts, after the move", 32), ("other projects", 3)],
+    "models": [("Opus 5", 1782), ("Opus 5.5", 1435), ("Fable 5.1", 170),
+               ("Sonnet 5", 101), ("Sonnet 5.5", 40)],
+    "borderline": {"sessions": 19, "usd": 1336, "prorated": 575},
+}
+
+
+def tooling_investment_html(t: dict = TOOLING_INVESTMENT) -> str:
+    """The tool's own bill, under the table and apart from it: a muted footer box.
+
+    Kept out of the table and its total on purpose — the table is what THIS change cost;
+    this is what building the reviewer cost, and the two must never be added up."""
+    if not t:
+        return ""
+    money = lambda n: f"${n:,.0f}"
+    tip = ("By bucket: " + " · ".join(f"{k} {money(v)}" for k, v in t["buckets"])
+           + ". By model: " + " · ".join(f"{k} {money(v)}" for k, v in t["models"])
+           + f". Not counted: {t['borderline']['sessions']} mixed sessions where human-review"
+           f" was under half the tool calls ({money(t['borderline']['usd'])} whole, about"
+           f" {money(t['borderline']['prorated'])} pro rata), and the petclinic era before"
+           " 22 Aug 2026, whose transcripts are mostly gone. Measured by"
+           " scripts/tools/tooling-cost.py.")
+    return (f'<p class="costtooling"><span data-tip="{html.escape(tip, quote=True)}" '
+            f'tabindex="0"><b>Tooling investment</b>, not this change: building human-review'
+            f' itself has cost ≈ {money(t["usd"])} in Claude API list price ({t["sessions"]}'
+            f' sessions, {t["first"]} → {t["asof"]}). Baseline as of {t["asof"]}, not'
+            ' updated automatically.</span></p>')
 
 
 def _cost_ledger_body(led: dict, tabs: list[dict], voices: dict | None = None) -> str:

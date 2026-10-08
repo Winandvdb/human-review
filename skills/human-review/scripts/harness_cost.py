@@ -464,7 +464,7 @@ WISPR_LEAD = dt.timedelta(minutes=20)
 _DICTATED = "[Dictated"
 #: What the relay and the harness add to a prompt that nobody said or typed.
 _NOT_HIS = re.compile(r"<pasted_content.*?</pasted_content[^>]*>|<system-reminder>.*?"
-                      r"</system-reminder>|\[📁=[^\]]*\]|\[📸[^\]]*\]|\[Dictated[^\]]*\]|<[^>]+>",
+                      r"</system-reminder>|\[📁=[^\]]*\]|\[📸[^\]]*\]|\[Dictated[^\]]*\]|<[^>]+>|\[Request interrupted by user[^\]]*\]",
                       re.S)
 
 

@@ -29,6 +29,13 @@ How it measures
     - petclinic sessions before the move (`--move`, the commit that took the skill to its
       own repo) are the "petclinic era".
 
+Time, beside the money (8 Oct 2026), for every session counted in:
+* **your time** — `harness_cost.claude_human_time` over the whole session: the dictations
+  Wispr Flow logged, the words it did not (spoken or typed), reading the replies;
+* **agent time** — `harness_cost.claude_busy_spans`, main thread and subagents: each
+  prompt to its turn's last record. `agent_seconds` adds the sessions up (parallel ones
+  count twice); `wall_seconds` is their union, the hours something was being built.
+
 Usage:  tooling-cost.py [--out DIR] [--until 2026-10-08]
 Writes  sessions.csv (one row per session tree), summary.json, and prints the summary.
 """
@@ -45,6 +52,8 @@ from collections import defaultdict
 from pathlib import Path
 
 PROJECTS = Path(os.path.expanduser("~/.claude/projects"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import harness_cost as hc  # noqa: E402
 PRICE_SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing (read 2026-10-08)"
 
 # $ per MTok: (input, output, cache read). Writes are 1.25x / 2x input for 5m / 1h.
@@ -365,6 +374,23 @@ def main() -> int:
             unknown_models=";".join(f"{k}={v}" for k, v in unknown.items()),
         ))
 
+    # Time, only for the sessions the money counts: reading a transcript whole is slow.
+    all_spans: list[tuple] = []
+    for r in rows:
+        r["human_seconds"] = r["agent_seconds"] = 0
+        main_file = PROJECTS / r["project"] / f"{r['session']}.jsonl"
+        if r["verdict"] != "in" or not r["first"] or not main_file.is_file():
+            continue
+        lo = dt.datetime.fromisoformat(r["first"])
+        hi = min(dt.datetime.fromisoformat(r["last"]), until or far)
+        spans = hc.claude_busy_spans(main_file, lo, hi)
+        for agent in sorted((PROJECTS / r["project"] / r["session"] / "subagents")
+                            .glob("agent-*.jsonl")):
+            spans += hc.claude_busy_spans(agent, lo, hi)
+        all_spans += spans
+        r["agent_seconds"] = round(sum((b - a).total_seconds() for a, b in spans))
+        r["human_seconds"] = round(hc.claude_human_time(main_file, lo, hi)["seconds"])
+
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     rows.sort(key=lambda r: r["first"])
@@ -418,6 +444,9 @@ def main() -> int:
         unknown_models_in_scope=dict(unknown),
         all_transcripts_usd=round(sum(r["usd"] for r in rows), 2),
         all_transcripts_first=min(r["first"] for r in rows if r["first"]),
+        human_seconds=sum(r["human_seconds"] for r in inc),
+        agent_seconds=sum(r["agent_seconds"] for r in inc),
+        wall_seconds=round(hc._intervals_union(all_spans)),
     )
     (out / "summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))

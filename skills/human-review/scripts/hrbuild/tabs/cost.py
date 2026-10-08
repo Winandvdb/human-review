@@ -518,15 +518,19 @@ COST_TITLE = '<h2 class="tabtitle">Token costs</h2>'
 #: list price (platform.claude.com/docs/en/about-claude/pricing, read 8 Oct 2026). A session
 #: counts when it ran in this repo, was a `claude -p` eval run, or when at least half its
 #: tool calls (subagents included) named a human-review path. The buckets are main threads;
-#: every bucket's subagents are one line of their own. They sum to `usd`.
+#: every bucket's subagents are one line of their own. They sum to `usd`. The three times
+#: (re-measured 8 Oct 2026, 14:00) are `harness_cost.claude_human_time` and
+#: `claude_busy_spans` over the same sessions: the human's, the agents' added up, and the
+#: agents' union — the hours in which something was being built.
 TOOLING_INVESTMENT = {
-    "usd": 3528, "sessions": 183, "first": "27 Aug 2026", "asof": "8 Oct 2026",
-    "buckets": [("human-review repo", 992), ("workspace sessions", 711),
-                ("subagents", 1567), ("eval runs (claude -p)", 224),
+    "usd": 3546, "sessions": 186, "first": "27 Aug 2026", "asof": "8 Oct 2026",
+    "buckets": [("human-review repo", 999), ("workspace sessions", 712),
+                ("subagents", 1576), ("eval runs (claude -p)", 224),
                 ("petclinic checkouts, after the move", 32), ("other projects", 3)],
-    "models": [("Opus 5", 1782), ("Opus 5.5", 1435), ("Fable 5.1", 170),
+    "models": [("Opus 5", 1782), ("Opus 5.5", 1453), ("Fable 5.1", 170),
                ("Sonnet 5", 101), ("Sonnet 5.5", 40)],
-    "borderline": {"sessions": 19, "usd": 1336, "prorated": 575},
+    "borderline": {"sessions": 21, "usd": 1338, "prorated": 575},
+    "humanSeconds": 104813, "agentSeconds": 1226755, "wallSeconds": 578725,
 }
 
 
@@ -534,10 +538,13 @@ def tooling_investment_html(t: dict = TOOLING_INVESTMENT) -> str:
     """The tool's own bill, under the table and apart from it: a muted footer box.
 
     Kept out of the table and its total on purpose — the table is what THIS change cost;
-    this is what building the reviewer cost, and the two must never be added up."""
+    this is what building the reviewer cost, and the two must never be added up. Three
+    figures, each its own tile (Victor, 8 Oct 2026: the token cost, the time he put in, and
+    how long it took to build, highlighted — not a sentence to read them out of)."""
     if not t:
         return ""
     money = lambda n: f"${n:,.0f}"
+    hours = lambda s: f"{s / 3600:,.0f} h"
     tip = ("By bucket: " + " · ".join(f"{k} {money(v)}" for k, v in t["buckets"])
            + ". By model: " + " · ".join(f"{k} {money(v)}" for k, v in t["models"])
            + f". Not counted: {t['borderline']['sessions']} mixed sessions where human-review"
@@ -545,11 +552,26 @@ def tooling_investment_html(t: dict = TOOLING_INVESTMENT) -> str:
            f" {money(t['borderline']['prorated'])} pro rata), and the petclinic era before"
            " 22 Aug 2026, whose transcripts are mostly gone. Measured by"
            " scripts/tools/tooling-cost.py.")
-    return (f'<p class="costtooling"><span data-tip="{html.escape(tip, quote=True)}" '
-            f'tabindex="0"><b>Tooling investment</b>, not this change: building human-review'
-            f' itself has cost ≈ {money(t["usd"])} in Claude API list price ({t["sessions"]}'
-            f' sessions, {t["first"]} → {t["asof"]}). Baseline as of {t["asof"]}, not'
-            ' updated automatically.</span></p>')
+    tiles = [(money(t["usd"]), "token cost", "Claude API list price, every session counted, "
+              "subagents included. " + tip)]
+    if t.get("humanSeconds"):
+        tiles.append((hours(t["humanSeconds"]), "your time, estimated",
+                      "Speaking each prompt (Wispr Flow's own duration where it logged the "
+                      "dictation), typing the rest, reading the agent's replies. A floor: "
+                      "reviewing, testing by hand and thinking leave no trace."))
+    if t.get("wallSeconds"):
+        tiles.append((hours(t["wallSeconds"]), "development time",
+                      "Hours in which at least one agent was working on it — each prompt to "
+                      "its turn's last record, overlapping sessions counted once. Added up "
+                      f"session by session it is {hours(t.get('agentSeconds') or 0)}."))
+    cells = "".join(f'<span class="costtile" tabindex="0" data-tip="{html.escape(tip_, quote=True)}">'
+                    f'<b>{html.escape(v)}</b><span>{html.escape(k)}</span></span>'
+                    for v, k, tip_ in tiles)
+    return (f'<div class="costtooling"><p class="costtooling-head">Building human-review '
+            f'itself <span>— the tool, not this change</span></p>'
+            f'<div class="costtiles">{cells}</div>'
+            f'<p class="costtooling-foot">{t["sessions"]} sessions, {t["first"]} &rarr; '
+            f'{t["asof"]}</p></div>')
 
 
 def _cost_ledger_body(led: dict, tabs: list[dict], voices: dict | None = None) -> str:

@@ -374,10 +374,13 @@ def test_the_deployed_app_row_is_the_films_own_app_block(tmp_path):
     assert html.escape(f"cd {root} && ./start-docker.sh up --ref {sha} --ttl 1800") in page
     assert html.escape(f"./start-docker.sh down petclinic-{short}") in page
     assert 'data-reset="/__reset"' in page
-    # What the content file says still wins.
+    # The config's commands win over the content file's (441021c, 5 Oct 2026: a hand-typed
+    # `cd ~/workspace/petclinic-pr && …` went stale when the folder was renamed); the content
+    # file still supplies what the config cannot know, such as its own `reset`.
     mine = build.video_html({"video": "assets/feature.webm",
-                             "runtime": {"command": "make up"}}, out)
-    assert "make up" in mine and "start-docker.sh up" not in mine
+                             "runtime": {"command": "make up", "reset": "/__wipe"}}, out)
+    assert "make up" not in mine and "start-docker.sh up" in mine
+    assert 'data-reset="/__wipe"' in mine
 
 
 def test_a_reset_that_is_a_command_is_not_a_button(tmp_path):

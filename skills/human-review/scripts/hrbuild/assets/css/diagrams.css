@@ -6,7 +6,12 @@
    middle of whatever room the two names left, so it wandered card to card (UX review,
    7 Oct 2026). Only right after the title: on a Data card the tab's presses stand between
    the two and already push the badge right. */
-.diagram .head > b + .badge { margin-left:auto; }
+/* The status badge (UNCHANGED, …) sits right after the title, whatever stands between
+   them (rerun ring, C4 description); the next item takes the push to the right edge
+   (Victor, 8 Oct 2026). */
+.diagram .head > .badge { margin-left:0 !important; }
+.diagram .head > *:has(+ .badge) { margin-right:0 !important; }
+.diagram .head > .badge + * { margin-left:auto !important; }
 .prov { margin:.5rem 0 0; display:flex; gap:.9rem; flex-wrap:wrap; }
 .prov .srcref { margin-bottom:0; }
 .diagram .head span { color:var(--muted); font-size:.82rem; font-family:ui-monospace,Menlo,monospace; }

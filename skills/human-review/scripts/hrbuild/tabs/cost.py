@@ -552,20 +552,25 @@ def tooling_investment_html(t: dict = TOOLING_INVESTMENT) -> str:
            f" {money(t['borderline']['prorated'])} pro rata), and the petclinic era before"
            " 22 Aug 2026, whose transcripts are mostly gone. Measured by"
            " scripts/tools/tooling-cost.py.")
-    tiles = [(money(t["usd"]), "token cost", "Claude API list price, every session counted, "
-              "subagents included. " + tip)]
+    # "(subsidized)": the figure is API list price, and the tool was built on a Claude
+    # subscription that bills a flat fee far below it (Victor, 8 Oct 2026).
+    tiles = [(money(t["usd"]), 'token cost (<a href="https://claude.com/pricing" '
+              'target="_blank" rel="noopener">subsidized</a>)',
+              "Claude API list price, every session counted, subagents included — what the "
+              "tokens would cost on an API key; a Claude subscription bills a flat monthly "
+              "fee instead. " + tip)]
     if t.get("humanSeconds"):
-        tiles.append((hours(t["humanSeconds"]), "your time, estimated",
+        tiles.append((hours(t["humanSeconds"]), "Victor&rsquo;s time, estimated",
                       "Speaking each prompt (Wispr Flow's own duration where it logged the "
                       "dictation), typing the rest, reading the agent's replies. A floor: "
                       "reviewing, testing by hand and thinking leave no trace."))
     if t.get("wallSeconds"):
-        tiles.append((hours(t["wallSeconds"]), "development time",
+        tiles.append((hours(t["wallSeconds"]), "agent time",
                       "Hours in which at least one agent was working on it — each prompt to "
                       "its turn's last record, overlapping sessions counted once. Added up "
                       f"session by session it is {hours(t.get('agentSeconds') or 0)}."))
     cells = "".join(f'<span class="costtile" tabindex="0" data-tip="{html.escape(tip_, quote=True)}">'
-                    f'<b>{html.escape(v)}</b><span>{html.escape(k)}</span></span>'
+                    f'<b>{html.escape(v)}</b><span>{k}</span></span>'
                     for v, k, tip_ in tiles)
     return (f'<div class="costtooling"><p class="costtooling-head">Building human-review '
             f'itself <span>— the tool, not this change</span></p>'

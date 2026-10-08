@@ -1863,7 +1863,9 @@ def load_model_mapping(review: Path) -> dict | None:
 #: The per-test coverage the right-hand column is drawn from (`tests.py:COVERAGE_JSON`).
 COVERAGE = "assets/test-coverage.json"
 #: The note over the ticket when the pairing is older than the evidence it should have read.
-STALE_NOTE = "Pairing predates the coverage run — re-run the pairing step:"
+STALE_NOTE = "The test pairing is older than the coverage run: rerun"
+#: Said by the `!🤖` pill after the ticket's checkbox (it used to be an amber banner over the ticket).
+STALE_TAIL = "(AI, paid)."
 
 
 def rerun_command(out_dir: Path, root: Path) -> str:
@@ -2290,8 +2292,14 @@ def render(ticket: dict, blocks: list[dict], rows: list[dict], entries: list[dic
     note = ""
     if stale:
         why, cmd = stale
-        note = (f'<p class="rm-stale" role="note" data-tip="{html.escape(why, quote=True)}">'
-                f'{html.escape(STALE_NOTE)} <code>{html.escape(cmd)}</code></p>')
+        tip = f"{STALE_NOTE} {cmd} {STALE_TAIL}"
+        # A pill, not a banner: `tests.py` moves it to sit right after the `Semantic coverage`
+        # checkbox. The robot is the press when the page is served (reqmap.js wires it to the
+        # Tests tab's own paid rerun chip); otherwise the pill only explains itself.
+        note = (f'<span class="rm-stale-badge" role="note" data-tip="{html.escape(tip, quote=True)}">'
+                '<b aria-hidden="true">!</b>'
+                f'<button type="button" class="rm-stale-ai" aria-label="{html.escape(tip, quote=True)}">'
+                '\U0001F916</button></span>')
     text = ('<div class="rm-text">' + note + legend + _ticket_html(ticket, blocks, by_sid)
             + '<div class="rm-gap" hidden></div></div>')
     css = (ASSETS / "reqmap.css").read_text(encoding="utf-8")

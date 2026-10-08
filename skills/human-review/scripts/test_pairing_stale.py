@@ -116,8 +116,10 @@ def test_the_build_warns_and_the_page_says_so(tmp_path, capsys):
     assert "WARNING: the Tests tab's pairing predates the coverage run" in err
     assert "rerun-model.py" in err
     page = (review / S.FRAGMENT).read_text()
-    assert '<p class="rm-stale" role="note"' in page
-    assert S.STALE_NOTE in page and "<code>rerun-model.py</code>" in page
+    assert '<span class="rm-stale-badge" role="note"' in page
+    assert "<p class=\"rm-stale\"" not in page, "no banner any more"
+    assert f"{S.STALE_NOTE} rerun-model.py {S.STALE_TAIL}" in page
+    assert 'class="rm-stale-ai"' in page and "\U0001F916</button>" in page
     merged = json.loads((review / S.MERGED).read_text())
     assert merged["stale"]["command"] == "rerun-model.py"
     assert "older than test-coverage.json" in merged["stale"]["why"]
@@ -129,7 +131,7 @@ def test_a_fresh_pairing_draws_no_note(tmp_path, capsys):
     _mapping(review)
     S.write_fragment(S._spec(review), review, root)
     assert "predates" not in capsys.readouterr().err
-    assert "rm-stale" not in (review / S.FRAGMENT).read_text().split("</style>", 1)[1]
+    assert "rm-stale-badge" not in (review / S.FRAGMENT).read_text().split("</style>", 1)[1]
     assert "stale" not in json.loads((review / S.MERGED).read_text())
 
 

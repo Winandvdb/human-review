@@ -570,14 +570,14 @@ def ticket_ref(spec: dict, out_dir: Path) -> dict | None:
 #: default: the reader opens the tab and sees the matrix say what it was built to say; the
 #: box is there for the moment they want to read the ticket as the author wrote it, four
 #: sentences with no green under them, and then put the fills back.
-SEMCOV_LABEL = "Semantic Test Coverage"
+SEMCOV_LABEL = "Semantic coverage"
 #: Its hover (Victor, 5 Oct 2026): the colours it switches are a model's reading of which
 #: test proves which claim, and a checkbox named like a metric reads as a measured one.
 _SEMCOV_TIP = "Claim ↔ test, as matched by AI"
 
 
 def semcov_switch() -> str:
-    """The `Semantic Test Coverage` checkbox, checked. It sits at the far end of the
+    """The `Semantic coverage` checkbox, checked. It sits at the far end of the
     ticket frame's own header strip (`victorrentea opened on …`), on the thing whose
     colouring it switches, rather than on the title row above the frame."""
     return (f'<label class="rm-semcov" data-tip="{html.escape(_SEMCOV_TIP, quote=True)}">'
@@ -1544,6 +1544,32 @@ REQMAP_SEMCOV_JS = """
     if (box.checked) map.removeAttribute('data-semcov');
     else map.setAttribute('data-semcov', 'off');
   });
+  // The stale-pairing pill: its robot presses the Tests tab's own paid rerun (the chip
+  // that confirms the spend first) when that chip is live on this page; else tooltip only.
+  function aiChip() {
+    return document.querySelector('button.chip-rerun-ai[data-tab="requirements"]');
+  }
+  function live() {
+    var c = aiChip();
+    return !!c && !c.hidden && !c.disabled && c.getAttribute('aria-disabled') !== 'true';
+  }
+  function paint() {
+    var on = live();
+    [].forEach.call(document.querySelectorAll('.rm-stale-badge'), function (b) {
+      if (on) b.setAttribute('data-live', ''); else b.removeAttribute('data-live');
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    var go = ev.target && ev.target.closest && ev.target.closest('.rm-stale-ai');
+    if (go && live()) aiChip().click();
+  });
+  document.addEventListener('DOMContentLoaded', function () {
+    paint();
+    var c = aiChip();
+    if (c && window.MutationObserver)
+      new MutationObserver(paint).observe(c, {attributes: true});
+    setTimeout(paint, 1500);
+  });
 })();</script>"""
 
 #: The card split into E2E/API/UNIT chapters, and the "All tests" checkbox that adds the
@@ -1664,8 +1690,14 @@ def reqmap_layout(frag: str, spec: dict, out_dir: Path, root: Path | None = None
 
     text_col = _append_inside(text_col, legend)
     # The switch goes on the ticket frame's header strip, at its far end.
+    # The stale-pairing pill (`semcov.render`) comes out of the text column and sits right
+    # after the checkbox, in the same strip.
+    pill = re.search(r'<span class="rm-stale-badge".*?</button></span>', text_col, re.S)
+    if pill:
+        text_col = text_col.replace(pill.group(0), "", 1)
     text_col = re.sub(r'(<div class="rm-tkhead">.*?)(</div>)',
-                      lambda h: h.group(1) + semcov_switch() + h.group(2),
+                      lambda h: h.group(1) + semcov_switch() + (pill.group(0) if pill else "")
+                      + h.group(2),
                       text_col, count=1, flags=re.S)
     # A matrix `semcov.py` drew already says what its card lists; only a model's is reworded.
     generated = 'data-generated="semcov"' in frag

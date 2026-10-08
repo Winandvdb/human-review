@@ -1114,7 +1114,7 @@ def components_html(comp: dict | None, fold: str = "", voices: dict | None = Non
                      'onclick="var t=this.closest(\'tr\');'
                      'do{t=t.nextElementSibling}while(t&amp;&amp;!t.classList.contains(\'costfold\'));'
                      'if(t){t.hidden=!t.hidden;this.setAttribute(\'aria-expanded\',!t.hidden)}">'
-                     f'{label}</button>')
+                     f'{label}<span class="costexp-ico" aria-hidden="true"></span></button>')
         # Time before the cost: the money stays the last column, where the page's
         # "Prompt to get this" button sits in the header, beside `cost`.
         out.append(f'<tr data-component="{html.escape(r["key"])}"><td>{label}{sub}</td>'

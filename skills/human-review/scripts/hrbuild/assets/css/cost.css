@@ -59,9 +59,14 @@ table.costtab tr.costfold > td { font-weight:400; text-align:left; }
 table.costtab .costexp { all:unset; cursor:pointer; color:var(--fg); }
 /* Victor (7 Oct 2026) never noticed the bare muted caret: it is link-coloured now and
    says what it does. */
-table.costtab .costexp::after { content:"\25B8\00a0 click for details"; color:var(--link);
-             font-size:.78rem; font-weight:500; margin-left:.55rem; white-space:nowrap; }
-table.costtab .costexp[aria-expanded="true"]::after { content:"\25BE\00a0 hide details"; }
+/* The caret is its own element so it can be bigger than the words beside it (Victor,
+   8 Oct 2026: at 0.78rem it was too small to notice). */
+table.costtab .costexp .costexp-ico::before { content:"\25B8"; color:var(--link); font-size:1.15rem;
+             line-height:1; margin-left:.55rem; vertical-align:-.06em; }
+table.costtab .costexp[aria-expanded="true"] .costexp-ico::before { content:"\25BE"; }
+table.costtab .costexp::after { content:"click for details"; color:var(--link);
+             font-size:.78rem; font-weight:500; margin-left:.3rem; white-space:nowrap; }
+table.costtab .costexp[aria-expanded="true"]::after { content:"hide details"; }
 table.costtab .costexp:hover::after { text-decoration:underline; }
 table.costtab .costexp:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 table.costtab tr.costfold > td { padding:.2rem 0 .8rem 1.2rem; }

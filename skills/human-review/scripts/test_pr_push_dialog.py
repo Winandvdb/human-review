@@ -79,6 +79,21 @@ def record(status="complete", present=2, sha=None) -> dict:
                 f"F:{slug(TITLES[2])}": {"mode": "line", "html_url": None}}}
 
 
+@pytest.fixture(scope="module")
+def browser():
+    """Its own, as `test_dataset_view.py` has: the `browser` it used to borrow was
+    pytest-playwright's, a plugin a laptop happened to have and `requirements-dev.txt` (so
+    CI) does not install, where the fixture simply did not exist."""
+    pw = pytest.importorskip("playwright.sync_api")
+    with pw.sync_playwright() as p:
+        try:
+            b = p.chromium.launch()
+        except Exception as e:                       # no chromium installed on this box
+            pytest.skip(f"chromium unavailable: {e}")
+        yield b
+        b.close()
+
+
 def open_page(browser, answers: dict, files: dict):
     """The page at http://127.0.0.1:9/review.html, its two JSON files served out of `files`
     (mutable: a test changes what the server holds between two presses)."""

@@ -2331,6 +2331,13 @@ def ledger(session: str | None, since: "dt.datetime | None", steps_path: Path,
         tab_all, _ = gather_turns(path, start, include_subagents, origin=tab_origin)
     tab_turns = ([t for t in tab_all if t[4] is None or t[4] <= end]
                  if tab_all is not None and end is not None else tab_all)
+    billed = any(isinstance(r, dict) and r.get("key") == "guide" and r.get("measured")
+                 for r in (components or {}).get("rows") or [])
+    if billed and start is None and end is None and tab_all is not None:
+        # The guide row bills none of this conversation (koejon #12: only the `claude -p`
+        # mapping), so none of its turns are that row's breakdown. Read from `.started`
+        # to "now", they were the fixes and whatever came after: $4.33 under a $0.08 row.
+        tab_turns = []
     tabs_report = tab_cost_report(session, start if tab_all is not turns else since,
                                   steps_path, tabs,
                                   include_subagents=include_subagents, turns=tab_turns,

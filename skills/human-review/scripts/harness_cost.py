@@ -1653,7 +1653,7 @@ def _guide_from_phases(phases: dict | None) -> dict | None:
 
 # ----------------------------------------------------------------------------- the page
 
-def without_paid_turns(guide: dict, first3: list[dict]) -> dict:
+def without_paid_turns(guide: dict, first3: list[dict], keep: list[dict] = ()) -> dict:
     """The guide row, less any turn of a Claude conversation that rows 1–3 already billed.
 
     The four rows are added up into one total, so they must not overlap — and the guide's
@@ -1671,6 +1671,9 @@ def without_paid_turns(guide: dict, first3: list[dict]) -> dict:
                 paid[e["session"]] = max(paid.get(e["session"], hi), hi)
     out, trimmed = [], []
     for e in guide.get("entries") or []:
+        if any(e is k for k in keep):
+            out.append(e)
+            continue
         lo, hi = (parse(x) for x in ((e.get("window") or [None, None]) + [None])[:2])
         floor = paid.get(e.get("session")) if e.get("harness") == CLAUDE else None
         if floor and lo and lo < floor:
@@ -1693,6 +1696,72 @@ def without_paid_turns(guide: dict, first3: list[dict]) -> dict:
                      (win[0], win[1]),
                      (guide.get("source") or "derived")
                      + ", less the turns the rows above already billed")
+
+
+def _span(e: dict) -> tuple:
+    return tuple(parse(x) for x in ((e.get("window") or [None, None]) + [None])[:2])
+
+
+def _less_runs(c: dict, runs: list[dict]) -> dict:
+    """Row `c` without the turns of the runs: what each run's conversation spent inside
+    the entry's window is subtracted from the entry. Subtracted, not measured again over
+    the rest of the window: the recorded entry reads to the end of its last turn, and a
+    fresh measurement of the pieces came out $0.08 short of it on koejon #12."""
+    entries, cut = [], False
+    for e in c.get("entries") or []:
+        lo, hi = _span(e)
+        hit = [_span(r) for r in runs if e.get("harness") == CLAUDE and lo and hi
+               and r.get("session") == e.get("session")
+               and _span(r)[0] <= hi and _span(r)[1] >= lo]
+        if not hit:
+            entries.append(e)
+            continue
+        cut, e = True, {**e, "models": dict(e.get("models") or {})}
+        for rlo, rhi in hit:
+            m = claude_entry(e["session"], max(lo, rlo), min(hi, rhi), "")
+            if not m:
+                continue
+            if e.get("usd") is not None:
+                e["usd"] = round(max(0.0, e["usd"] - (m["usd"] or 0.0)), 4)
+            for k in ("tokens", "calls"):
+                e[k] = max(0, (e.get(k) or 0) - (m.get(k) or 0))
+            e["modelSeconds"] = round(max(0.0, (e.get("modelSeconds") or 0)
+                                          - (m.get("modelSeconds") or 0)), 1)
+            for model, n in (m.get("models") or {}).items():
+                left = e["models"].get(model, 0) - n
+                e["models"] = {**e["models"], model: left} if left > 0 else \
+                    {k: v for k, v in e["models"].items() if k != model}
+            run = f"less the /human-review run, {rlo:%H:%M}–{rhi:%H:%M} UTC"
+            e["note"] = f'{e["note"]}; {run}' if e.get("note") else run
+        entries.append(e)
+    if not cut:
+        return c
+    out = component(c["key"], entries, c.get("reason"), tuple(c.get("window") or (None, None)),
+                    (c.get("source") or "recorded") + ", less the /human-review run")
+    out.update({k: c[k] for k in ("recorded", "extendedTo", "dropped") if k in c})
+    return out
+
+
+def settle_overlap(guide: dict, first3: list[dict]) -> tuple[dict, list[dict]]:
+    """The guide row and rows 1–3, with no turn in two of them.
+
+    A run that STARTED inside a window rows 1–3 bill is page building done in the middle
+    of that phase — koejon #12 built its page during the auto-fixes, in the same
+    conversation — so its turns are the guide's, and the row around it gives them up. A run
+    that started before every such window is a mis-drawn window (eval run 10), and the
+    guide gives up the overlap instead, as `without_paid_turns` always did."""
+    spans: dict[str, list[tuple]] = {}
+    for c in first3:
+        for e in (c or {}).get("entries") or []:
+            lo, hi = _span(e)
+            if e.get("harness") == CLAUDE and e.get("session") and lo and hi:
+                spans.setdefault(e["session"], []).append((lo, hi))
+    nested = [e for e in guide.get("entries") or []
+              if e.get("harness") == CLAUDE and _span(e)[0] and _span(e)[1]
+              and any(lo <= _span(e)[0] <= hi for lo, hi in spans.get(e.get("session"), []))]
+    if nested:
+        first3 = [_less_runs(c, nested) if c else c for c in first3]
+    return without_paid_turns(guide, first3, keep=nested), first3
 
 
 def drop_undone(root: Path, base: str, c: dict) -> dict:
@@ -1755,7 +1824,7 @@ def components(root: Path, base: str, review: Path, phases: dict | None = None,
         if not guide["measured"] and (phases or {}).get("run_session"):
             guide = _guide_from_phases(phases) or guide
         guide["source"] = "derived"
-    kept = without_paid_turns(guide, first3)
+    kept, first3 = settle_overlap(guide, first3)
     if kept is not guide and not kept["measured"] and (phases or {}).get("run_session"):
         kept = _guide_from_phases(phases) or kept
     guide = kept

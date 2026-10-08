@@ -728,6 +728,29 @@ def test_the_guide_row_never_bills_a_turn_the_rows_above_already_billed(claude_w
     assert hc.without_paid_turns(other, paid) is other, "another conversation is untouched"
 
 
+def test_a_run_started_inside_the_fixes_is_billed_to_the_guide_not_the_fixes(claude_world):
+    """koejon #12: `/human-review` built the page at 12:19–12:23, in the conversation that
+    was still fixing (auto-fixes 12:16–13:00). The guide row lost the run's $1.19 to the
+    auto-fixes row and kept only the $0.08 mapping, and the fold under it, with no window
+    left to read, read the conversation to "now" and printed $4.33."""
+    w = claude_world
+    fixing = hc.component("autofix", [hc.claude_entry(w["sid"], "2026-10-02T10:50:00Z",
+                                                      "2026-10-02T11:05:10Z", "fixing")])
+    run = hc.claude_entry(w["sid"], "2026-10-02T10:51:30Z", "2026-10-02T10:53:00Z",
+                          "the /human-review run")
+    guide, (fixes,) = hc.settle_overlap(hc.component("guide", [run]), [fixing])
+    assert guide["usd"] == pytest.approx(run["usd"]) and run["usd"] > 0, \
+        "the run keeps its own turn (a7)"
+    assert fixes["usd"] == pytest.approx(fixing["usd"] - run["usd"])
+    assert "less the /human-review run" in fixes["source"]
+    # A guide that opens before the fixes do is the mis-drawn window of eval run 10:
+    # trimmed as before, and the rows above keep every turn.
+    whole = hc.component("guide", [hc.claude_entry(w["sid"], "2026-10-02T10:00:00Z",
+                                                   "2026-10-02T11:31:00Z", "the run")])
+    kept, (same,) = hc.settle_overlap(whole, [fixing])
+    assert kept["usd"] == pytest.approx(0.20) and same is fixing
+
+
 def test_an_extended_autofix_row_keeps_what_the_record_said(tmp_path, monkeypatch):
     """Eval run 10: $2.26 / 7.7M on the page, $1.97 / 6.5M in the committed record, and
     nothing on the row to say why. The extension keeps the recorded figure beside it."""

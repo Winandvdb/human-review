@@ -2234,9 +2234,16 @@ def main():
         # second branch. Take the next free port and say so; silently serving a
         # different tree at the URL the reader has bookmarked is the worse bug.
         # That server is left exactly as it is.
+        # Only within PORT_SPAN: that is as far as `find_server` looks, so a server started
+        # past it would never be found again and every refresh would start one more. And a
+        # sandbox that refuses every local bind made an unbounded search count past 65535.
         running = probe(port) or {}
-        while not free(port):
-            port += 1
+        last = min(args.port + PORT_SPAN, 65536) - 1
+        port = next((p for p in range(args.port + 1, last + 1) if free(p)), None)
+        if port is None:
+            sys.exit(f"[serve-review] no free port in :{args.port}–:{last}. Every one is in "
+                     "use, or this environment does not allow a local port (a sandbox can "
+                     "refuse them all). Stop a server with --stop, or pass --port.")
         print(f"[serve-review] :{args.port} already serves "
               f"{running.get('served') or 'something else'} — using :{port}", file=sys.stderr)
 

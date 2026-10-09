@@ -72,8 +72,6 @@ details.dsa-screen > summary { cursor: pointer; list-style: none; display: flex;
   align-items: baseline; color: var(--fg); font-size: .95rem; font-weight: 600;
   padding: .25rem 0; }
 details.dsa-screen > summary::-webkit-details-marker { display: none; }
-details.dsa-screen > summary::before { content: "▾"; font-size: .75rem; }
-details.dsa-screen:not([open]) > summary::before { content: "▸"; }
 details.dsa-screen > summary:hover { color: var(--link); }
 .dsa-route { opacity: .7; font-weight: 400; }
 .dsa-considered { margin: .6rem 0 0; font-size: .84rem; opacity: .85; }
@@ -114,6 +112,17 @@ details.dsa-screen > summary .dsa-sumtail { font-weight: 400; }
   padding: 0 .35rem; font-weight: 700; white-space: nowrap; }
 .dsa-fixed { color: var(--dsa-ok); }
 .dsa-pre { opacity: .7; }
+.dsa-count { text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+/* Open, the count's underline goes solid: the box under it belongs to that word. */
+.dsa-count[aria-expanded="true"] { text-decoration-style: solid; }
+/* The box as Victor tuned it live on 7 Oct 2026 (PR #51 page): a little more air inside
+   and under it, each heading a short paragraph, the bullets indented by margin. */
+.dsa-howbox { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: .6rem .9rem; margin: .4rem 0 .9rem; font-size: .88rem; line-height: 1.45; }
+.dsa-howbox[hidden] { display: none; }
+.dsa-howbox p { margin: .2rem 0; }
+.dsa-howbox ul { margin: .1rem 0 .5rem 1.1rem; padding: 0; }
+.dsa-howbox li { margin: .1rem 0; }
 .dsa-gap, .dsa-comp, .dsa-fixed, .dsa-pre { cursor: help; }
 .dsa-unlisted { color: var(--dsa-bad); border: 1px solid var(--dsa-bad); border-radius: 6px;
   padding: .45rem .7rem; margin: .4rem 0 .8rem; font-size: .9rem; }

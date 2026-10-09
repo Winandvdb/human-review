@@ -1,7 +1,7 @@
 {
  "review": "be762955d5f477feeca0f7db55e32fa1c2fb8db5",
  "review_short": "be762955",
- "head": "c31ba5ec7721e7417cd0c0c4b46dcd848078ec56",
+ "head": "10d7ced178746ad377c81e79184b580338c39bee",
  "takeover": null,
  "generated_globs": [
   "**/generated/**",
@@ -363,22 +363,237 @@
    "measured": true,
    "taken_over": false,
    "takeover": false
+  },
+  {
+   "sha": "1114f3ba5289e808a7839807c8348a417a5ab302",
+   "short": "1114f3ba",
+   "when": "2026-10-06T11:34:13+02:00",
+   "subject": "Merge remote-tracking branch 'origin/main' into test-pr",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/generated/MavenModules.puml",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/scripts/mavenmodules/maven_modules_to_puml.py",
+     "added": 2,
+     "deleted": 2,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/README.md",
+     "added": 6,
+     "deleted": 6,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/pom.xml",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/src/main/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariable.java",
+     "added": 0,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/src/main/java/victor/training/petclinic/rewrite/ListGetFirst.java",
+     "added": 0,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/src/test/java/victor/training/petclinic/rewrite/InlineSingleUseLocalVariableTest.java",
+     "added": 0,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "{refactoring-legacy => refactoring-tools}/src/test/java/victor/training/petclinic/rewrite/ListGetFirstTest.java",
+     "added": 0,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 10,
+   "deleted": 10,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "6b4b63bef60f0902fa253b495c5cafec2a62746d",
+   "short": "6b4b63be",
+   "when": "2026-10-07T21:13:55+02:00",
+   "subject": "Fixture colours for the human-review Demo and Tests tabs",
+   "files": [
+    {
+     "path": "petclinic-backend/src/main/resources/db/fixtures/fixture-colors.json",
+     "added": 4,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 4,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "44689ad3e4b358abf0aff2baba66859b5565cd5a",
+   "short": "44689ad3",
+   "when": "2026-10-07T21:13:55+02:00",
+   "subject": "Merge origin/main into test-pr",
+   "files": [],
+   "added": 0,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": false,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "db57f1b45fa37949f9e14a04f930178b6f898877",
+   "short": "db57f1b4",
+   "when": "2026-10-08T06:40:21+01:00",
+   "subject": "C4: add notification-service and SMS gateway to C2, wire Notification component, theme default",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/c4model.c1+c2.dsl",
+     "added": 7,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 7,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "24af8d668bdf9fb606baa62f5e5cadc0f2b662d3",
+   "short": "24af8d66",
+   "when": "2026-10-08T06:40:21+01:00",
+   "subject": "Merge origin/main into test-pr",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C1-Context.puml",
+     "added": 2,
+     "deleted": 0,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C2-BackendOutbound.puml",
+     "added": 2,
+     "deleted": 0,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C2-Containers.puml",
+     "added": 4,
+     "deleted": 0,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C3-Components-All.puml",
+     "added": 3,
+     "deleted": 0,
+     "binary": false,
+     "generated": true
+    }
+   ],
+   "added": 11,
+   "deleted": 0,
+   "generated_only": true,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "37aa569cc272355e72c4eed73d92c1e81d4bc474",
+   "short": "37aa569c",
+   "when": "2026-10-08T06:42:39+01:00",
+   "subject": "C4: inline styles instead of the defunct cloud 'theme default'",
+   "files": [
+    {
+     "path": "petclinic-backend/docs/c4model.c1+c2.dsl",
+     "added": 32,
+     "deleted": 3,
+     "binary": false,
+     "generated": false
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C2-BackendOutbound.puml",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": true
+    },
+    {
+     "path": "petclinic-backend/docs/generated/c4views/C2-Containers.puml",
+     "added": 1,
+     "deleted": 1,
+     "binary": false,
+     "generated": true
+    }
+   ],
+   "added": 34,
+   "deleted": 5,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "10d7ced178746ad377c81e79184b580338c39bee",
+   "short": "10d7ced1",
+   "when": "2026-10-08T06:42:39+01:00",
+   "subject": "Merge origin/main into test-pr",
+   "files": [],
+   "added": 0,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": false,
+   "taken_over": false,
+   "takeover": false
   }
  ],
  "totals": {
-  "commits": 9,
-  "files": 29,
-  "added": 599,
-  "deleted": 168,
+  "commits": 16,
+  "files": 41,
+  "added": 663,
+  "deleted": 181,
   "code": {
-   "files": 23,
-   "added": 479,
-   "deleted": 42
+   "files": 31,
+   "added": 529,
+   "deleted": 52
   },
   "generated": {
-   "files": 6,
-   "added": 120,
-   "deleted": 126
+   "files": 10,
+   "added": 134,
+   "deleted": 129
   }
  },
  "clean": false

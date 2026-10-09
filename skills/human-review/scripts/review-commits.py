@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Which commit is the implementation, which one is the review, and what came after.
+r"""Which commit is the implementation, which one is the review, and what came after.
 
 The flow this reads is two commits wide. The first is the feature and nothing else; the
 second carries the fixes the agent accepted plus the `review-points.md` that records what

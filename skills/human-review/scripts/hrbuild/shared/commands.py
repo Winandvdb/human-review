@@ -251,7 +251,11 @@ def place_tab_reruns(tab_id: str, label: str, body: str, presses: str) -> str:
     if not presses:
         return body
     if tab_id in CARD_HEADED_TABS and _CARD_TITLE.search(body):
-        return _CARD_TITLE.sub(lambda m: m.group(1) + presses, body)
+        # A card that came with a ring of its own keeps it, and only it: the draw.io card's
+        # redraws that one picture (`diagrams.card_rerun_html`), which is what a press on
+        # that card means, and a second ring beside it would re-run the whole tab.
+        return _CARD_TITLE.sub(lambda m: m.group(1) + (
+            "" if body.startswith('<span class="tabre">', m.end()) else presses), body)
     lede = body.find('<p class="sub counts pilelede"')
     if lede >= 0:
         end = body.find("</p>", lede)

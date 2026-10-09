@@ -54,8 +54,12 @@ def test_6_the_filter_pills_are_one_width():
     assert "min-width:70px" in rule and "justify-content:center" in rule
 
 
-def test_8_unchanged_sits_beside_the_file_name():
-    assert "margin-left:auto" in _rule(_read(CSS / "diagrams.css"), ".diagram .head > b + .badge")
+def test_8_unchanged_sits_right_after_the_title():
+    """Moved by 9d4f5ac (Victor, 8 Oct 2026): the badge follows the title, and whatever comes
+    after it (the file name) takes the push right — it no longer floats between the two."""
+    css = _read(CSS / "diagrams.css")
+    assert "margin-left:0" in _rule(css, ".diagram .head > .badge")
+    assert "margin-left:auto" in _rule(css, ".diagram .head > .badge + *")
 
 
 def test_10_tooltips_are_opaque():
@@ -106,7 +110,8 @@ def test_16_a_link_gets_the_hand_not_the_question_mark():
 
 def test_17b_change_count_pills_are_one_width():
     src = _read(HERE / "openapi-visual-diff.py")
-    badge = re.search(r"\.dv-badge \{(.*?)\n  \}", src, re.S).group(1)
+    # The bare rule, not `.dv-rail > .dv-badge` (787713f), which is a folder tab, not a pill.
+    badge = re.search(r"\n  \.dv-badge \{(.*?)\n  \}", src, re.S).group(1)
     assert "min-width: 80px; text-align: center;" in badge
 
 

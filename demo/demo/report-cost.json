@@ -237,6 +237,56 @@
    "at": "2026-10-07T08:55:17+00:00",
    "seconds": 48.9,
    "steps": "none"
+  },
+  {
+   "at": "2026-10-07T15:30:51+00:00",
+   "seconds": 43.6,
+   "steps": "none"
+  },
+  {
+   "at": "2026-10-07T21:28:32+00:00",
+   "seconds": 367.6,
+   "steps": "basestack,reviewpoints,aftermath,diagrams,sequence,c2,c4,complexity,api,specchanges,logging,dsaudit,owners,tests,traces,testcov,city"
+  },
+  {
+   "at": "2026-10-07T23:07:10+00:00",
+   "seconds": 253.4,
+   "steps": "sequence,c2"
+  },
+  {
+   "at": "2026-10-07T23:20:43+00:00",
+   "seconds": 92.4,
+   "steps": "static"
+  },
+  {
+   "at": "2026-10-08T00:01:12+00:00",
+   "seconds": 42.5,
+   "steps": "none"
+  },
+  {
+   "at": "2026-10-08T09:40:43+00:00",
+   "seconds": 40.0,
+   "steps": "none"
+  },
+  {
+   "at": "2026-10-08T11:11:12+00:00",
+   "seconds": 48.7,
+   "steps": "static"
+  },
+  {
+   "at": "2026-10-08T13:12:12+00:00",
+   "seconds": 51.4,
+   "steps": "none"
+  },
+  {
+   "at": "2026-10-08T13:51:24+00:00",
+   "seconds": 47.8,
+   "steps": "none"
+  },
+  {
+   "at": "2026-10-08T14:22:20+00:00",
+   "seconds": 63.1,
+   "steps": "none"
   }
  ]
 }

@@ -57,7 +57,11 @@ window.HR = (function () {
   // and the two scopes are two answers of the probe, since a build may declare either.
   var OWN = {'__rerun__': 'rerun', '__rerun_ai__': 'rerunAi', '__rerun_tests__': 'rerunTests'};
 
-  function can(id, tab) {
+  function can(id, tab, card) {
+    // One draw.io card's own ring: its redraw is a manifest entry of its own, declared by
+    // the build beside the card (`__rerun__:card:<name>`), so a server or a build without
+    // it leaves the ring down rather than offering a press that reruns the whole tab.
+    if (card) return !!(caps && caps.actions && caps.actions[id + ':card:' + card]);
     if (id === '__rerun_tests__' && !tab) return !!(caps && caps.rerunTestsAll);
     if (OWN[id]) return !!(caps && caps[OWN[id]]);
     return !!(caps && caps.actions && caps.actions[id]);
@@ -93,13 +97,13 @@ window.HR = (function () {
   // only when the *request* could not be made or the run could not be followed, which is
   // the case where the caller has to fall back to the clipboard.
   function run(id, params, onprogress) {
-    if (!can(id, params && params.tab)) return Promise.reject(new Error(id + ' is not available here'));
+    if (!can(id, params && params.tab, params && params.card)) return Promise.reject(new Error(id + ' is not available here'));
     // The two server-owned verbs route to their own endpoints. Here rather than in every
     // caller: `run(id)` is what the whole page reaches for, and a play mark beside the
     // refresh command that had to know it was special would be the one control on the page
     // whose wiring depended on which command it was printing.
     // `params.tab` narrows either one to a tab's own producers (the ↻ beside its pill).
-    if (id === '__rerun__') return rerun(onprogress, params && params.tab);
+    if (id === '__rerun__') return rerun(onprogress, params && params.tab, params && params.card);
     if (id === '__rerun_ai__') return rerunAi(onprogress, params && params.tab);
     if (id === '__rerun_tests__') {
       var tab = params && params.tab;
@@ -130,8 +134,8 @@ window.HR = (function () {
   // it does not send is an id, because there is nothing for the page to name: the command
   // is the server's own refresh program. So this is gated on `caps.rerun`, which the
   // probe answers, and not on a manifest entry a build could forget to write.
-  function rerun(onprogress, tab) {
-    return ask('/__rerun__', 'rerun', onprogress, tab);
+  function rerun(onprogress, tab, card) {
+    return ask('/__rerun__', 'rerun', onprogress, tab, undefined, card);
   }
 
   // The same verb with the model's half in front of it: the requirements matrix and the
@@ -146,7 +150,7 @@ window.HR = (function () {
     return ask('/__rerun_ai__', 'rerunAi', onprogress, tab);
   }
 
-  function ask(route, capability, onprogress, tab, mode) {
+  function ask(route, capability, onprogress, tab, mode, card) {
     if (!caps || !caps[capability]) {
       return Promise.reject(new Error('this page cannot rebuild itself here'));
     }
@@ -154,7 +158,8 @@ window.HR = (function () {
       method: 'POST', cache: 'no-store',
       headers: {'Content-Type': 'application/json',
                 'X-Human-Review-Token': (caps && caps.token) || ''},
-      body: JSON.stringify(Object.assign(tab ? {tab: tab} : {}, mode ? {mode: mode} : {}))
+      body: JSON.stringify(Object.assign(tab ? {tab: tab} : {}, mode ? {mode: mode} : {},
+                                         card ? {card: card} : {}))
     }).then(function (r) {
       if (r.ok) return r.json();
       // A refusal may be a sentence or it may be a refusal *with the run it is refusing
@@ -264,9 +269,19 @@ window.HR = (function () {
   // second of promptness on a page nobody is timing. The server does the debouncing —
   // the stamp only moves once the tree has stopped being written — so a rebuild that
   // takes twenty seconds reloads this tab once, at the end, and not on its first file.
+  // A draw.io card's redraw changes the page on disk *and* hands the page the new card,
+  // which it swaps in place (`rerun.js`). The reload the watcher would then do is the
+  // forty-second round trip the swap exists to avoid, and it would lose the reader's place:
+  // so while a swap is under way the watcher does not reload, and when it is done it adopts
+  // the stamp the server published for exactly the tree the swap came from.
+  var seenStamp = null, holdReload = 0;
+  function adoptStamp(stamp) { if (stamp) seenStamp = stamp; }
+  function quiet(on) { holdReload = Math.max(0, holdReload + (on ? 1 : -1)); }
+
   onready(function (j) {
     if (!j || !j.watch) return;
-    var seen = j.watch, misses = 0;
+    var misses = 0;
+    seenStamp = j.watch;
     (function next() {
       // Slower when the tab is in the background: it will be reloaded before anyone
       // looks at it either way, and a dozen parked reports are a dozen pollers.
@@ -276,7 +291,7 @@ window.HR = (function () {
           .then(function (w) {
             misses = 0;
             // `reload()` and not a cache-buster: the server sends no-store.
-            if (w.stamp && w.stamp !== seen) { location.reload(); return; }
+            if (w.stamp && w.stamp !== seenStamp && !holdReload) { location.reload(); return; }
             next();
           })
           // The server is mortal by design — idle for `--idle-minutes` and it is gone,
@@ -365,7 +380,15 @@ window.HR = (function () {
     // Every offer on the page, not only the ones under a diagram: the aftermath band's
     // regenerate is the same control in a different place, and a selector naming one of the
     // two places is how the second one silently ships with both buttons on screen.
-    [].forEach.call(document.querySelectorAll('button.runhere[data-action]'),
+    raiseRunHere(document);
+    // And inside a card swapped in after load (`rerun.js` redraws a draw.io card in place):
+    // its Revert ships `hidden` like every other play mark, and nothing else would raise it.
+    document.addEventListener('hr:swapped', function (ev) { raiseRunHere(ev.detail); });
+  });
+
+  function raiseRunHere(root) {
+    if (!root || !root.querySelectorAll) return;
+    [].forEach.call(root.querySelectorAll('button.runhere[data-action]'),
         function (b) {
       if (!can(b.getAttribute('data-action'))) return;
       b.setAttribute('data-tip', b.getAttribute('data-tip-served')
@@ -390,12 +413,13 @@ window.HR = (function () {
       var clip = pair && pair.querySelector('.cmd-copy');
       if (clip) clip.hidden = true;
     });
-  });
+  }
 
   // `follow`: the poller, for a page that loads while a run is already going -- it has
   // the run's id from `status()` and needs the same tail, at the same cadence, to
   // the same end.
   return {ready: ready, can: can, onready: onready, run: run, rerun: rerun, follow: poll,
           rerunAi: rerunAi, tail: tail, copy: copy, keepPlace: keepPlace,
-          status: status, caps: function () { return caps; }};
+          status: status, caps: function () { return caps; },
+          adoptStamp: adoptStamp, quiet: quiet};
 })();

@@ -953,3 +953,83 @@ def test_several_sessions_are_a_breakdown_under_the_row_not_a_line_of_prices(tmp
     assert "costnum" not in out
     assert "costfold" in out.split('<tr class="costpart">')[-1], "the fold follows the parts"
     assert "nextElementSibling}while" in out, "the toggle finds its fold past the parts"
+
+
+# --------------------------------------------------------------------------------------- #
+# The human's time: Wispr's measured dictations, the words it has no row for, the reading.
+# --------------------------------------------------------------------------------------- #
+
+WISPR_SCHEMA = ("CREATE TABLE History (timestamp DATETIME, asrText TEXT, formattedText TEXT, "
+                "duration FLOAT, numWords INTEGER)")
+
+
+def _rec(kind: str, at: str, text, **extra) -> str:
+    return json.dumps({"type": kind, "timestamp": at, **extra,
+                       "message": {"role": kind, "content": text}})
+
+
+def _human_fixture(tmp_path: Path, monkeypatch, entrypoint: str = "cli") -> Path:
+    db = tmp_path / "flow.sqlite"
+    con = sqlite3.connect(db)
+    con.execute(WISPR_SCHEMA)
+    # Logged at the start of speech, a minute before the relay delivers it; the relay
+    # sends Wispr's raw asrText, which the formatted text does not match word for word.
+    con.execute("INSERT INTO History VALUES ('2026-10-08 09:00:30.000 +00:00', "
+                "'please add a column for how much time it took', "
+                "'Please add a column for how long it took.', 60.0, 10)")
+    con.commit()
+    con.close()
+    monkeypatch.setattr(hc, "WISPR_DB", db)
+    words = " ".join(["word"] * 250)                     # one minute at READ_WPM
+    path = tmp_path / "s.jsonl"
+    path.write_text("\n".join([
+        _rec("user", "2026-10-08T08:50:00Z", "fix the build " * 10, entrypoint=entrypoint),
+        _rec("assistant", "2026-10-08T08:55:00Z", [{"type": "text", "text": words}]),
+        _rec("user", "2026-10-08T09:01:40Z",
+             "please add a column for how much time it took\n\n[Dictated in RO or EN]\n"
+             "[📁=$WALKIE_SHOTS/x]", entrypoint=entrypoint),
+        _rec("user", "2026-10-08T09:02:00Z", [{"type": "tool_result", "content": "ok"}]),
+        _rec("assistant", "2026-10-08T09:03:00Z", [{"type": "text", "text": "done " * 125}]),
+    ]) + "\n")
+    return path
+
+
+def test_human_time_measures_dictation_and_estimates_the_rest(tmp_path, monkeypatch):
+    path = _human_fixture(tmp_path, monkeypatch)
+    got = hc.claude_human_time(path, hc.parse("2026-10-08T08:00:00Z"),
+                               hc.parse("2026-10-08T10:00:00Z"))
+    assert got["prompts"] == 2 and got["dictated"] == 1 and got["measured"] == 1
+    assert got["speak"] == 60                            # Wispr's own duration
+    assert got["type"] == 45                             # 30 typed words at 40 wpm
+    assert got["read"] == 60 + 30                        # 250 words before, 125 after
+    assert got["seconds"] == 60 + 45 + 90
+
+
+def test_reading_is_capped_by_the_wait(tmp_path, monkeypatch):
+    """He cannot have read the reply for longer than he waited before speaking."""
+    path = _human_fixture(tmp_path, monkeypatch)
+    lines = path.read_text().splitlines()
+    lines[1] = lines[1].replace("08:55:00", "09:00:10")  # 20 s before the dictation began
+    path.write_text("\n".join(lines) + "\n")
+    got = hc.claude_human_time(path, hc.parse("2026-10-08T08:00:00Z"),
+                               hc.parse("2026-10-08T10:00:00Z"))
+    assert got["read"] == 20 + 30
+
+
+def test_a_scripted_run_has_nobody_at_the_keyboard(tmp_path, monkeypatch):
+    path = _human_fixture(tmp_path, monkeypatch, entrypoint="sdk-cli")
+    got = hc.claude_human_time(path, hc.parse("2026-10-08T08:00:00Z"),
+                               hc.parse("2026-10-08T10:00:00Z"))
+    assert got["prompts"] == 0 and got["seconds"] == 0
+
+
+def test_the_you_column_says_none_for_a_scripted_run_and_the_parts_on_hover():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("brh", HERE / "build-review-html.py")
+    b = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(b)
+    assert ">none<" in b._human_cell({"prompts": 0, "seconds": 0})
+    cell = b._human_cell({"prompts": 2, "measured": 1, "speak": 60, "type": 45, "read": 90,
+                          "seconds": 195})
+    assert ">3 min<" in cell and "Wispr-measured, 1 of 2 prompts" in html.unescape(cell)
+    assert b._human_cell(None) == "<td>—</td>"

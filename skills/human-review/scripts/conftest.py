@@ -18,6 +18,10 @@ from pathlib import Path
 
 import pytest
 
+# A build reads the PR's description from GitHub (`attach_pr_body`); the suite's fixtures
+# name real PR URLs, and a test must not depend on the network or on what a PR says today.
+os.environ.setdefault("HR_NO_GITHUB", "1")
+
 HERE = Path(__file__).resolve().parent
 
 

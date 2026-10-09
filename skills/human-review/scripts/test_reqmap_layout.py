@@ -556,6 +556,22 @@ def test_the_legend_holds_every_state_inside_its_column(width, scheme, tmp_path)
     assert {p[0] for p in got["pills"]} >= {"unconfirmed", "narrowed"}
 
 
+#: Resolves once the layout has stopped moving: the fit script's `--rm-tail-h`, the page's
+#: height and the footer's edge read the same over three animation frames running. A fixed
+#: 100 ms wait instead raced the ResizeObserver on a loaded machine.
+SETTLED = """() => new Promise(done => {
+  let last = null, same = 0;
+  (function tick() {
+    const now = JSON.stringify([innerWidth, innerHeight, document.documentElement.scrollHeight,
+      document.documentElement.style.getPropertyValue('--rm-tail-h'),
+      document.querySelector('footer').getBoundingClientRect().bottom]);
+    same = now === last ? same + 1 : 0;
+    last = now;
+    if (same >= 3) done(); else requestAnimationFrame(tick);
+  })();
+})"""
+
+
 @pytest.mark.parametrize("scheme", ["light", "dark"])
 def test_the_tab_is_exactly_one_window_tall_footer_included(scheme, tmp_path):
     """Victor, 7 Oct 2026, at 1152x625: the matrix filled the window under the masthead and
@@ -588,11 +604,11 @@ def test_the_tab_is_exactly_one_window_tall_footer_included(scheme, tmp_path):
             page = browser.new_page(viewport={"width": 1152, "height": 625},
                                     color_scheme=scheme)
             page.goto(page_file.as_uri())
-            page.wait_for_timeout(100)
+            page.evaluate(SETTLED)
             got = [page.evaluate(measure)]
             for w, h in ((1152, 900), (1152, 480), (1500, 900), (1152, 625)):
                 page.set_viewport_size({"width": w, "height": h})
-                page.wait_for_timeout(100)
+                page.evaluate(SETTLED)
                 got.append(page.evaluate(measure))
         finally:
             browser.close()

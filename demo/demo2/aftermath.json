@@ -1,7 +1,7 @@
 {
- "review": "810678122004a60220d5aefbcb5249793a33057a",
- "review_short": "81067812",
- "head": "810678122004a60220d5aefbcb5249793a33057a",
+ "review": "d01c37761baf50f2afb1b397c2fe078af3a42138",
+ "review_short": "d01c3776",
+ "head": "a5a1f3fa4c77d459069b5b12a74e2f125fd6a430",
  "takeover": null,
  "generated_globs": [
   "**/generated/**",
@@ -28,15 +28,58 @@
   "**/poetry.lock",
   ".human-review/**"
  ],
- "commits": [],
+ "commits": [
+  {
+   "sha": "a02544760c34305833f81a6ee2908decd39cf907",
+   "short": "a0254476",
+   "when": "2026-10-07T21:11:53+02:00",
+   "subject": "Fixture colours for the human-review Demo and Tests tabs",
+   "files": [
+    {
+     "path": "petclinic-backend/src/main/resources/db/fixtures/fixture-colors.json",
+     "added": 4,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 4,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  },
+  {
+   "sha": "a5a1f3fa4c77d459069b5b12a74e2f125fd6a430",
+   "short": "a5a1f3fa",
+   "when": "2026-10-07T21:13:03+02:00",
+   "subject": "Merge origin/main into Devoxx26",
+   "files": [
+    {
+     "path": "petclinic-backend/src/main/resources/db/fixtures/fixture-colors.json",
+     "added": 4,
+     "deleted": 0,
+     "binary": false,
+     "generated": false
+    }
+   ],
+   "added": 4,
+   "deleted": 0,
+   "generated_only": false,
+   "measured": true,
+   "taken_over": false,
+   "takeover": false
+  }
+ ],
  "totals": {
-  "commits": 0,
-  "files": 0,
-  "added": 0,
+  "commits": 2,
+  "files": 1,
+  "added": 4,
   "deleted": 0,
   "code": {
-   "files": 0,
-   "added": 0,
+   "files": 1,
+   "added": 4,
    "deleted": 0
   },
   "generated": {
@@ -45,5 +88,5 @@
    "deleted": 0
   }
  },
- "clean": true
+ "clean": false
 }

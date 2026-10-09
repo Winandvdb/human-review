@@ -39,7 +39,7 @@
     },
     {
       "panel": "city",
-      "title": "Code City",
+      "title": "City",
       "file": "city.jpg"
     },
     {
@@ -54,17 +54,17 @@
     },
     {
       "panel": "logging",
-      "title": "Logging",
+      "title": "Logs",
       "file": "logging.jpg"
     },
     {
       "panel": "owners",
-      "title": "CODEOWNERS",
+      "title": "Codeowners",
       "file": "owners.jpg"
     },
     {
       "panel": "cost",
-      "title": "$27",
+      "title": "$11",
       "file": "cost.jpg"
     }
   ]

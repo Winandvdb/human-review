@@ -837,8 +837,8 @@ def test_the_widget_sits_in_the_card_every_other_diagram_does(tmp_path):
     verdict["diagram"] = "docs/ConceptualModel.drawio.png"
     (assets / "conceptual-diff.json").write_text(json.dumps(verdict))
     out = build.drawio_widget_html("conceptual", assets, tmp_path)
-    assert out.startswith('<div class="diagram dgm-toggles"><div class="head">'
-                          '<b>Conceptual Model</b>')
+    assert out.startswith('<div class="diagram dgm-toggles" data-drawio="conceptual">'
+                          '<div class="head"><b>Conceptual Model</b>')
     assert out.endswith("</div>") and 'class="dgmviews"' in out
 
 

@@ -518,15 +518,19 @@ COST_TITLE = '<h2 class="tabtitle">Token costs</h2>'
 #: list price (platform.claude.com/docs/en/about-claude/pricing, read 8 Oct 2026). A session
 #: counts when it ran in this repo, was a `claude -p` eval run, or when at least half its
 #: tool calls (subagents included) named a human-review path. The buckets are main threads;
-#: every bucket's subagents are one line of their own. They sum to `usd`.
+#: every bucket's subagents are one line of their own. They sum to `usd`. The three times
+#: (re-measured 8 Oct 2026, 14:00) are `harness_cost.claude_human_time` and
+#: `claude_busy_spans` over the same sessions: the human's, the agents' added up, and the
+#: agents' union — the hours in which something was being built.
 TOOLING_INVESTMENT = {
-    "usd": 3528, "sessions": 183, "first": "27 Aug 2026", "asof": "8 Oct 2026",
-    "buckets": [("human-review repo", 992), ("workspace sessions", 711),
-                ("subagents", 1567), ("eval runs (claude -p)", 224),
+    "usd": 3546, "sessions": 186, "first": "27 Aug 2026", "asof": "8 Oct 2026",
+    "buckets": [("human-review repo", 999), ("workspace sessions", 712),
+                ("subagents", 1576), ("eval runs (claude -p)", 224),
                 ("petclinic checkouts, after the move", 32), ("other projects", 3)],
-    "models": [("Opus 5", 1782), ("Opus 5.5", 1435), ("Fable 5.1", 170),
+    "models": [("Opus 5", 1782), ("Opus 5.5", 1453), ("Fable 5.1", 170),
                ("Sonnet 5", 101), ("Sonnet 5.5", 40)],
-    "borderline": {"sessions": 19, "usd": 1336, "prorated": 575},
+    "borderline": {"sessions": 21, "usd": 1338, "prorated": 575},
+    "humanSeconds": 104813, "agentSeconds": 1226755, "wallSeconds": 578725,
 }
 
 
@@ -534,10 +538,13 @@ def tooling_investment_html(t: dict = TOOLING_INVESTMENT) -> str:
     """The tool's own bill, under the table and apart from it: a muted footer box.
 
     Kept out of the table and its total on purpose — the table is what THIS change cost;
-    this is what building the reviewer cost, and the two must never be added up."""
+    this is what building the reviewer cost, and the two must never be added up. Three
+    figures, each its own tile (Victor, 8 Oct 2026: the token cost, the time he put in, and
+    how long it took to build, highlighted — not a sentence to read them out of)."""
     if not t:
         return ""
     money = lambda n: f"${n:,.0f}"
+    hours = lambda s: f"{s / 3600:,.0f} h"
     tip = ("By bucket: " + " · ".join(f"{k} {money(v)}" for k, v in t["buckets"])
            + ". By model: " + " · ".join(f"{k} {money(v)}" for k, v in t["models"])
            + f". Not counted: {t['borderline']['sessions']} mixed sessions where human-review"
@@ -545,11 +552,31 @@ def tooling_investment_html(t: dict = TOOLING_INVESTMENT) -> str:
            f" {money(t['borderline']['prorated'])} pro rata), and the petclinic era before"
            " 22 Aug 2026, whose transcripts are mostly gone. Measured by"
            " scripts/tools/tooling-cost.py.")
-    return (f'<p class="costtooling"><span data-tip="{html.escape(tip, quote=True)}" '
-            f'tabindex="0"><b>Tooling investment</b>, not this change: building human-review'
-            f' itself has cost ≈ {money(t["usd"])} in Claude API list price ({t["sessions"]}'
-            f' sessions, {t["first"]} → {t["asof"]}). Baseline as of {t["asof"]}, not'
-            ' updated automatically.</span></p>')
+    # "(subsidized)": the figure is API list price, and the tool was built on a Claude
+    # subscription that bills a flat fee far below it (Victor, 8 Oct 2026).
+    tiles = [(money(t["usd"]), 'token cost (<a href="https://claude.com/pricing" '
+              'target="_blank" rel="noopener">subsidized</a>)',
+              "Claude API list price, every session counted, subagents included — what the "
+              "tokens would cost on an API key; a Claude subscription bills a flat monthly "
+              "fee instead. " + tip)]
+    if t.get("humanSeconds"):
+        tiles.append((hours(t["humanSeconds"]), "Victor&rsquo;s time, estimated",
+                      "Speaking each prompt (Wispr Flow's own duration where it logged the "
+                      "dictation), typing the rest, reading the agent's replies. A floor: "
+                      "reviewing, testing by hand and thinking leave no trace."))
+    if t.get("wallSeconds"):
+        tiles.append((hours(t["wallSeconds"]), "agent time",
+                      "Hours in which at least one agent was working on it — each prompt to "
+                      "its turn's last record, overlapping sessions counted once. Added up "
+                      f"session by session it is {hours(t.get('agentSeconds') or 0)}."))
+    cells = "".join(f'<span class="costtile" tabindex="0" data-tip="{html.escape(tip_, quote=True)}">'
+                    f'<b>{html.escape(v)}</b><span>{k}</span></span>'
+                    for v, k, tip_ in tiles)
+    return (f'<div class="costtooling"><p class="costtooling-head">Building human-review '
+            f'itself <span>— the tool, not this change</span></p>'
+            f'<div class="costtiles">{cells}</div>'
+            f'<p class="costtooling-foot">{t["sessions"]} sessions, {t["first"]} &rarr; '
+            f'{t["asof"]}</p></div>')
 
 
 def _cost_ledger_body(led: dict, tabs: list[dict], voices: dict | None = None) -> str:
@@ -898,6 +925,32 @@ def _minutes(secs) -> str:
 BUSY_TIP = ("Agent busy time: each prompt to its last reply, summed. "
             "Waiting for the next prompt is left out.")
 
+#: The "you" column's header hover (Victor, 8 Oct 2026: "collect not only tokens, but the
+#: time it took to vibe" — his own time, estimated from what he dictated).
+HUMAN_TIP = ("Your time, a floor: speaking each prompt (Wispr Flow's own duration where it "
+             "logged the dictation, else words at 121 wpm spoken / 40 wpm typed) plus "
+             "reading the agent's reply before it at 250 wpm. Looking at diffs, testing by "
+             "hand and thinking leave no trace and are not in it.")
+
+
+def _human_cell(h: dict | None, cls: str = "costtime") -> str:
+    """The "you" column: the human's estimated time, its parts on the hover. `—` when no
+    Claude conversation of this row is on disk; `none` for a `claude -p` run."""
+    if not h:
+        return "<td>—</td>"
+    if not h.get("prompts"):
+        return (f'<td><span class="{cls}" data-tip="No prompt from a person in this window '
+                '— a scripted claude -p run, or the agent working on alone.">none</span></td>')
+    n, m = h["prompts"], h.get("measured") or 0
+    parts = [f"speaking {_duration(h.get('speak'))}"
+             + (f" (Wispr-measured, {m} of {n} prompt{'s' if n != 1 else ''})" if m else ""),
+             f"{'typing / unlogged speech' if h.get('type') else 'typing'} "
+             f"{_duration(h.get('type'))} (estimated)",
+             f"reading replies {_duration(h.get('read'))} (estimated)"]
+    tip = f"{n} prompt{'s' if n != 1 else ''}: " + " · ".join(parts)
+    return (f'<td><span class="{cls}" data-tip="{html.escape(tip, quote=True)}">'
+            f'{_duration(h.get("seconds"))}</span></td>')
+
 
 def _duration(secs) -> str:
     """`45 s`, `12 min`, `3 h 05 min` — or `—` when nothing could time it."""
@@ -968,8 +1021,10 @@ def _entry_row(e: dict) -> str:
     busy = e.get("busySeconds")
     when = (_time_cell(busy, e.get("modelSeconds"), "costsub costtime") if busy is not None
             else "<td></td>")
+    you = (_human_cell(e["human"], "costsub costtime") if e.get("human") is not None
+           else "<td></td>")
     return (f'<tr class="costpart"><td><span class="costsub">{_entry_line(e)}</span></td>'
-            f'{when}<td><span class="costsub">{money}</span></td></tr>')
+            f'{you}{when}<td><span class="costsub">{money}</span></td></tr>')
 
 
 
@@ -1081,10 +1136,18 @@ def voices_row_html(v: dict | None) -> str:
     model = " / ".join(v["models"]) or FISH_DEFAULT_MODEL
     return ('<tr class="costquiet" data-component="voices"><td>Voices'
             f'<span class="costsub">Fish Audio, {n} voice{"s" if n != 1 else ""}</span></td>'
-            '<td></td>'
+            '<td></td><td></td>'
             f'<td><span class="costmoney" data-tip="{html.escape("; ".join(tips), quote=True)}">'
             f'{html.escape(voice_money(v["usd"]))}</span><span class="costsub">{html.escape(model)}</span>'
             '</td></tr>')
+
+
+def _human_total(rows: list[dict]) -> dict | None:
+    """The rows' human time, added up, for the total's "you" cell."""
+    got = [r["human"] for r in rows if r.get("measured") and r.get("human")]
+    if not got:
+        return None
+    return {k: sum(h.get(k) or 0 for h in got) for k in got[0]}
 
 
 def components_html(comp: dict | None, fold: str = "", voices: dict | None = None) -> str:
@@ -1105,7 +1168,7 @@ def components_html(comp: dict | None, fold: str = "", voices: dict | None = Non
             why = html.escape(str(r.get("reason") or "not measured"))
             out.append(f'<tr class="costquiet" data-component="{html.escape(r["key"])}">'
                        f'<td>{label}<span class="costsub">unmeasured — {why}</span></td>'
-                       '<td>—</td><td>—</td></tr>')
+                       '<td>—</td><td>—</td><td>—</td></tr>')
             continue
         entries = r.get("entries") or []
         parts = len(entries) > 1
@@ -1159,13 +1222,14 @@ def components_html(comp: dict | None, fold: str = "", voices: dict | None = Non
         # Time before the cost: the money stays the last column, where the page's
         # "Prompt to get this" button sits in the header, beside `cost`.
         out.append(f'<tr data-component="{html.escape(r["key"])}"><td>{label}{sub}</td>'
+                   + _human_cell(r.get("human"))
                    + _time_cell(r.get("busySeconds"), r.get("modelSeconds"))
                    + f'<td>{_cost_cell(_component_money(r, rate), r.get("tokens") or 0, models)}'
                    '</td></tr>')
         if parts:
             out.append("".join(_entry_row(e) for e in entries))
         if folds:
-            out.append(f'<tr class="costfold" hidden><td colspan="3">{fold}</td></tr>')
+            out.append(f'<tr class="costfold" hidden><td colspan="4">{fold}</td></tr>')
     out.append(voices_row_html(voices))
     usd, aic = comp.get("usd") or 0.0, comp.get("aic") or 0.0
     total = usd + aic * rate + ((voices or {}).get("usd") or 0.0)
@@ -1181,6 +1245,7 @@ def components_html(comp: dict | None, fold: str = "", voices: dict | None = Non
     foot = (f'<tr class="costtotal"><td>Total'
             + (f'<span class="costsub">{html.escape(sub)}</span>' if sub else "")
             + '</td>'
+            + _human_cell(_human_total(rows))
             + _time_cell(comp.get("busySeconds"),
                          sum(r.get("modelSeconds") or 0 for r in rows if r.get("measured")))
             + f'<td>{_cost_cell(_cost_money(total), tokens)}</td></tr>')
@@ -1199,7 +1264,8 @@ def components_html(comp: dict | None, fold: str = "", voices: dict | None = Non
             + (f'<caption>{caption}</caption>' if caption else '') +
             # "step" (Victor, 7 Oct 2026): the rows are the steps the change went through.
             '<thead><tr><th scope="col">step</th>'
-            f'<th scope="col"><span data-tip="{html.escape(BUSY_TIP, quote=True)}">time</span>'
+            f'<th scope="col"><span data-tip="{html.escape(HUMAN_TIP, quote=True)}">you</span>'
+            f'</th><th scope="col"><span data-tip="{html.escape(BUSY_TIP, quote=True)}">agent</span>'
             '</th><th scope="col">cost</th></tr></thead>'
             f'<tbody>{"".join(out)}</tbody><tfoot>{foot}</tfoot></table>')
 

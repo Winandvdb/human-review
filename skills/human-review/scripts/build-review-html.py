@@ -149,6 +149,7 @@ from hrbuild.shared.folders import (
     _STEREO, _tree_base
 )
 from hrbuild.shared.diagrams import (
+    CARD_NAME, card_rerun_html, card_rerun_id, REFRESH_CARD,
     CM_LEGEND_NEW, CM_LEGEND_TODO, DEFAULT_FOCUS, DGM_SRC_ANCHOR, dgm_views_html, DRAWIO_TOKEN,
     drawio_unchanged, drawio_unchanged_at, drawio_widget_html, expand_drawio,
     find_diagram_source, read_manifest, render_diagrams, render_puml, schema_unseen_note,
@@ -212,7 +213,9 @@ from hrbuild.tabs.review import (
     grade_reasons, grade_reasons_html, _first_clause, _CLAUSE_END, PILE_ROUND, _round_kicker,
     _LEDE_SHOWN, _LIST_OFFSET, _merge_seam_shas, _open_list, _pile_anchor, _raised_by,
     _ref_link, _regenerate_offer, _score_target, _tooling_commit_shas,
-    gh_comment_link, prepare_pr_push, pr_comment_slug, PR_COMMENTS_JSON, PR_PILE_LETTER,
+    gh_comment_link, prepare_pr_push, attach_pr_body, pr_description_html, pr_body_html,
+    _md_inline, PR_BODY_JSON, _PULL_URL, _PR_BODY_BOILERPLATE, pr_comment_slug, PR_COMMENTS_JSON,
+    PR_PILE_LETTER,
     PR_POSTED_JSON, PR_PUSH_JS, push_pr_button, push_pr_dialog, PUSH_PR_ACTION,
     PUSH_PR_DRY_ACTION, _PR_SLUG_MAX, PR_PREVIEW_TAG, PR_RESULT_TAG, _payload_changed,
     VSCODE_PR_URI, vscode_pr_uri, vscode_pr_link, _PR_URL, VSC_ICON, vscode_file_link,
@@ -253,7 +256,7 @@ from hrbuild.tabs.sequence import (
     SEQ_SELECTION, SEQ_WHY, sequence_selection, _slug, picked_for, _why_chip,
     SEQ_ALSO, ledger_status,
     SEQ_TOUCHED, touched_via, _branch_changed, _direct_imports, _TS_IMPORT, _JAVA_IMPORT,
-    TRACE_SHOT, TRACE_SHOT_META, TRACE_ANSWER, TRACE_HOW, trace_how_html,
+    TRACE_SHOT, TRACE_SHOT_META, TRACE_ANSWER, TRACE_HOW, TRACE_SAMPLED, trace_how_html,
     _trace_shot_html
 )
 from hrbuild.tabs.tests import (
@@ -302,7 +305,8 @@ from hrbuild.tabs.cost import (
     _legacy_ledger_html, _HARNESS, _aic, _component_money, _minutes, _entry_line,
     guide_breakdown_html, _extension_line, _instants, _stamp_s, _span, _cost_cell,
     voice_money, voices_cost, voices_row_html, FISH_PRICE_PER_M_BYTES, FISH_DEFAULT_MODEL,
-    BUSY_TIP, _duration, _time_cell, COST_TITLE, _WHAT_SHORT, _cost_ledger_body, _entry_row,
+    BUSY_TIP, HUMAN_TIP, _human_cell, _human_total, _duration, _time_cell, COST_TITLE,
+    _WHAT_SHORT, _cost_ledger_body, _entry_row,
     _split, TOOLING_INVESTMENT, tooling_investment_html
 )
 
@@ -426,6 +430,7 @@ def _main(argv=None) -> int:
     # them as lists. This is the point at which the branch's own record becomes the page's.
     resolve_review_points(spec, out_dir)
     prepare_pr_push(spec, out_dir, root, HERE)
+    attach_pr_body(spec, out_dir, root)
     # The Tests tab's matrix is drawn from its inputs here, before `own_layout` looks for
     # the fragment: the ticket, the coverage and the pairing (tests.py:scripted_reqmap).
     scripted_reqmap(spec, out_dir, root)

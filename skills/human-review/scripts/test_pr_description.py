@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+"""The PR's own description on the Review tab: fetched, cached, rendered safely.
+
+Run with:  python3 -m pytest test_pr_description.py
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+from hrbuild.tabs import review  # noqa: E402
+
+URL = "https://github.com/acme/shop/pull/51"
+
+
+def test_markdown_is_escaped_and_linked():
+    out = review.pr_body_html("Closes #25.\n\n- [x] **paged** grid\n- see "
+                              "[spec](https://x.io/s) <script>alert(1)</script>\n\n"
+                              "```\nif (a < b) {}\n```", "https://github.com/acme/shop")
+    assert '<a href="https://github.com/acme/shop/issues/25"' in out
+    assert "<li>☑ <b>paged</b> grid</li>" in out
+    assert '<a href="https://x.io/s"' in out
+    assert "<script>" not in out and "&lt;script&gt;" in out
+    assert "<pre><code>if (a &lt; b) {}</code></pre>" in out
+
+
+def test_the_agent_attribution_line_is_left_out():
+    spec = {"_prBody": {"url": URL, "body": "Closes #25.\n\n🤖 Generated with "
+                                             "[Claude Code](https://claude.com/claude-code)"}}
+    out = review.pr_description_html(spec)
+    assert "Closes" in out and "Generated with" not in out
+    assert f'href="{URL}"' in out
+
+
+def test_an_empty_description_draws_nothing():
+    assert review.pr_description_html({}) == ""
+    assert review.pr_description_html({"_prBody": {"url": URL, "body": "  \n"}}) == ""
+
+
+def test_offline_the_cache_stands_in(tmp_path, monkeypatch):
+    monkeypatch.setenv("HR_NO_GITHUB", "1")
+    (tmp_path / review.PR_BODY_JSON).write_text(json.dumps(
+        {"number": 51, "url": URL, "body": "cached words"}))
+    spec = {"pr": {"number": 51, "url": URL}}
+    review.attach_pr_body(spec, tmp_path)
+    assert spec["_prBody"]["body"] == "cached words"
+    other = {"pr": {"number": 52, "url": URL.replace("51", "52")}}
+    review.attach_pr_body(other, tmp_path)
+    assert "_prBody" not in other

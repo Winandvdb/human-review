@@ -38,7 +38,6 @@
 .oac-reasons { list-style:none; margin:.45rem 0 0; padding:0; display:grid; gap:.28rem; }
 .oac-reasons li { font-size:.88rem; line-height:1.6; }
 .oac-reasons li::before { content:"↳"; color:var(--muted); margin-right:.45rem; }
-.oac-reasons li.oac-more { color:var(--muted); font-size:.8rem; font-style:italic; }
 .oac-lv { font:700 .64rem/1.8 inherit; text-transform:uppercase; letter-spacing:.04em;
           border-radius:3px; padding:0 .3rem; }
 .oac-lv-err  { background:#fdeaea; color:#8a1c1c; }
@@ -48,11 +47,6 @@
 .oac code { font:600 12px/1.5 ui-monospace,Menlo,monospace; background:var(--code-bg);
             border-radius:3px; padding:0 .25rem; }
 .oac b.oac-add { color:#2e7d32; } .oac b.oac-del { color:#c62828; }
-.oac-agree, .oac-disagree { margin:1.2rem 0 0; border-radius:8px; padding:.65rem .85rem;
-                            font-size:.86rem; line-height:1.7; }
-.oac-agree { background:var(--code-bg); color:var(--muted); }
-.oac-agree b { color:var(--fg); }
-.oac-disagree { background:#fdf3e2; color:#6b4a0f; border:1px solid #e5c98f; }
 .oac-log { margin:1.4rem 0 0; }
 .oac-log summary { cursor:pointer; color:var(--muted); font-size:.85rem; }
 .oac-log-op { margin:.9rem 0 .2rem; display:flex; align-items:center; gap:.5rem; }
@@ -71,7 +65,7 @@
   .oac-compatible   .oac-seal { background:#1b2c1f; color:#9ad3a5; }
   .oac-partial .oac-seal { background:#3a3018; color:#e6c07b; }
   .oac b.oac-add { color:#8fd39c; } .oac b.oac-del { color:#f08a8a; }
-  .oac-disagree, .oac-incomplete { background:#3a3018; color:#e6c07b; border-color:#6b5520; }
+  .oac-incomplete { background:#3a3018; color:#e6c07b; border-color:#6b5520; }
   .oac-lv-err  { background:#3a1f1f; color:#f2a0a0; }
   .oac-lv-warn { background:#3a3018; color:#e6c07b; }
 }

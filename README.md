@@ -190,14 +190,13 @@ of its own, for example `~/tools/<project>-review/`, and per project:
    ```json
    {
      "base": "origin/main",
-     "page": {"layout": "new"},
      "font": {"family": "Sofia", "files": {"400": "~/tools/<project>-review/fonts/Sofia-Regular.ttf",
                                            "600": "~/tools/<project>-review/fonts/Sofia-SemiBold.ttf"}},
      "ci": {"workflows": ["<the pull request workflow>.yml"]}
    }
    ```
 
-   `page.layout: "new"` turns the redesigned page on; without it the old page is built.
+   The redesigned page needs no setting; `"page": {"layout": "old"}` builds the old one.
    The lab900 colours are the default and need no setting. The font is licensed and is
    never in this repository: put the files in the project's folder and name them in
    `font`, or leave the block out and the page uses Arial. For the steps your stack has

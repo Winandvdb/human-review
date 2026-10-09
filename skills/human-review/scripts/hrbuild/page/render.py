@@ -1,4 +1,5 @@
-"""The redesigned review page — `"page": {"layout": "new"}` in `human-review.json`.
+"""The redesigned review page — the default; `"page": {"layout": "old"}` in
+`human-review.json` builds the old one instead.
 
 The old page grew one tab per tool and one chip per number, and a reader had to learn it
 before they could use it. This one answers four questions in the order a reviewer asks
@@ -43,10 +44,11 @@ NP_MAPPING_FILES = ("assets/test-mapping.merged.json", "test-mapping.json")
 
 
 def page_layout(root: Path) -> str:
-    """`new` or `old`: the project's `human-review.json`, else `$HUMAN_REVIEW_LAYOUT`."""
+    """`new` or `old`: the project's `human-review.json`, else `$HUMAN_REVIEW_LAYOUT`,
+    else `new` — the old page is built only when one of the two asks for it."""
     page = _project_cfg(root).get("page")
     named = page.get("layout") if isinstance(page, dict) else None
-    return (named or os.environ.get("HUMAN_REVIEW_LAYOUT") or "old").strip().lower()
+    return (named or os.environ.get("HUMAN_REVIEW_LAYOUT") or "new").strip().lower()
 
 
 # --------------------------------------------------------------------------- helpers

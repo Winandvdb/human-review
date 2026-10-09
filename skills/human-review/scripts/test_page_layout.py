@@ -1,4 +1,4 @@
-"""The redesigned page (`hrbuild/page/render.py`), switched on by `"page": {"layout": "new"}`.
+"""The redesigned page (`hrbuild/page/render.py`), the default unless a project asks for the old one.
 
 Built the way the skill builds it, from a content file, with `$HUMAN_REVIEW_LAYOUT` instead
 of a project config so the test needs no checkout of its own.
@@ -158,16 +158,27 @@ def test_an_unstamped_map_is_matched_to_its_run_by_time(tmp_path):
     assert "run 1 of 2" in render._np_provenance(tmp_path, {})
 
 
-def test_the_old_layout_is_still_the_default(tmp_path):
+def _build_with(tmp_path: Path, layout: str | None) -> str:
+    """Built with `$HUMAN_REVIEW_LAYOUT` set to `layout`, or not set at all."""
     home = tmp_path / "home"
     home.mkdir()
     env = {k: v for k, v in os.environ.items()
            if k not in ("CLAUDE_CODE_SESSION_ID", "HUMAN_REVIEW_LAYOUT")}
     env["HOME"] = str(home)
+    if layout:
+        env["HUMAN_REVIEW_LAYOUT"] = layout
     src = tmp_path / "content.json"
     src.write_text(json.dumps(SPEC), encoding="utf-8")
     out = tmp_path / "review.html"
     proc = subprocess.run([sys.executable, str(HERE / "build-review-html.py"), str(src),
                            "--out", str(out)], capture_output=True, text=True, env=env)
     assert proc.returncode == 0, proc.stderr
-    assert 'class="np"' not in out.read_text(encoding="utf-8")
+    return out.read_text(encoding="utf-8")
+
+
+def test_the_new_layout_is_the_default(tmp_path):
+    assert 'class="np"' in _build_with(tmp_path, None)
+
+
+def test_a_project_can_still_ask_for_the_old_page(tmp_path):
+    assert 'class="np"' not in _build_with(tmp_path, "old")

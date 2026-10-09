@@ -159,6 +159,78 @@ and then, in the same repository, when you want the page:
 /human-review 123          # a pull request
 ```
 
+## Set up a project (this fork)
+
+This fork adds a redesigned page: the lab900 style, a light and dark theme switch, and five
+tabs of its own — **What changed**, **Asked vs tested**, **Your decisions**, **Fixed in
+review** and **Cost** — plus the views (Sequence, API, Data, …) that have data.
+
+Install it as above, from `Winandvdb/human-review`. Or, to run it from a checkout you can
+read and change, clone it and link the two skills:
+
+```sh
+git clone --depth 1 https://<your-user>@github.com/Winandvdb/human-review.git ~/tools/human-review
+ln -s ~/tools/human-review/skills/human-review ~/.claude/skills/human-review
+ln -s ~/tools/human-review/skills/record-review ~/.claude/skills/record-review
+python3 -m venv ~/tools/hr-venv
+~/tools/hr-venv/bin/pip install pygments pillow numpy pyyaml
+```
+
+Put `~/tools/hr-venv/bin` first on your `PATH` (the scripts call `python3`), then restart
+Claude Code. The `https://<your-user>@github.com/…` form keeps a git rule that rewrites
+GitHub URLs to SSH from hanging on a prompt.
+
+**Nothing about a project goes in this repository.** Keep each project's setup in a folder
+of its own, for example `~/tools/<project>-review/`, and per project:
+
+1. **A `human-review.json`** in that folder, linked into every checkout of the project
+   (`ln -sf ~/tools/<project>-review/human-review.json <checkout>/human-review.json`).
+   The smallest useful one:
+
+   ```json
+   {
+     "base": "origin/main",
+     "page": {"layout": "new"},
+     "font": {"family": "Sofia", "files": {"400": "~/tools/<project>-review/fonts/Sofia-Regular.ttf",
+                                           "600": "~/tools/<project>-review/fonts/Sofia-SemiBold.ttf"}},
+     "ci": {"workflows": ["<the pull request workflow>.yml"]}
+   }
+   ```
+
+   `page.layout: "new"` turns the redesigned page on; without it the old page is built.
+   The lab900 colours are the default and need no setting. The font is licensed and is
+   never in this repository: put the files in the project's folder and name them in
+   `font`, or leave the block out and the page uses Arial. For the steps your stack has
+   (traced tests, a film of the app, coverage per test), start from
+   `skills/human-review/human-review.example.json`.
+2. **These lines in the project's `.git/info/exclude`**, so nothing of the review is
+   committed by accident:
+
+   ```
+   /human-review.json
+   /review-points.md
+   /review-cost.json
+   /.human-review/
+   ```
+3. **Record the review** in the conversation that wrote the code, after the pull request
+   is open: `/record-review origin/main` (or the branch under a stacked one).
+4. **Build the page**: `/human-review <pull request number>`. It is served at
+   `http://127.0.0.1:7654/review.html`; `serve-review.py --stop` stops the server.
+
+What each tab needs, and what it shows without it:
+
+| Tab | Needs | Without it |
+|---|---|---|
+| What changed | the branch; the run writes the summary | the film is left out without `steps.video.app` |
+| Asked vs tested | a GitHub issue with acceptance criteria; for the best pairing, coverage per test (`testcov`: JUnit, Karma, vitest or Playwright e2e) | no issue: no tab |
+| Your decisions, Fixed in review | `review-points.md`, written by `/record-review` | the tabs say that nothing was recorded |
+| Cost | Claude Code transcripts on this machine | "not measured" |
+| Views (Sequence, API, Data, Logging, Complexity, UX, Owners) | a backend and the steps in `human-review.json` | the view is not shown |
+
+An app without a backend is filmed too: in `steps.video.app.env`, set
+`HUMAN_REVIEW_API_PROBE` to `""`, `HUMAN_REVIEW_VIDEO_VIEWPORT` to the screen size (for a
+phone, `"390x844"`) and `HUMAN_REVIEW_NODE_PATH` to a `node_modules` that has Playwright.
+
 ## Two commands: one decides, the other writes it up
 
 This is the one thing worth knowing before installing it. **The judgement is produced by

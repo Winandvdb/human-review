@@ -110,7 +110,7 @@ def _rerun_model():
 
 
 def test_a_paid_pairing_says_which_model_made_it_and_when(tmp_path):
-    """koejon #12: a second "Rerun with AI" rewrote the map with a different answer, and
+    """A second "Rerun with AI" once rewrote the map with a different answer, and
     nothing on the page said that the map on screen was the second of two."""
     out = _rerun_model().install(tmp_path, {"sentences": []}, by="sonnet")
     stamp = json.loads(out.read_text())["pairedBy"]

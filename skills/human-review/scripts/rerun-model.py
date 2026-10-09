@@ -348,7 +348,7 @@ def install(review: Path, doc: dict, offered: list[str] | None = None,
     the card that this answer never read (`semcov.pairing_stale`).
 
     `by` stamps which model paired it and when (`pairedBy`): two paid runs over the same
-    branch can disagree (koejon #12), and the page says which answer it shows."""
+    branch can disagree, and the page says which answer it shows."""
     if offered is not None:
         doc = {**doc, "offered": list(offered)}
     if by:

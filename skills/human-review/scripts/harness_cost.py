@@ -1706,7 +1706,7 @@ def _less_runs(c: dict, runs: list[dict]) -> dict:
     """Row `c` without the turns of the runs: what each run's conversation spent inside
     the entry's window is subtracted from the entry. Subtracted, not measured again over
     the rest of the window: the recorded entry reads to the end of its last turn, and a
-    fresh measurement of the pieces came out $0.08 short of it on koejon #12."""
+    fresh measurement of the pieces came out $0.08 short of it on a real review."""
     entries, cut = [], False
     for e in c.get("entries") or []:
         lo, hi = _span(e)
@@ -1746,8 +1746,8 @@ def settle_overlap(guide: dict, first3: list[dict]) -> tuple[dict, list[dict]]:
     """The guide row and rows 1–3, with no turn in two of them.
 
     A run that STARTED inside a window rows 1–3 bill is page building done in the middle
-    of that phase — koejon #12 built its page during the auto-fixes, in the same
-    conversation — so its turns are the guide's, and the row around it gives them up. A run
+    of that phase — a page built during the auto-fixes, in the same conversation — so its
+    turns are the guide's, and the row around it gives them up. A run
     that started before every such window is a mis-drawn window (eval run 10), and the
     guide gives up the overlap instead, as `without_paid_turns` always did."""
     spans: dict[str, list[tuple]] = {}

@@ -317,7 +317,7 @@ def _np_test_names(out_dir: Path, spec: dict) -> tuple[dict, list[dict]]:
 
 def _np_provenance(out_dir: Path, mapping: dict) -> str:
     """Which paid run paired the ticket with the tests, and whether an earlier answer is
-    kept. Two runs over one branch can disagree (koejon #12: the second found no test for a
+    kept. Two runs over one branch can disagree (once, the second found no test for a
     criterion the first had two for), so the page says which answer it shows. The stamp is
     `rerun-model.py`'s `pairedBy`; a map older than the stamp is matched to the run in
     `.model-runs.json` that ended within two minutes of the file's own time."""

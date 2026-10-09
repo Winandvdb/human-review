@@ -729,7 +729,7 @@ def test_the_guide_row_never_bills_a_turn_the_rows_above_already_billed(claude_w
 
 
 def test_a_run_started_inside_the_fixes_is_billed_to_the_guide_not_the_fixes(claude_world):
-    """koejon #12: `/human-review` built the page at 12:19–12:23, in the conversation that
+    """A real review: `/human-review` built the page at 12:19–12:23, in the conversation that
     was still fixing (auto-fixes 12:16–13:00). The guide row lost the run's $1.19 to the
     auto-fixes row and kept only the $0.08 mapping, and the fold under it, with no window
     left to read, read the conversation to "now" and printed $4.33."""

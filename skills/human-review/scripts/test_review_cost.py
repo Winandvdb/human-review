@@ -1842,7 +1842,8 @@ def test_the_tab_split_starts_where_the_guide_row_starts_not_at_dot_started(tmp_
 
 
 def test_a_guide_row_without_this_conversation_splits_none_of_it(tmp_path, monkeypatch):
-    """koejon #12: the guide row held only the `claude -p` mapping ($0.08), so it gave no
+    """A page built during the auto-fixes: the guide row held only the `claude -p` mapping
+    ($0.08), so it gave no
     window for the conversation, and the fold read it from `.started` to "now": $4.33 of
     fixing and later work, under a $0.08 row."""
     comp = _guide_component(_MAPPING)

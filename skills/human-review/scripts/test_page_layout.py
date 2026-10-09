@@ -84,6 +84,19 @@ def test_the_least_sure_choice_comes_first_and_every_point_is_numbered(tmp_path)
     assert "60% sure" in decide and "Not fixed because:" in decide
 
 
+def test_a_branch_with_no_recorded_review_says_so_instead_of_reading_as_clean(tmp_path):
+    """Without `review-points.md` the piles are empty because nobody wrote them down, not
+    because the review found nothing — "Nothing is waiting for you" was the wrong answer."""
+    sys.path.insert(0, str(HERE))
+    render = importlib.import_module("hrbuild.page.render")
+    spec = {"_reviewPoints": {"missing": True, "path": "review-points.md"}}
+    decide, n = render._np_decisions(spec, tmp_path)
+    fixed, _ = render._np_fixed(spec, tmp_path)
+    for panel in (decide, fixed):
+        assert "No review was recorded" in panel and "/record-review" in panel
+    assert "Nothing is waiting for you" not in decide and "fixed nothing" not in fixed
+
+
 def test_the_fixes_have_a_tab_of_their_own(tmp_path):
     fixed = _panel(_build(tmp_path, SPEC), "fixed")
     assert "Pile moved" in fixed and "Keep the box size." in fixed

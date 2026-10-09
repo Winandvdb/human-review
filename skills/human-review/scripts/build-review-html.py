@@ -77,7 +77,8 @@ from hrbuild.page.render import (
     _np_asked, _np_changed_tests, _np_confidence, _np_cost, _np_decisions, _np_demo, _np_esc,
     _np_files, _np_fixed, _np_footer, _np_git, _np_icon, _np_json, _np_meta, _np_minutes,
     _np_next, _np_provenance, _np_refs, _np_score, _np_section, _np_sections, _np_semcov, _np_status,
-    _np_tabbar, _np_test_names, _np_title, _np_topbar, new_page_html, page_layout,
+    _np_tabbar, _np_test_names, _np_title, _np_topbar, _np_unrecorded, new_page_html,
+    page_layout,
 )
 from hrbuild.shared.fixtures import (
     FIXTURE_COLORS_FILE,

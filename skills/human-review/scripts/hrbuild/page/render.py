@@ -489,6 +489,18 @@ def _np_confidence(c) -> str:
             f'style="width:{pct}%"></span></span>{pct}% sure</span>')
 
 
+def _np_unrecorded(spec: dict) -> str:
+    """The note for a branch with no `review-points.md`: its piles are empty because
+    nothing was written down, which must not read as a review that found nothing."""
+    points = spec.get("_reviewPoints") or {}
+    if not points.get("missing"):
+        return ""
+    return (f'<p class="np-note warn">No review was recorded for this branch: no '
+            f'<code>{_np_esc(points.get("path") or "review-points.md")}</code> says what was '
+            "reviewed, fixed or declined. Run <code>/record-review</code> in the conversation "
+            "that wrote the code, then build the page again.</p>")
+
+
 def _np_decisions(spec: dict, root: Path) -> tuple[str, int]:
     assumed = sorted((a for a in spec.get("assumptions") or [] if isinstance(a, dict)),
                      key=lambda a: float(a.get("confidence") or 1))
@@ -515,7 +527,9 @@ def _np_decisions(spec: dict, root: Path) -> tuple[str, int]:
         f'<span class="np-sev">{_np_esc(f.get("severity"))}</span>' if f.get("severity")
         else "") for f in ignored)
     total = len(assumed) + len(ignored)
-    if not total:
+    if _np_unrecorded(spec):
+        body = _np_unrecorded(spec)
+    elif not total:
         body = '<p class="np-empty">Nothing is waiting for you.</p>'
     else:
         body = ((f'<h3 class="np-h3">Choices where the ticket was not clear '
@@ -552,8 +566,9 @@ def _np_fixed(spec: dict, root: Path) -> tuple[str, int]:
                   f'{_np_icon("chevron_right", "chev")}</summary>'
                   f'<div class="np-itembody">{other}</div></details>')
     warn = "".join(f'<p class="np-note warn">{w}</p>' for w in points.get("fixWarnings") or [])
-    body = (f'<div class="np-items">{items}</div>{warn}' if fixes or other
-            else '<p class="np-empty">The review fixed nothing.</p>')
+    body = (_np_unrecorded(spec) or (f'<div class="np-items">{items}</div>{warn}'
+                                     if fixes or other
+                                     else '<p class="np-empty">The review fixed nothing.</p>'))
     return (_np_section("fixed", f'Fixed in review <span class="np-muted">{len(fixes)}</span>',
                         "The review found these, and the agent fixed them. You need to do "
                         "nothing here.", body), len(fixes))

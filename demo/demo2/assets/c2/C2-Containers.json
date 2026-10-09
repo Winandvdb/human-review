@@ -2,14 +2,12 @@
   "new": {
     "sources": [
       "petclinic-test/generated/AddVisitApiTest.java.adds-a-visit-to-an-existing-pet.genseq.puml",
-      "petclinic-test/generated/OwnerListTest.java.defaultrequest-returnsfirsttenbynameascendingandthetotal.genseq.puml",
-      "petclinic-test/generated/OwnerListTest.java.response-isanobjectwithexactlycontentandtotalelements.genseq.puml",
+      "petclinic-test/generated/OwnerListTest.java.defaultpage-isthefirsttenbyname.genseq.puml",
+      "petclinic-test/generated/OwnerListTest.java.unfilteredtotal-countseveryowner.genseq.puml",
       "petclinic-test/generated/add-visit.spec.ts.add-a-visit-to-an-existing-pet-from-the-owner-detail-page.genseq.puml",
-      "petclinic-test/generated/owner-search.feature.a-new-search-goes-back-to-the-first-page.genseq.puml",
-      "petclinic-test/generated/owner-search.feature.changing-the-page-size-goes-back-to-the-first-page.genseq.puml",
-      "petclinic-test/generated/owner-search.feature.paging-through-the-whole-list-reaches-every-owner-exactly-once.genseq.puml",
+      "petclinic-test/generated/owner-search.feature.choosing-5-rows-per-page.genseq.puml",
       "petclinic-test/generated/owner-search.feature.searching-with-an-empty-last-name-shows-the-first-page-of-every-owner.genseq.puml",
-      "petclinic-test/generated/owner-search.feature.sorting-by-city-descending.genseq.puml"
+      "petclinic-test/generated/owner-search.feature.sorting-by-city.genseq.puml"
     ],
     "nodes": {
       "Backend": {
@@ -46,6 +44,13 @@
         "descr": "",
         "inferredBy": "config",
         "decl": "participant"
+      },
+      "\u00abmodule\u00bb\\nCommons": {
+        "kind": "container",
+        "tech": "",
+        "descr": "",
+        "inferredBy": "default",
+        "decl": "participant"
       }
     },
     "edges": [
@@ -54,19 +59,19 @@
         "to": "DB",
         "status": "same",
         "protocol": "SQL",
-        "operations": 6,
+        "operations": 7,
         "operationsDelta": 0,
-        "calls": 72,
+        "calls": 70,
         "detail": [
           {
             "name": "OwnerRepository.findByLastNameStartingWith",
             "path": "",
-            "calls": 32
+            "calls": 18
           },
           {
-            "name": "SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type \u2026",
+            "name": "insert for victor.training.petclinic.domain.Owner",
             "path": "",
-            "calls": 17
+            "calls": 12
           },
           {
             "name": "insert for victor.training.petclinic.domain.Visit",
@@ -74,19 +79,24 @@
             "calls": 2
           },
           {
+            "name": "select count(*) from Owner x",
+            "path": "",
+            "calls": 1
+          },
+          {
             "name": "select owners",
             "path": "",
-            "calls": 7
+            "calls": 5
           },
           {
             "name": "select pets",
             "path": "",
-            "calls": 8
+            "calls": 18
           },
           {
             "name": "select visits",
             "path": "",
-            "calls": 6
+            "calls": 14
           }
         ],
         "toKind": "db"
@@ -109,13 +119,30 @@
         "toKind": "container"
       },
       {
+        "from": "Backend",
+        "to": "\u00abmodule\u00bb\\nCommons",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 2,
+        "detail": [
+          {
+            "name": "PhoneNumbers.normalize",
+            "path": "",
+            "calls": 2
+          }
+        ],
+        "toKind": "container"
+      },
+      {
         "from": "Browser",
         "to": "Backend",
         "status": "same",
         "protocol": "HTTP",
         "operations": 4,
         "operationsDelta": 0,
-        "calls": 19,
+        "calls": 11,
         "detail": [
           {
             "name": "Add a visit for an owner's pet",
@@ -128,9 +155,9 @@
             "calls": 3
           },
           {
-            "name": "List owners",
+            "name": "List one page of owners",
             "path": "GET /api/owners",
-            "calls": 14
+            "calls": 6
           },
           {
             "name": "getPet",
@@ -156,6 +183,40 @@
           }
         ],
         "toKind": "external"
+      },
+      {
+        "from": "NotificationService",
+        "to": "\u00abmodule\u00bb\\nCommons",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 2,
+        "detail": [
+          {
+            "name": "PhoneNumbers.normalize",
+            "path": "",
+            "calls": 2
+          }
+        ],
+        "toKind": "container"
+      },
+      {
+        "from": "\u00abmodule\u00bb\\nCommons",
+        "to": "Backend",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 1,
+        "detail": [
+          {
+            "name": "NotificationServiceClient.homeDialCode",
+            "path": "",
+            "calls": 1
+          }
+        ],
+        "toKind": "container"
       }
     ]
   },
@@ -200,6 +261,13 @@
         "descr": "",
         "inferredBy": "config",
         "decl": "participant"
+      },
+      "\u00abmodule\u00bb\\nCommons": {
+        "kind": "container",
+        "tech": "",
+        "descr": "",
+        "inferredBy": "default",
+        "decl": "participant"
       }
     },
     "edges": [
@@ -210,7 +278,7 @@
         "protocol": "SQL",
         "operations": 5,
         "operationsDelta": 0,
-        "calls": 215,
+        "calls": 214,
         "detail": [
           {
             "name": "OwnerRepository.findByLastNameStartingWith",
@@ -225,12 +293,12 @@
           {
             "name": "select owners",
             "path": "",
-            "calls": 6
+            "calls": 7
           },
           {
             "name": "select pets",
             "path": "",
-            "calls": 100
+            "calls": 98
           },
           {
             "name": "select visits",
@@ -252,6 +320,23 @@
           {
             "name": "",
             "path": "POST /api/notifications/visit-booked",
+            "calls": 2
+          }
+        ],
+        "toKind": "container"
+      },
+      {
+        "from": "Backend",
+        "to": "\u00abmodule\u00bb\\nCommons",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 2,
+        "detail": [
+          {
+            "name": "PhoneNumbers.normalize",
+            "path": "",
             "calls": 2
           }
         ],
@@ -305,6 +390,40 @@
           }
         ],
         "toKind": "external"
+      },
+      {
+        "from": "NotificationService",
+        "to": "\u00abmodule\u00bb\\nCommons",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 2,
+        "detail": [
+          {
+            "name": "PhoneNumbers.normalize",
+            "path": "",
+            "calls": 2
+          }
+        ],
+        "toKind": "container"
+      },
+      {
+        "from": "\u00abmodule\u00bb\\nCommons",
+        "to": "Backend",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 2,
+        "detail": [
+          {
+            "name": "NotificationServiceClient.homeDialCode",
+            "path": "",
+            "calls": 2
+          }
+        ],
+        "toKind": "container"
       }
     ]
   },
@@ -349,6 +468,14 @@
         "inferredBy": "config",
         "decl": "participant",
         "status": "same"
+      },
+      "\u00abmodule\u00bb\\nCommons": {
+        "kind": "container",
+        "tech": "",
+        "descr": "",
+        "inferredBy": "default",
+        "decl": "participant",
+        "status": "same"
       }
     },
     "edges": [
@@ -357,19 +484,19 @@
         "to": "DB",
         "status": "same",
         "protocol": "SQL",
-        "operations": 6,
-        "operationsDelta": 1,
-        "calls": 72,
+        "operations": 7,
+        "operationsDelta": 0,
+        "calls": 70,
         "detail": [
           {
             "name": "OwnerRepository.findByLastNameStartingWith",
             "path": "",
-            "calls": 32
+            "calls": 18
           },
           {
-            "name": "SELECT o FROM Owner o LEFT JOIN FETCH o.pets p LEFT JOIN FETCH p.type \u2026",
+            "name": "insert for victor.training.petclinic.domain.Owner",
             "path": "",
-            "calls": 17
+            "calls": 12
           },
           {
             "name": "insert for victor.training.petclinic.domain.Visit",
@@ -377,19 +504,24 @@
             "calls": 2
           },
           {
+            "name": "select count(*) from Owner x",
+            "path": "",
+            "calls": 1
+          },
+          {
             "name": "select owners",
             "path": "",
-            "calls": 7
+            "calls": 5
           },
           {
             "name": "select pets",
             "path": "",
-            "calls": 8
+            "calls": 18
           },
           {
             "name": "select visits",
             "path": "",
-            "calls": 6
+            "calls": 14
           }
         ],
         "toKind": "db"
@@ -412,13 +544,30 @@
         "toKind": "container"
       },
       {
+        "from": "Backend",
+        "to": "\u00abmodule\u00bb\\nCommons",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 2,
+        "detail": [
+          {
+            "name": "PhoneNumbers.normalize",
+            "path": "",
+            "calls": 2
+          }
+        ],
+        "toKind": "container"
+      },
+      {
         "from": "Browser",
         "to": "Backend",
         "status": "same",
         "protocol": "HTTP",
         "operations": 4,
         "operationsDelta": 0,
-        "calls": 19,
+        "calls": 11,
         "detail": [
           {
             "name": "Add a visit for an owner's pet",
@@ -431,9 +580,9 @@
             "calls": 3
           },
           {
-            "name": "List owners",
+            "name": "List one page of owners",
             "path": "GET /api/owners",
-            "calls": 14
+            "calls": 6
           },
           {
             "name": "getPet",
@@ -459,6 +608,40 @@
           }
         ],
         "toKind": "external"
+      },
+      {
+        "from": "NotificationService",
+        "to": "\u00abmodule\u00bb\\nCommons",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 2,
+        "detail": [
+          {
+            "name": "PhoneNumbers.normalize",
+            "path": "",
+            "calls": 2
+          }
+        ],
+        "toKind": "container"
+      },
+      {
+        "from": "\u00abmodule\u00bb\\nCommons",
+        "to": "Backend",
+        "status": "same",
+        "protocol": "calls",
+        "operations": 1,
+        "operationsDelta": 0,
+        "calls": 1,
+        "detail": [
+          {
+            "name": "NotificationServiceClient.homeDialCode",
+            "path": "",
+            "calls": 1
+          }
+        ],
+        "toKind": "container"
       }
     ],
     "compared": {
@@ -467,18 +650,16 @@
         "petclinic-test/generated/add-visit.spec.ts.add-a-visit-to-an-existing-pet-from-the-owner-detail-page.genseq.puml"
       ],
       "onlyNew": [
-        "petclinic-test/generated/OwnerListTest.java.defaultrequest-returnsfirsttenbynameascendingandthetotal.genseq.puml",
-        "petclinic-test/generated/OwnerListTest.java.response-isanobjectwithexactlycontentandtotalelements.genseq.puml",
-        "petclinic-test/generated/owner-search.feature.a-new-search-goes-back-to-the-first-page.genseq.puml",
-        "petclinic-test/generated/owner-search.feature.changing-the-page-size-goes-back-to-the-first-page.genseq.puml",
-        "petclinic-test/generated/owner-search.feature.paging-through-the-whole-list-reaches-every-owner-exactly-once.genseq.puml",
+        "petclinic-test/generated/OwnerListTest.java.defaultpage-isthefirsttenbyname.genseq.puml",
+        "petclinic-test/generated/OwnerListTest.java.unfilteredtotal-countseveryowner.genseq.puml",
+        "petclinic-test/generated/owner-search.feature.choosing-5-rows-per-page.genseq.puml",
         "petclinic-test/generated/owner-search.feature.searching-with-an-empty-last-name-shows-the-first-page-of-every-owner.genseq.puml",
-        "petclinic-test/generated/owner-search.feature.sorting-by-city-descending.genseq.puml"
+        "petclinic-test/generated/owner-search.feature.sorting-by-city.genseq.puml"
       ],
       "onlyOld": [
         "petclinic-test/generated/owner-search.feature.searching-with-an-empty-last-name-lists-every-owner.genseq.puml"
       ]
     }
   },
-  "base": "f78a360af2d7329451d88b900fe9b3619869e843"
+  "base": "390f0e0efee30a2aeeaa07895560d97eafaab479"
 }

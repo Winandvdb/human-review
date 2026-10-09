@@ -729,9 +729,12 @@ def _context_svg(rel: str, root: Path, out_dir: Path):
     cache = out_dir / "assets" / (Path(rel).stem + ".context.svg")
     cache.parent.mkdir(parents=True, exist_ok=True)
     if not cache.is_file() or cache.stat().st_mtime < src.stat().st_mtime:
-        out = subprocess.run(["plantuml", "-tsvg", "-pipe"],
-                             input=src.read_bytes(), capture_output=True)
-        if out.returncode != 0 or not out.stdout:
+        try:
+            out = subprocess.run(["plantuml", "-tsvg", "-pipe"],
+                                 input=src.read_bytes(), capture_output=True)
+        except FileNotFoundError:  # not on PATH: the same paragraph, not a traceback
+            out = None
+        if out is None or out.returncode != 0 or not out.stdout:
             return None, (f'<p class="sub">plantuml could not render '
                           f'<code>{html.escape(rel)}</code> \u2014 is it installed?</p>')
         cache.write_bytes(out.stdout)

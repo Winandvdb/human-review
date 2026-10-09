@@ -847,6 +847,11 @@ TRACE_HOW = (
 )
 
 
+#: Under the shot: this is telemetry, not a drawing — recorded from the e2e run itself, every
+#: request kept. Victor, 8 Oct 2026: readers should relate the arrows to where they came from.
+TRACE_SAMPLED = "Recorded while the e2e tests ran, 100% sampled: every request is in it."
+
+
 def _trace_shot_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
     """The trace itself, closing the "How" fold, or "" when this run shot none.
 
@@ -876,6 +881,7 @@ def _trace_shot_html(out_dir: Path, root: Path, shown: dict[str, str]) -> str:
         said = f"{which} of {html.escape(name)}, in Grafana Tempo."
     else:
         said = "A trace of this run, in Grafana Tempo."
+    said += " " + TRACE_SAMPLED
     alt = f"A trace in Grafana Tempo{': ' + name if name else ''}"
     # No fold of its own: one inside "How were these captured?" was a second click for a
     # reader who had already asked how — the picture is the answer's last line.

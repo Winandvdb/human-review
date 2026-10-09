@@ -120,6 +120,10 @@ TABS_JS = _script("tabs.js")
 # rather than an invisible one nothing will ever reveal.
 PAINT_HOLD_JS = _script("paint-hold.js")
 
+# In the head for the same reason: the reader's theme (`shared/theme.py`) has to be on the
+# root element before the first frame, or a dark page flashes white.
+THEME_JS = _script("theme.js")
+
 
 # The release, and it is its own script rather than the last line of TABS_JS on purpose:
 # TABS_JS returns early on a page built without a tab strip, and a throw anywhere inside
@@ -129,6 +133,11 @@ PAINT_HOLD_JS = _script("paint-hold.js")
 PAINT_RELEASE_JS = _script("paint-release.js")
 
 XREF_CSS = _text("xref.css")
+
+# The redesigned page's own sheet and script (`hrbuild/page/render.py`), emitted after the
+# old sheet so its `.np`-scoped rules win wherever the two meet.
+PAGE_CSS = _text("page.css")
+PAGE_JS = _script("page.js")
 
 
 XREF_JS = _script("xref.js")

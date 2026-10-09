@@ -15,12 +15,15 @@
   }
   function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
   function render(t, sec) {
-    var h = '<ul>', mv = t.move ? sec.querySelector(t.move) : null, lead = '', src = '';
+    var h = '<ul>', mv = t.move ? sec.querySelector(t.move) : null, lead = '', src = '', shot = '';
     if (mv) {
       // The tab's own "how this was made" line moves in: a <details> keeps its summary
       // (the count in it stays the page's own), a plain line comes along as a footnote.
-      var ans = mv.querySelector('.seqhow-ans');
+      // The Sequence fold also ends on a screenshot of one real trace, in Grafana: it comes
+      // along, last, so the reader sees where the arrows were recorded (8 Oct 2026, Victor).
+      var ans = mv.querySelector('.seqhow-ans'), pic = mv.querySelector('.seqhow-shot');
       if (ans) lead = ans.innerHTML; else src = mv.innerHTML;
+      if (pic) shot = pic.outerHTML;
       mv.classList.add('hrx-moved-away');
     }
     if (lead) h += '<li>' + lead + '</li>';
@@ -29,7 +32,7 @@
     if (t.ex) h += '<div class="hrx-ex">' + t.ex + '</div>';
     if (t.code) h += '<pre>' + t.code + '</pre>';
     if (src) h += '<span class="hrx-src">' + src + '</span>';
-    return h;
+    return h + shot;
   }
   function wire(i) {
     if (i.dataset.hrxWired) return;

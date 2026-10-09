@@ -1,0 +1,8 @@
+{
+ "state": "unavailable",
+ "reason": "Docker is not running",
+ "fingerprint": "79cb98df8e7e78acbd1f",
+ "workspaces": [
+  "petclinic-backend/docs/c4model.c1+c2.dsl"
+ ]
+}

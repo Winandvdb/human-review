@@ -111,6 +111,14 @@ shape whether or not it ever hesitated, and the anchor is the whole difference.
 ## Top level
 
 ```json
+"summary": "<p>Each team's won tricks now lie face down as a small pile next to the team. Our pile lies by the partner, theirs by the left opponent. The piles clear when the next hand starts.</p>"
+```
+
+What the change does, in two to four plain sentences — what a user or a caller now sees or
+can do. It is the first thing on the page. No grade, no finding, no number the page
+computes (see SKILL.md, *The prose that is left*).
+
+```json
 "pr": {"number": 37, "title": "Link Visit with Vet",
        "url": "https://github.com/victorrentea/petclinic/pull/37",
        "repo": "https://github.com/victorrentea/petclinic",
@@ -582,9 +590,8 @@ it and strikes the label through.
   build proved the commit 6, two tabs without evidence 6, breaking API / one tab without
   evidence / code after the review / unreviewed commits 7) — never raised; the panel shows
   the model's number struck through beside the capped one.
-- **No `summary`.** It opened the first tab — the Review tab — as model prose above the
-  grade, where the reader arriving from the score expects the computed reasons; the build
-  drops it there and says so on stderr. Do not declare an Overview tab either.
+- **`summary` opens the first tab**, above that tab's own intro: the page answers "what
+  changed?" before anything else. Do not declare an Overview tab for it.
 - The score beside the title **links to the tab that renders `findings`** — the reasons
   behind `5/10 not yet mergeable` — so keep the findings in one tab.
 - A tab whose every block came back empty is **dropped** and named in the build log.

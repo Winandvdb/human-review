@@ -80,7 +80,9 @@ MERGE_BASE="$(git merge-base "$BASE_REF" HEAD)"
 # `hrbuild/shared/genseq.py` `_overlay_state`.
 OVERLAY="${PUML_OVERLAY:-.human-review/assets/genseq}"
 SUPERSEDED=""
-TRACED_AT="$(cat "$OVERLAY/.head" 2>/dev/null)"
+# `|| true`: under `set -e` a failed substitution fails the assignment, and no overlay at
+# all (a project whose Sequence step never ran) is the common case, not an error.
+TRACED_AT="$(cat "$OVERLAY/.head" 2>/dev/null || true)"
 if [ ! -d "$OVERLAY" ] || [ -z "$TRACED_AT" ] \
    || ! SUPERSEDED="$(git diff --name-only --no-renames "$TRACED_AT" HEAD 2>/dev/null)"; then
   OVERLAY=""
@@ -183,7 +185,8 @@ classify() {
 }
 
 count=0
-for rel in "${CHANGED[@]}"; do
+# `${a[@]+…}`: bash 3.2 calls an empty array unbound under `set -u`.
+for rel in ${CHANGED[@]+"${CHANGED[@]}"}; do
   [ -n "$rel" ] || continue
   label="$(basename "${rel%.puml}")"
   # Key every output on the repo-relative PATH, not the basename: two diagrams called

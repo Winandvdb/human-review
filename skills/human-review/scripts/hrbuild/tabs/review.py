@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -103,9 +104,8 @@ def resolve_review_points(spec: dict, out_dir: Path) -> dict | None:
     carried from the commit it was written at to the tree the page quotes
     (`reanchor_refs`); the grade's reasons
     are computed from what the page measured and its number capped by them
-    (`grade_signals`, `cap_grade`); and the content file's prose `summary`, which opened
-    this tab above the grade, is dropped (`drop_model_summary`)."""
-    drop_model_summary(spec)
+    (`grade_signals`, `cap_grade`). The content file's `summary` is kept: it says what
+    changed, and the page opens on that."""
     points = resolve_piles(spec, out_dir)
     attribute_fix_hunks(spec, out_dir)
     reanchor_refs(spec, out_dir)
@@ -113,21 +113,6 @@ def resolve_review_points(spec: dict, out_dir: Path) -> dict | None:
     grade_signals(spec, out_dir)
     cap_grade(spec)
     return points
-
-
-def drop_model_summary(spec: dict) -> None:
-    """Drop `summary` when it would open the Review tab, and say so on stderr.
-
-    It rendered as a bordered paragraph of the model's prose above the grade, where the
-    reader arriving from the score expects the computed reasons. Everything it can say
-    honestly the page now measures; what it says beyond that nobody checked."""
-    tabs = spec.get("tabs") or []
-    first = tabs[0] if tabs else {}
-    if spec.get("summary") and any(b.get("type") in POINTS_PILES
-                                    for b in first.get("blocks") or []):
-        print("[review] content.json's `summary` is not rendered — the Review tab opens on "
-              "the computed grade reasons, not on prose", file=sys.stderr)
-        spec.pop("summary", None)
 
 
 def resolve_piles(spec: dict, out_dir: Path) -> dict | None:
@@ -1549,6 +1534,147 @@ def _drop_model_line(text: str, spec, short: str | None = None) -> bool:
     return True
 
 
+# --------------------------------------------------------------------------------------- #
+# The PR's own description, as its author wrote it on GitHub (Victor, 8 Oct 2026: "we miss
+# something very important"). Every other line of this tab is the review's reading of the
+# change; this is the one place the page says what the change claims to be, in its
+# author's words, before the reader is told what was found in it.
+# --------------------------------------------------------------------------------------- #
+
+PR_BODY_JSON = "pr-body.json"
+_PULL_URL = re.compile(r"github\.com/([^/\s]+/[^/\s]+)/pull/(\d+)")
+#: The attribution line an agent appends to every PR it opens: the same words on every
+#: page, about the tool rather than the change.
+_PR_BODY_BOILERPLATE = re.compile(r"^\s*🤖 Generated with \[Claude Code\]\([^)]*\)\s*$", re.M)
+
+
+def attach_pr_body(spec: dict, out_dir: Path, root: Path | None = None) -> None:
+    """Put the PR's description on `spec["_prBody"]`: asked of GitHub (`gh pr view`) at
+    every build, so an edit on GitHub shows at the next refresh, and written down in
+    `pr-body.json` so a build with no network still has the last one it saw. Nothing when
+    the content file names no PR. `HR_NO_GITHUB` keeps the test suite off the network."""
+    pr = spec.get("pr") or {}
+    m = _PULL_URL.search(str(pr.get("url") or ""))
+    num = pr.get("number") or (int(m.group(2)) if m else None)
+    if not num:
+        return
+    cache = out_dir / PR_BODY_JSON
+    try:
+        got = json.loads(cache.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        got = {}
+    if str(got.get("number")) != str(num):
+        got = {}
+    if not os.environ.get("HR_NO_GITHUB"):
+        args = ["gh", "pr", "view", str(num), "--json", "number,body,url"]
+        if m:
+            args += ["-R", m.group(1)]
+        try:
+            out = subprocess.run(args, capture_output=True, text=True, timeout=15,
+                                 cwd=root, check=True)
+            raw = json.loads(out.stdout)
+            got = {"number": num, "url": raw.get("url") or pr.get("url") or "",
+                   "body": raw.get("body") or ""}
+            cache.write_text(json.dumps(got, indent=1) + "\n", encoding="utf-8")
+        except Exception as exc:                  # noqa: BLE001 - the cache stands in
+            print(f"[review] `gh pr view {num}` did not answer ({exc}); "
+                  + ("using the description cached in " + PR_BODY_JSON if got
+                     else "the PR description is left off the page"), file=sys.stderr)
+    if got:
+        spec["_prBody"] = got
+
+
+def _md_inline(text: str, repo_url: str) -> str:
+    """One line of GitHub markdown as HTML: code, bold, links, bare URLs, `#25`."""
+    keep: list[str] = []
+
+    def stash(h: str) -> str:
+        keep.append(h)
+        return f"\x00{len(keep) - 1}\x00"
+
+    t = re.sub(r"`([^`]+)`", lambda m: stash(f"<code>{html.escape(m.group(1))}</code>"), text)
+    t = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", lambda m: stash(
+        f'<a href="{html.escape(m.group(2), quote=True)}" target="_blank" rel="noopener">'
+        f'{html.escape(m.group(1))}</a>'), t)
+    t = re.sub(r"(?<![\w/])(https?://[^\s<>()]+[^\s<>().,;:!?])", lambda m: stash(
+        f'<a href="{html.escape(m.group(1), quote=True)}" target="_blank" rel="noopener">'
+        f'{html.escape(m.group(1))}</a>'), t)
+    if repo_url:
+        t = re.sub(r"(?<![\w&/])#(\d+)\b", lambda m: stash(
+            f'<a href="{html.escape(repo_url)}/issues/{m.group(1)}" target="_blank" '
+            f'rel="noopener">#{m.group(1)}</a>'), t)
+    t = html.escape(t, quote=False)
+    t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
+    return re.sub(r"\x00(\d+)\x00", lambda m: keep[int(m.group(1))], t)
+
+
+def pr_body_html(body: str, repo_url: str = "") -> str:
+    """A PR description's markdown as HTML: paragraphs, headings, lists (task boxes too),
+    fenced code, quotes. Escaped before anything is let through — it is somebody's text."""
+    out, para, items, code = [], [], [], None
+    def flush():
+        if para:
+            out.append("<p>" + "<br>".join(_md_inline(x, repo_url) for x in para) + "</p>")
+            para.clear()
+        if items:
+            out.append("<ul>" + "".join(f"<li>{x}</li>" for x in items) + "</ul>")
+            items.clear()
+    for line in body.replace("\r\n", "\n").split("\n"):
+        if code is not None:
+            if line.strip().startswith("```"):
+                out.append(f"<pre><code>{html.escape(chr(10).join(code))}</code></pre>")
+                code = None
+            else:
+                code.append(line)
+            continue
+        if line.strip().startswith("```"):
+            flush()
+            code = []
+            continue
+        if not line.strip():
+            flush()
+            continue
+        h = re.match(r"^\s{0,3}#{1,6}\s+(.*)$", line)
+        li = re.match(r"^\s*(?:[-*+]|\d+[.)])\s+(?:\[([ xX])\]\s+)?(.*)$", line)
+        q = re.match(r"^\s*>\s?(.*)$", line)
+        if h:
+            flush()
+            out.append(f"<h4>{_md_inline(h.group(1), repo_url)}</h4>")
+        elif li:
+            if para:
+                flush()
+            box = {" ": "\u2610 ", "x": "\u2611 ", "X": "\u2611 "}.get(li.group(1) or "", "")
+            items.append(box + _md_inline(li.group(2), repo_url))
+        elif q:
+            flush()
+            out.append(f"<blockquote>{_md_inline(q.group(1), repo_url)}</blockquote>")
+        else:
+            if items:
+                flush()
+            para.append(line.strip())
+    if code is not None:
+        out.append(f"<pre><code>{html.escape(chr(10).join(code))}</code></pre>")
+    flush()
+    return "".join(out)
+
+
+def pr_description_html(spec) -> str:
+    """The PR's description, between the grade's reasons and the counts line. Empty when
+    there is no PR, or its description is empty once the agent's attribution line is cut."""
+    got = spec.get("_prBody") or {}
+    body = _PR_BODY_BOILERPLATE.sub("", str(got.get("body") or "")).strip()
+    if not body:
+        return ""
+    url = str(got.get("url") or "")
+    m = _PULL_URL.search(url)
+    repo_url = f"https://github.com/{m.group(1)}" if m else ""
+    link = (f' <a class="prdesc-gh" href="{html.escape(url, quote=True)}" target="_blank" '
+            'rel="noopener">on GitHub &#8599;</a>' if url else "")
+    return (f'<section class="prdesc" aria-label="Pull request description">'
+            f'<p class="prdesc-h">PR description{link}</p>'
+            f'<div class="prdesc-body">{pr_body_html(body, repo_url)}</div></section>')
+
+
 def grade_reasons_html(spec) -> str:
     """The panel above the three piles that the score in the masthead links to: a bullet
     per reason on the left, and the grade itself, large, in the right-hand space the short
@@ -1726,7 +1852,9 @@ def opening_lede(spec) -> str:
     # two: under the grade, which is read first on arrival from the masthead, and directly
     # above the counts line it qualifies — every number on that line was counted at the
     # reviewed commit, not at the branch's head.
-    return (grade_reasons_html(spec) + _flush_top_bands()
+    # The PR's own words go right under the grade (Victor, 8 Oct 2026): what the change
+    # claims to be, read before the counts of what was found in it.
+    return (grade_reasons_html(spec) + pr_description_html(spec) + _flush_top_bands()
             + f'<p class="sub counts pilelede"{no_pr_line(spec)}>' + " &middot; ".join(parts)
             + push_pr_button(spec) + "</p>" + push_pr_dialog(spec)
             + PILELEDE_SPY_JS)
@@ -3307,8 +3435,8 @@ def snippet_card(ref: str, caption: str | None, root: Path) -> str:
 # on a conclusion, so the list of findings the reader came for started below the fold. The
 # `verdict` block in the content file is still read: its `score` is the pill's number and
 # its band its colour, once `cap_grade` has lowered it to what the computed signals allow.
-# Up to two of its `bullets` join the computed reasons in the grade panel; `summary` is
-# dropped from this tab (`drop_model_summary`).
+# Up to two of its `bullets` join the computed reasons in the grade panel; `summary` opens
+# this tab, because the page answers "what changed?" first.
 
 
 def _score_target(spec) -> tuple[str, str]:

@@ -413,8 +413,9 @@ def test_the_card_says_pr_only_over_a_pull_request(tmp_path):
     """Eval run 10 said "…modified in this PR" on a branch with no pull request."""
     page = _with_coverage(tmp_path)
     assert f'<span class="rm-who">{T.COVCARD_WHO}</span>' in page
-    # One tooltip for the shield and the title together (Victor, 7 Oct 2026).
-    assert ('<span class="cov-head" data-tip="Each of the' in page
+    # One tooltip for the shield and the title together (Victor, 7 Oct 2026); its text lost
+    # the "Each of the N tests ran alone…" count in d0a58cf.
+    assert (f'<span class="cov-head" data-tip="{T.COVCARD_TIP}">' in page
             and '<span class="rm-av cov-av" aria-hidden="true">' in
             page.split('<span class="cov-head"')[1].split("</span></span>")[0])
     assert "in this PR" not in page

@@ -1,7 +1,7 @@
 """What the tests next door share.
 
-There is one thing, and it exists because the page builder stopped being one file. Half a
-dozen tests are *guardrails over the source text* — "only one place emits this control",
+The layout they build (`_old_layout_unless_asked`), and `page_source()`, which exists
+because the page builder stopped being one file. Half a dozen tests are *guardrails over the source text* — "only one place emits this control",
 "the green in the palette is the same green the diff painter uses", "every key
 `review-points.py` writes is a key the renderer reads". They used to read
 `build-review-html.py` and get everything the page is made of, because everything the
@@ -13,9 +13,24 @@ for: every line the page is built from, in one string.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
+import pytest
+
+# A build reads the PR's description from GitHub (`attach_pr_body`); the suite's fixtures
+# name real PR URLs, and a test must not depend on the network or on what a PR says today.
+os.environ.setdefault("HR_NO_GITHUB", "1")
+
 HERE = Path(__file__).resolve().parent
+
+
+@pytest.fixture(autouse=True)
+def _old_layout_unless_asked(monkeypatch):
+    """The redesigned page is the default, but most tests here were written against the
+    old one and still test it: they build it unless a test asks for a layout itself."""
+    if "HUMAN_REVIEW_LAYOUT" not in os.environ:
+        monkeypatch.setenv("HUMAN_REVIEW_LAYOUT", "old")
 
 
 def page_source() -> str:

@@ -3059,7 +3059,9 @@ def test_the_confidence_chip_is_as_big_as_the_title_and_on_its_baseline(tmp_path
                "blocks": [{"type": "assumptions", "mode": "A"}]}]))
     rule = re.search(r'\.f-confidence \{([^}]*)\}', page).group(1)
     assert "1em/" in rule and "vertical-align:baseline" in rule
-    dark = page[page.index("@media (prefers-color-scheme: dark) {\n  .f-confidence.sev-high"):]
+    # The dark block's selectors carry the theme switch's `:root:not(...)` (shared/theme.py).
+    dark = page[page.index("@media (prefers-color-scheme: dark) {\n  "
+                           ":root:not([data-theme=light]) .f-confidence.sev-high"):]
     for band in ("sev-high", "sev-med", "sev-info"):
         assert re.search(rf"\.f-confidence\.{band}\s*\{{", page)
         assert re.search(rf"\.f-confidence\.{band}\s*\{{", dark)
@@ -5500,14 +5502,28 @@ def test_a_page_with_no_measurements_keeps_the_models_grade(tmp_path):
     assert build.cap_grade(spec) is None and spec["verdict"] == {"score": 8}
 
 
-def test_the_summary_no_longer_opens_the_review_tab(tmp_path, capsys):
-    spec = {"summary": "<p>Model prose.</p>",
-            "tabs": [{"id": "review", "blocks": [{"type": "findings"}]}]}
-    build.drop_model_summary(spec)
-    assert "summary" not in spec and "is not rendered" in capsys.readouterr().err
-    other = {"summary": "<p>x</p>", "tabs": [{"id": "data", "blocks": [{"type": "section"}]}]}
-    build.drop_model_summary(other)
-    assert other["summary"] == "<p>x</p>"
+def test_the_summary_says_what_changed_before_the_review(tmp_path):
+    """The redesign opens on "what changed?": the summary is the first thing on the page,
+    on the Review tab too, where it used to be dropped for the grade's reasons."""
+    page, _ = _build(tmp_path, dict(
+        BARE, summary="<p>Each team's won tricks now lie as a pile.</p>",
+        findings=[{"severity": "low", "source": "/code-review", "title": "a nit",
+                   "body": "left as is"}],
+        tabs=[{"id": "review", "label": "Review", "blocks": [{"type": "findings"}]},
+              {"id": "two", "label": "Two", "blocks": [{"type": "section", "id": "two"}]}]))
+    panel = page[page.index('<section class="panel" id="review"'):]
+    assert "won tricks now lie as a pile" in panel[:panel.index("</section>")]
+
+
+def test_the_reader_can_force_the_theme_either_way(tmp_path):
+    """Dark mode followed the system only. The head now sets `data-theme` from the
+    reader's last choice before the first paint, and every dark rule has a forced form."""
+    page, _ = _build(tmp_path, BARE)
+    head = page[:page.index("</head>")]
+    assert "localStorage" in head and "data-theme" in head
+    assert head.index("data-theme") < head.index("<style>"), "before the first paint"
+    assert ":root[data-theme=dark]" in head and ":root:not([data-theme=light])" in head
+    assert 'id="hr-theme"' in page
 
 
 def test_no_pull_request_means_no_publish_button(tmp_path):

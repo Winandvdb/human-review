@@ -1841,6 +1841,31 @@ def test_the_tab_split_starts_where_the_guide_row_starts_not_at_dot_started(tmp_
     assert got["run"]["messages"] == 2, "the run's own total still reads from `.started`"
 
 
+def test_a_guide_row_without_this_conversation_splits_none_of_it(tmp_path, monkeypatch):
+    """A page built during the auto-fixes: the guide row held only the `claude -p` mapping
+    ($0.08), so it gave no
+    window for the conversation, and the fold read it from `.started` to "now": $4.33 of
+    fixing and later work, under a $0.08 row."""
+    comp = _guide_component(_MAPPING)
+    session = tmp_path / "s1.jsonl"
+    session.write_text("".join(json.dumps(_assistant(mid, when)) + "\n" for mid, when in [
+        ("fix", "2026-10-02T23:55:00Z"), ("later", "2026-10-03T02:00:00Z"),
+    ]), encoding="utf-8")
+    steps = tmp_path / ".steps.json"
+    steps.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(rc, "transcript", lambda s: session)
+    monkeypatch.setattr(rc, "subagent_transcripts", lambda path: [])
+    monkeypatch.setattr(rc, "four_components", lambda *a, **k: comp)
+    monkeypatch.setattr(rc, "pass_costs", lambda *a, **k: {"measured": False, "groups": {}})
+    monkeypatch.setattr(rc, "authoring_cost", lambda *a, **k: {"measured": False,
+                                                               "cost": 0.0, "tokens": 0})
+    got = rc.ledger("s1", _ts("2026-10-02T23:51:20+00:00"), steps, ["review", "requirements"],
+                    "origin/main", tmp_path)
+    assert got["tabs"]["residual"]["messages"] == 0, "no turn of it is the guide row's"
+    assert got["tabs"]["tabs"]["requirements"]["cost"] == pytest.approx(0.16), \
+        "the mapping still is, on the Tests tab"
+
+
 def _rerun_model():
     spec = importlib.util.spec_from_file_location("rerun_model_rc", HERE / "rerun-model.py")
     mod = importlib.util.module_from_spec(spec)

@@ -10,7 +10,10 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import shutil
 from pathlib import Path
+
+import pytest
 
 HERE = Path(__file__).parent
 spec = importlib.util.spec_from_file_location("cut_idle", HERE / "cut-idle.py")
@@ -29,6 +32,8 @@ def test_a_moment_inside_a_cut_lands_on_its_splice():
   assert cut.remap(6.5, [(5.0, 8.0)]) == 5.0
 
 
+@pytest.mark.skipif(not (shutil.which("ffmpeg") and shutil.which("ffprobe")),
+                    reason="encodes a test clip with ffmpeg and measures the cut with ffprobe")
 def test_the_cut_drops_exactly_the_stretches_and_cues_follow(tmp_path):
   import subprocess
   raw = tmp_path / "raw.webm"

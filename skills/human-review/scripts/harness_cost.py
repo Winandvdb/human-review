@@ -442,6 +442,161 @@ def busy_seconds(entries: list[dict], root: Path | None = None) -> float | None:
     return round(_intervals_union(spans)) if spans else None
 
 
+# --------------------------------------------------------------------------------------- #
+# The human's time — the third number. Tokens say what the agent cost, busy time how long it
+# worked; neither says how much of Victor's own afternoon the change took, which is the
+# number a "vibe-coded in an hour" claim is about. Nothing records it directly, so it is
+# put together from what does: Wispr Flow logs every dictation with its real duration, and
+# the transcript holds every prompt and every reply he had to read.
+# --------------------------------------------------------------------------------------- #
+
+WISPR_DB = Path(os.path.expanduser("~/Library/Application Support/Wispr Flow/flow.sqlite"))
+#: Speaking pace when a dictation is not in Wispr's log (Walkie Talkie's local Whisper):
+#: Victor's own, from Wispr's log since Sep 2026 — 121 words per minute.
+SPEAK_WPM = 121
+#: Typing pace for a prompt with no dictation marker.
+TYPE_WPM = 40
+#: Reading pace for the agent's reply: skimming technical prose, not studying it.
+READ_WPM = 250
+#: A dictation is looked for this long before the prompt that carries it: the relay sends
+#: when he stops talking, and a long one can be queued behind a busy turn.
+WISPR_LEAD = dt.timedelta(minutes=20)
+_DICTATED = "[Dictated"
+#: What the relay and the harness add to a prompt that nobody said or typed.
+_NOT_HIS = re.compile(r"<pasted_content.*?</pasted_content[^>]*>|<system-reminder>.*?"
+                      r"</system-reminder>|\[📁=[^\]]*\]|\[📸[^\]]*\]|\[Dictated[^\]]*\]|<[^>]+>|\[Request interrupted by user[^\]]*\]",
+                      re.S)
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"[^\W_]+", (text or "").lower())
+
+
+def wispr_rows(lo, hi) -> list[dict]:
+    """Wispr Flow's dictations in `[lo − WISPR_LEAD, hi]`, oldest first; [] without the app."""
+    if not WISPR_DB.is_file() or not lo or not hi:
+        return []
+    fmt = lambda t: t.astimezone(dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        con = sqlite3.connect(f"file:{WISPR_DB}?mode=ro", uri=True, timeout=2)
+        try:
+            got = con.execute(
+                "SELECT timestamp, coalesce(asrText,''), coalesce(formattedText,''), "
+                "duration, coalesce(numWords,0) FROM History WHERE duration > 0 "
+                "AND timestamp >= ? AND timestamp <= ? ORDER BY timestamp",
+                (fmt(lo - WISPR_LEAD), fmt(hi + dt.timedelta(seconds=1)))).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return []
+    out = []
+    for when, asr, formatted, secs, n in got:
+        t = parse(str(when).replace(" +", "+").replace(" ", "T", 1))
+        if t:
+            out.append({"at": t, "keys": [" ".join(_words(x)[:6]) for x in (asr, formatted)
+                                          if len(_words(x)) >= 3],
+                        "seconds": float(secs), "words": int(n)})
+    return out
+
+
+def _text(rec: dict) -> str:
+    content = (rec.get("message") or {}).get("content")
+    if isinstance(content, list):
+        return " ".join(b.get("text") or "" for b in content
+                        if isinstance(b, dict) and b.get("type") == "text")
+    return str(content or "")
+
+
+def claude_human_time(path: Path, lo, hi) -> dict:
+    """How much of the human's own time one Claude session took inside `[lo, hi]`.
+
+    Three parts, each per prompt he sent:
+      * **speaking** — the dictation's duration as Wispr Flow logged it, matched to the
+        prompt by its first words (the relay sends Wispr's raw `asrText`, so both texts
+        are tried); measured, not estimated;
+      * **typing / unlogged speech** — the prompt's words Wispr has no row for, at
+        `TYPE_WPM`, or at `SPEAK_WPM` when the prompt carries the relay's dictation marker;
+      * **reading** — the agent's last message before the prompt at `READ_WPM`, never more
+        than the time between that message and the prompt: he cannot have read for longer
+        than he waited. The last reply in the window is read too.
+
+    A `claude -p` session (`entrypoint: sdk-cli`) has nobody at the keyboard: all zeros.
+    Looking at a diff, testing the app by hand, thinking — none of it leaves a trace, so
+    the figure is a floor, and the page says so."""
+    out = {"seconds": 0.0, "speak": 0.0, "type": 0.0, "read": 0.0, "prompts": 0,
+           "dictated": 0, "measured": 0}
+    rows = [r for r in rc()._rows(path) if r.get("type") in ("user", "assistant")]
+    if any(r.get("entrypoint") == "sdk-cli" for r in rows[:5]):
+        return out
+    wispr = wispr_rows(lo, hi)
+    used: set[int] = set()
+    reply, reply_at = "", None
+    for rec in rows:
+        t = parse(rec.get("timestamp"))
+        if t is None or not _within(t, lo, hi):
+            continue
+        if rec.get("type") == "assistant" and not rec.get("isSidechain"):
+            text = _text(rec)
+            if text.strip():
+                reply, reply_at = text, t
+            continue
+        if not _real_prompt(rec):
+            continue
+        raw = _text(rec)
+        said = " ".join(_words(_NOT_HIS.sub(" ", raw)))
+        speak, matched_words, first_at = 0.0, 0, None
+        for i, w in enumerate(wispr):
+            if i in used or not (t - WISPR_LEAD <= w["at"] <= t):
+                continue
+            if any(k and k in said for k in w["keys"]):
+                used.add(i)
+                speak += w["seconds"]
+                matched_words += w["words"]
+                first_at = first_at or w["at"]
+        rest = max(0, len(said.split()) - matched_words)
+        dictated = _DICTATED in raw or speak > 0
+        typed = rest / (SPEAK_WPM if dictated else TYPE_WPM) * 60
+        read = 0.0
+        if reply_at is not None:
+            read = min(len(_words(reply)) / READ_WPM * 60,
+                       max(0.0, ((first_at or t) - reply_at).total_seconds()))
+        reply, reply_at = "", None
+        out["prompts"] += 1
+        out["dictated"] += dictated
+        out["measured"] += speak > 0
+        out["speak"] += speak
+        out["type"] += typed
+        out["read"] += read
+    if reply_at is not None:
+        out["read"] += len(_words(reply)) / READ_WPM * 60
+    for k in ("speak", "type", "read"):
+        out[k] = round(out[k])
+    out["seconds"] = out["speak"] + out["type"] + out["read"]
+    return out
+
+
+def human_time(entries: list[dict]) -> dict | None:
+    """A component's human time: its Claude entries' `claude_human_time`, added up. None
+    when no entry is a Claude conversation on this disk — Copilot keeps no prompt text the
+    estimate could be made from, and a `claude -p` model step has no human in it."""
+    total, any_ = {}, False
+    for e in entries or []:
+        sid = str(e.get("session") or "")
+        if e.get("harness") != CLAUDE or not sid or sid.startswith("claude -p"):
+            continue
+        win = (e.get("window") or []) + [None, None]
+        lo, hi = parse(win[0]), parse(win[1])
+        path = rc().transcript(sid)
+        if path is None or not lo or not hi:
+            continue
+        got = claude_human_time(path, lo, hi)
+        e["human"] = got
+        any_ = True
+        for k, v in got.items():
+            total[k] = total.get(k, 0) + v
+    return total if any_ else None
+
+
 #: What the harness types into a conversation on its own, never a person: a background
 #: task finishing, a skill's body loaded under its slash command, a hook's reminder.
 _HARNESS_PROMPTS = ("<task-notification>", "<system-reminder>", "<local-command-",
@@ -1653,7 +1808,7 @@ def _guide_from_phases(phases: dict | None) -> dict | None:
 
 # ----------------------------------------------------------------------------- the page
 
-def without_paid_turns(guide: dict, first3: list[dict]) -> dict:
+def without_paid_turns(guide: dict, first3: list[dict], keep: list[dict] = ()) -> dict:
     """The guide row, less any turn of a Claude conversation that rows 1–3 already billed.
 
     The four rows are added up into one total, so they must not overlap — and the guide's
@@ -1671,6 +1826,9 @@ def without_paid_turns(guide: dict, first3: list[dict]) -> dict:
                 paid[e["session"]] = max(paid.get(e["session"], hi), hi)
     out, trimmed = [], []
     for e in guide.get("entries") or []:
+        if any(e is k for k in keep):
+            out.append(e)
+            continue
         lo, hi = (parse(x) for x in ((e.get("window") or [None, None]) + [None])[:2])
         floor = paid.get(e.get("session")) if e.get("harness") == CLAUDE else None
         if floor and lo and lo < floor:
@@ -1693,6 +1851,72 @@ def without_paid_turns(guide: dict, first3: list[dict]) -> dict:
                      (win[0], win[1]),
                      (guide.get("source") or "derived")
                      + ", less the turns the rows above already billed")
+
+
+def _span(e: dict) -> tuple:
+    return tuple(parse(x) for x in ((e.get("window") or [None, None]) + [None])[:2])
+
+
+def _less_runs(c: dict, runs: list[dict]) -> dict:
+    """Row `c` without the turns of the runs: what each run's conversation spent inside
+    the entry's window is subtracted from the entry. Subtracted, not measured again over
+    the rest of the window: the recorded entry reads to the end of its last turn, and a
+    fresh measurement of the pieces came out $0.08 short of it on a real review."""
+    entries, cut = [], False
+    for e in c.get("entries") or []:
+        lo, hi = _span(e)
+        hit = [_span(r) for r in runs if e.get("harness") == CLAUDE and lo and hi
+               and r.get("session") == e.get("session")
+               and _span(r)[0] <= hi and _span(r)[1] >= lo]
+        if not hit:
+            entries.append(e)
+            continue
+        cut, e = True, {**e, "models": dict(e.get("models") or {})}
+        for rlo, rhi in hit:
+            m = claude_entry(e["session"], max(lo, rlo), min(hi, rhi), "")
+            if not m:
+                continue
+            if e.get("usd") is not None:
+                e["usd"] = round(max(0.0, e["usd"] - (m["usd"] or 0.0)), 4)
+            for k in ("tokens", "calls"):
+                e[k] = max(0, (e.get(k) or 0) - (m.get(k) or 0))
+            e["modelSeconds"] = round(max(0.0, (e.get("modelSeconds") or 0)
+                                          - (m.get("modelSeconds") or 0)), 1)
+            for model, n in (m.get("models") or {}).items():
+                left = e["models"].get(model, 0) - n
+                e["models"] = {**e["models"], model: left} if left > 0 else \
+                    {k: v for k, v in e["models"].items() if k != model}
+            run = f"less the /human-review run, {rlo:%H:%M}–{rhi:%H:%M} UTC"
+            e["note"] = f'{e["note"]}; {run}' if e.get("note") else run
+        entries.append(e)
+    if not cut:
+        return c
+    out = component(c["key"], entries, c.get("reason"), tuple(c.get("window") or (None, None)),
+                    (c.get("source") or "recorded") + ", less the /human-review run")
+    out.update({k: c[k] for k in ("recorded", "extendedTo", "dropped") if k in c})
+    return out
+
+
+def settle_overlap(guide: dict, first3: list[dict]) -> tuple[dict, list[dict]]:
+    """The guide row and rows 1–3, with no turn in two of them.
+
+    A run that STARTED inside a window rows 1–3 bill is page building done in the middle
+    of that phase — a page built during the auto-fixes, in the same conversation — so its
+    turns are the guide's, and the row around it gives them up. A run
+    that started before every such window is a mis-drawn window (eval run 10), and the
+    guide gives up the overlap instead, as `without_paid_turns` always did."""
+    spans: dict[str, list[tuple]] = {}
+    for c in first3:
+        for e in (c or {}).get("entries") or []:
+            lo, hi = _span(e)
+            if e.get("harness") == CLAUDE and e.get("session") and lo and hi:
+                spans.setdefault(e["session"], []).append((lo, hi))
+    nested = [e for e in guide.get("entries") or []
+              if e.get("harness") == CLAUDE and _span(e)[0] and _span(e)[1]
+              and any(lo <= _span(e)[0] <= hi for lo, hi in spans.get(e.get("session"), []))]
+    if nested:
+        first3 = [_less_runs(c, nested) if c else c for c in first3]
+    return without_paid_turns(guide, first3, keep=nested), first3
 
 
 def drop_undone(root: Path, base: str, c: dict) -> dict:
@@ -1755,7 +1979,7 @@ def components(root: Path, base: str, review: Path, phases: dict | None = None,
         if not guide["measured"] and (phases or {}).get("run_session"):
             guide = _guide_from_phases(phases) or guide
         guide["source"] = "derived"
-    kept = without_paid_turns(guide, first3)
+    kept, first3 = settle_overlap(guide, first3)
     if kept is not guide and not kept["measured"] and (phases or {}).get("run_session"):
         kept = _guide_from_phases(phases) or kept
     guide = kept
@@ -1765,6 +1989,7 @@ def components(root: Path, base: str, review: Path, phases: dict | None = None,
         # Re-read at every build, never trusted from a record: `review-cost.json` predates
         # the field, and the store is what the window's turns are read from anyway.
         c["busySeconds"] = busy_seconds(c.get("entries"), root) if c.get("measured") else None
+        c["human"] = human_time(c.get("entries")) if c.get("measured") else None
         if c.get("measured") and len(c.get("entries") or []) > 1:
             # Each session's own share, for its line under the row (the row's time is
             # their union, so these may add up to more than it).
@@ -1782,4 +2007,6 @@ def components(root: Path, base: str, review: Path, phases: dict | None = None,
             "mixed": bool(usd and aic), "rateNote": AIC_RATE_NOTE,
             "unmeasured": [c["key"] for c in rows if not c.get("measured")],
             "wallclock": wall, "refreshes": refreshes, "busySeconds": busy,
+            "humanSeconds": (sum((c.get("human") or {}).get("seconds") or 0 for c in rows)
+                             if any(c.get("human") for c in rows) else None),
             "refreshSeconds": round(sum(r.get("seconds") or 0 for r in refreshes))}

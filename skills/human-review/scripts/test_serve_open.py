@@ -6,6 +6,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("serve_review", HERE / "serve-review.py")
 sr = importlib.util.module_from_spec(spec)
@@ -114,6 +116,26 @@ def test_a_marker_without_the_key_is_somebody_elses_server(monkeypatch, tmp_path
     assert sr.main() == 0
     assert capsys.readouterr().out.strip() == "http://127.0.0.1:17655/review.html"
     assert len(seen["spawned"]) == 1
+
+
+def test_no_free_port_is_said_plainly_and_starts_nothing(monkeypatch, tmp_path):
+    """A sandbox that refuses every local bind made the search count past 65535 and die
+    with `OverflowError: bind(): port must be 0-65535`."""
+    seen = _world(monkeypatch, tmp_path, {})
+    monkeypatch.setattr(sr, "free", lambda port: False)
+    with pytest.raises(SystemExit) as stop:
+        sr.main()
+    assert "no free port" in str(stop.value) and seen["spawned"] == []
+
+
+def test_a_new_server_stays_where_the_next_refresh_looks_for_it(monkeypatch, tmp_path):
+    """`find_server` asks only `PORT_SPAN` ports from the preferred one, so a server started
+    past them would never be found again, and every refresh would start one more."""
+    seen = _world(monkeypatch, tmp_path, {})
+    monkeypatch.setattr(sr, "free", lambda port: port >= 17654 + sr.PORT_SPAN)
+    with pytest.raises(SystemExit):
+        sr.main()
+    assert seen["spawned"] == []
 
 
 def test_stop_stops_this_reports_server_and_never_another_checkouts(monkeypatch, tmp_path):

@@ -263,9 +263,16 @@ the command. Nothing re-runs it for you: run `rerun-model.py` again.
 
 ### The prose that is left
 
-Everything else in the content file is prose: `title`, `subtitle`, `pr`, `verdict`, an
-optional `note`, and the Review tab's block titles and ledes. **No `summary`**: the
-Review tab opens on the grade's computed reasons, and a `summary` is dropped there.
+Everything else in the content file is prose: `title`, `subtitle`, `pr`, `summary`,
+`verdict`, an optional `note`, and the Review tab's block titles and ledes.
+
+**Always write `summary`: it is what changed, and the page opens on it.** Two to four short
+sentences in plain words, in one `<p>`: what a user or a caller of the code now sees or can
+do, and what is gone. Write it from the diff, the ticket and the demo, not from the review —
+no grade, no finding, no count the page computes, no file or function name unless the
+change is about that name. A reviewer who reads only this paragraph must know what the
+branch does.
+
 `verdict` is `{"score": n}` plus at most two `bullets` for what only you know — CI, the
 open piles, a breaking API change, tabs without evidence and commits outside the review
 are computed, and they cap your score.

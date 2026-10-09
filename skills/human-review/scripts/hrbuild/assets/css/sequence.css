@@ -135,3 +135,8 @@ details.seqhow dfn { font-style:normal; font-weight:650; }
 .seqhow-img { display:block; border:1px solid var(--line); border-radius:8px;
   max-height:min(75vh, 46rem); overflow:auto; cursor:zoom-in; }
 .seqhow-img img { display:block; width:100%; height:auto; }
+/* Inside the (i) box (`explain.js` carries it there): flush with the bullets, and shorter —
+   the box is an aside, the trace a glimpse of the source, a click away from full size. */
+.hrx-box .seqhow-shot { margin:.5rem 0 0; }
+.hrx-box .seqhow-cap { margin:0 0 .35rem; }
+.hrx-box .seqhow-img { max-height:min(45vh, 26rem); }

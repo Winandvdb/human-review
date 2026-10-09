@@ -341,12 +341,19 @@ def keep_refused(review: Path, text: str) -> Path | None:
         return None
 
 
-def install(review: Path, doc: dict, offered: list[str] | None = None) -> Path:
+def install(review: Path, doc: dict, offered: list[str] | None = None,
+            by: str | None = None) -> Path:
     """Write the answer, by everyone's name for it — with `offered`, the ids of every test
     the model was shown, so a later build can tell when the coverage has put a candidate on
-    the card that this answer never read (`semcov.pairing_stale`)."""
+    the card that this answer never read (`semcov.pairing_stale`).
+
+    `by` stamps which model paired it and when (`pairedBy`): two paid runs over the same
+    branch can disagree, and the page says which answer it shows."""
     if offered is not None:
         doc = {**doc, "offered": list(offered)}
+    if by:
+        doc = {**doc, "pairedBy": {"model": by, "at": datetime.datetime.now(
+            datetime.timezone.utc).isoformat(timespec="seconds")}}
     out = review / WRITES[0]
     out.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     return out
@@ -662,7 +669,7 @@ def main(argv=None) -> int:
                 doc, said_check = checked(sc, doc, parse_answer(csaid or cproc.stdout), asked)
     ledger()
     doc = _noted(doc, said_script, said_check)
-    install(review, doc, offered)
+    install(review, doc, offered, by=model)
     total = _priced(billed())[0]
     price = f"${total:.4f}" if isinstance(total, (int, float)) else "an unpriced run"
 

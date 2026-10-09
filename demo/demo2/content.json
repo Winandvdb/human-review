@@ -1,16 +1,18 @@
 {
   "title": "Owners grid: paged and sorted by Name or City",
-  "subtitle": "hr-claude-18 — issue #25",
+  "subtitle": "Devoxx26 — issue #25",
   "pr": {
-    "title": "Paginate and sort the owners grid by Name or City",
+    "title": "Owners grid: paged and sorted by Name or City",
     "repo": "https://github.com/victorrentea/petclinic",
-    "branch": "hr-claude-18",
+    "branch": "Devoxx26",
     "base": "main",
     "ticket": {
       "number": 25,
       "title": "Add pagination to Owners grid",
       "url": "https://github.com/victorrentea/petclinic/issues/25"
-    }
+    },
+    "number": 51,
+    "url": "https://github.com/victorrentea/petclinic/pull/51"
   },
   "scope": [
     {
@@ -28,8 +30,8 @@
   "verdict": {
     "score": 7,
     "bullets": [
-      "Nothing measured the paged query against the 100k owners projected for Sep 2027; the index tests prove the indexes exist, not that the plan uses them (design.md:60).",
-      "Issue #25 was never told the scope narrowed to Name/City and the response became an envelope (task 4.4 left open)."
+      "Only the test database is pinned to ICU; production's collation is still unknown, so accented owners may sort after Z there (design.md:167).",
+      "The visit-date commit underneath carries six real findings declined here as out of scope — owner/pet mismatch on booking among them; they need their own ticket."
     ]
   },
   "findings": {
@@ -202,7 +204,7 @@
       "blocks": [
         {
           "type": "logging",
-          "base": "f78a360a",
+          "base": "origin/main",
           "paths": [
             "petclinic-backend"
           ],
@@ -221,5 +223,5 @@
     }
   ],
   "sections": [],
-  "footer": "Built by /human-review from hr-claude-18 on 5 Oct 2026."
+  "footer": "Built by /human-review from Devoxx26 on 7 Oct 2026."
 }

@@ -410,7 +410,7 @@ def spec_line(src: list[str], description: str) -> int | None:
     for quote in ("'", '"', "`"):
         needle = quote + description + quote
         for i, t in enumerate(src):
-            if needle in js_unescaped(t) and re.search(r"\b(f|x)?it\s*\(", t):
+            if needle in js_unescaped(t) and re.search(r"\b((f|x)?it|test)(\.\w+)?\s*\(", t):
                 return i + 1
     for i, t in enumerate(src):
         if description in js_unescaped(t):
@@ -570,6 +570,80 @@ def karma_suites(cfg: list[dict], repo: Repo,
     return tests, suites, executable
 
 
+def vitest_suites(cfg: list[dict], repo: Repo,
+                  reuse: bool = False) -> tuple[list[dict], list[dict], dict]:
+    """Like `karma_suites`: {vitest} = the Istanbul provider on, plus a setup file that
+    snapshots its counters around every test (`testcov/vitest/setup.js`); `join.js` then
+    turns statement ids into TypeScript lines. Vitest names each test's own file, so no
+    search for the spec is needed — only for the `it(`/`test(` line in it."""
+    tests, suites, executable = [], [], {}
+    for i, run in enumerate(cfg):
+        label = run.get("label", "Vitest")
+        cwd = repo.root / run.get("cwd", ".")
+        raw = (WORK / f"vitest-{i}").resolve()
+        out = (WORK / f"vitest-{i}.json").resolve()
+        t0 = time.monotonic()
+        rc = 0
+        if not reuse:
+            shutil.rmtree(raw, ignore_errors=True)
+            out.unlink(missing_ok=True)
+            # Vitest's CLI takes no --setupFiles, so a config of ours loads the project's and
+            # adds it — written INTO the project, where `vitest/config` and `vitest` resolve.
+            raw.mkdir(parents=True)
+            shutil.copy(TOOLS / "vitest" / "setup.js", raw / "hr-setup.js")
+            base = (cwd / run.get("config", "vite.config.ts")).resolve()
+            conf = raw / "hr-vitest.config.mjs"
+            conf.write_text(
+                f"import base from {json.dumps(str(base))};\n"
+                "import {mergeConfig} from 'vitest/config';\n"
+                "const b = typeof base === 'function' ? await base({command: 'serve', mode: 'test'}) : base;\n"
+                f"export default mergeConfig(b, {{root: {json.dumps(str(cwd.resolve()))}, "
+                f"test: {{setupFiles: [{json.dumps(str(raw / 'hr-setup.js'))}]}}}});\n",
+                encoding="utf-8")
+            slot = (f"--config={shlex.quote(str(conf))} "
+                    "--coverage.enabled --coverage.provider=istanbul --coverage.reporter=json "
+                    f"--coverage.reportsDirectory={shlex.quote(str(raw / 'report'))}")
+            rc = run_logged(expand(run["command"], vitest=slot), cwd, WORK / f"vitest-{i}.log",
+                            env={"HR_TESTCOV_VITEST_DIR": str(raw)})
+            if raw.is_dir():
+                j = subprocess.run(["node", str(TOOLS / "vitest" / "join.js"), str(raw), str(cwd)],
+                                   capture_output=True, text=True)
+                if j.returncode == 0:
+                    out.write_text(j.stdout, encoding="utf-8")
+                else:
+                    log(f"vitest join failed: {j.stderr[-800:]}")
+        if not out.is_file():
+            suites.append({"name": label, "source": "vitest", "status": "failed", "tests": 0,
+                           "seconds": round(time.monotonic() - t0, 1),
+                           "note": f"exit {rc} and no per-test coverage — see {WORK}/vitest-{i}.log"})
+            continue
+        doc = json.loads(out.read_text(encoding="utf-8"))
+
+        def rel(p: str) -> str | None:
+            try:
+                return str(Path(p).resolve().relative_to(repo.root.resolve()))
+            except ValueError:
+                return None
+
+        for p, lines in doc.get("executable", {}).items():
+            r = rel(p)
+            if r:
+                executable.setdefault(r, set()).update(lines)
+        for t in doc.get("tests", []):
+            file = rel(t.get("file", ""))
+            desc = t.get("description", "")
+            tests.append({"id": f"{label}:{file}:{t.get('id', '')}", "suite": label,
+                          "title": t.get("id") or desc, "file": file,
+                          "line": spec_line(repo.text(file), desc) if file else None,
+                          "status": t.get("status", ""), "source": "vitest",
+                          "hits": {r: v for p, v in t.get("hits", {}).items() if (r := rel(p))}})
+        suites.append({"name": label, "source": "vitest", "status": "ran",
+                       "tests": len(doc.get("tests", [])),
+                       "seconds": round(time.monotonic() - t0, 1),
+                       "note": f"exit {rc}, see {WORK}/vitest-{i}.log" if rc else ""})
+    return tests, suites, executable
+
+
 def e2e_suites(cfg: dict, repo: Repo, tools: dict | None, head: str,
                node_modules: list[str], init: dict) -> tuple[list[dict], list[dict], dict]:
     tests, suites, executable = [], [], {}
@@ -679,7 +753,7 @@ def main(argv=None) -> int:
     ap.add_argument("--base", default="origin/main")
     ap.add_argument("--config", default="human-review.json")
     ap.add_argument("--out", default=str(DEFAULT_OUT))
-    ap.add_argument("--only", help="comma-separated: junit,karma,e2e")
+    ap.add_argument("--only", help="comma-separated: junit,karma,vitest,e2e")
     ap.add_argument("--reuse", action="store_true",
                     help="run no suite; re-read what the last run left in .human-review/coverage")
     args = ap.parse_args(argv)
@@ -694,7 +768,7 @@ def main(argv=None) -> int:
     if not cfg:
         log("steps.testcov is not configured in human-review.json — nothing to measure")
         return 3
-    only = set(args.only.split(",")) if args.only else {"junit", "karma", "e2e"}
+    only = set(args.only.split(",")) if args.only else {"junit", "karma", "vitest", "e2e"}
     repo = Repo(root)
     head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     mb = subprocess.run(["git", "merge-base", args.base, "HEAD"], capture_output=True,
@@ -736,6 +810,8 @@ def main(argv=None) -> int:
                            "note": "the listener could not be built"})
     if cfg.get("karma") and "karma" in only:
         merge(karma_suites(cfg["karma"], repo, args.reuse))
+    if cfg.get("vitest") and "vitest" in only:
+        merge(vitest_suites(cfg["vitest"], repo, args.reuse))
     if cfg.get("e2e") and "e2e" in only:
         mods = [str(root / p / "node_modules") for p in
                 (cfg["e2e"].get("project"), cfg["e2e"].get("frontend"),

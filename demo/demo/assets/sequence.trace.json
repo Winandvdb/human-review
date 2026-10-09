@@ -1,12 +1,12 @@
 {
  "diagram": "petclinic-test/generated/VisitTest.java.create-withoutvet.genseq.puml",
  "test": "VisitTest.java",
- "trace": "dfa8f2d48b3939770bb04a9c55a46073",
+ "trace": "1e953f30133780c46fdc746a9b76267e",
  "traces": 1,
  "spans": 25,
  "services": [
   "petclinic-backend"
  ],
  "root": "test: create_withoutVet()",
- "at": "2026-10-06T09:03:51+00:00"
+ "at": "2026-10-07T23:05:30+00:00"
 }

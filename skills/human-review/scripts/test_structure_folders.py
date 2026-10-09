@@ -11,6 +11,7 @@ from __future__ import annotations
 import http.server
 import json
 import os
+import shutil
 import subprocess
 import threading
 import urllib.parse
@@ -278,6 +279,8 @@ def test_no_window_on_the_checkout_is_none(repo, tmp_path, monkeypatch):
     assert seen == []
 
 
+@pytest.mark.skipif(not shutil.which("plantuml"),
+                    reason="the folder links are stamped on the SVG plantuml draws")
 def test_a_gallery_card_links_its_boxes_and_a_sequence_card_does_not(repo, tmp_path):
     """The Structure tab's delta gallery and its context cards go through one door."""
     from hrbuild.shared import diagrams

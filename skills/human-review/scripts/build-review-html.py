@@ -66,7 +66,18 @@ from hrbuild.shared.assets import (
     APP_ENV_JS, CAPTION_JS, CSS, CSS_FILES, DGM_VIEWS_JS, EDITOR_JS, FOCUS_JS, FOOTER_CSS,
     GENSEQ_JS, HSCROLL_JS, LATE_CSS, PAINT_HOLD_JS, PAINT_RELEASE_JS, RERUN_JS, SEQFOLD_JS, SEQHEADS_JS,
     SEQLINK_JS, SERVER_JS, TABS_JS, TIP_JS, TRACE_JS, XREF_CSS, XREF_JS, FOLDERS_JS,
-    FIXTURES_JS, EXPLAIN_JS
+    FIXTURES_JS, EXPLAIN_JS, THEME_JS, PAGE_CSS, PAGE_JS
+)
+from hrbuild.shared.theme import (
+    AUTO_ATTR, AUTO_ROOT, COMMENT, DARK_ATTR, DARK_QUERY, DARK_ROOT, FONT_TYPES, STYLE_BLOCK,
+    THEME_BUTTON, _block_end, _narrow, _rules, _selectors, font_css, switchable, themed_styles,
+)
+from hrbuild.page.render import (
+    NP_COVERAGE, NP_DROPPED, NP_ICONS, NP_MAPPING_FILES, NP_NATIVE, NP_VIEW_LABELS,
+    _np_asked, _np_changed_tests, _np_confidence, _np_cost, _np_decisions, _np_demo, _np_esc,
+    _np_files, _np_fixed, _np_footer, _np_git, _np_icon, _np_json, _np_meta, _np_minutes,
+    _np_next, _np_provenance, _np_refs, _np_score, _np_section, _np_sections, _np_semcov, _np_status,
+    _np_tabbar, _np_test_names, _np_title, _np_topbar, new_page_html, page_layout,
 )
 from hrbuild.shared.fixtures import (
     FIXTURE_COLORS_FILE,
@@ -1168,6 +1179,7 @@ def _main(argv=None) -> int:
     # Only a tabbed page grows a masthead; the plain single-column guide keeps the
     # heading it always had.
     strip_html = allbtn_html = diskline_html = mode_html = rerun_fail_html = ""
+    led, emitted = None, []
     if tabs:
         # Measured once, for every tab, before the loop: one subprocess and one transcript
         # scan rather than one per tab. `led` is None only when review-cost.py itself
@@ -1351,7 +1363,8 @@ def _main(argv=None) -> int:
         # VSC first, hidden: only the served page can ask the editor bridges whether a
         # window is on the reviewed commit, so editor.js raises it there and colours it.
         mode_html = (
-            '<button type="button" class="chip chip-vsc" id="hr-vsc" hidden>VSC</button>'
+            THEME_BUTTON
+            + '<button type="button" class="chip chip-vsc" id="hr-vsc" hidden>VSC</button>'
             '<span class="chip chip-mode" id="hr-mode">Static</span>'
             '<button type="button" class="chip chip-serve copycmd" id="hr-serve" '
             f'data-copy="{html.escape(serve_cmd, quote=True)}" '
@@ -1455,7 +1468,8 @@ def _main(argv=None) -> int:
 <title>{html.escape(spec.get('title', 'Review guide'))}</title>
 <link rel="icon" type="image/svg+xml" href="{FAVICON}">
 {PAINT_HOLD_JS}
-<style>{CSS}{FOOTER_CSS}{extra_css.rstrip()}
+{THEME_JS}
+<style>{CSS}{font_css(root)}{FOOTER_CSS}{extra_css.rstrip()}
 {LATE_CSS}{XREF_CSS}</style></head>
 <body><div class="wrap">
 {masthead_html(spec, mode_html + title_score, chips, strip_html, base_st)}
@@ -1481,11 +1495,26 @@ def _main(argv=None) -> int:
 {fixtures_html}
 </body></html>
 """
+    doc = themed_styles(doc)
     doc = code_xref.cross_link(doc)
     doc = open_links_in_new_tabs(doc)
     doc = one_tooltip_only(doc)
     doc = promote_traced(doc)
     check_baked_excerpts(doc)
+    if page_layout(root) == "new":
+        # The redesign, built from everything prepared above; the old page is its quarry
+        # for the view panels and the `<head>` (styles, theme, paint hold). Scripts: what
+        # the views, the actions menu and the copy buttons need — not the old tab strip.
+        head = doc[doc.index("<head>") + len("<head>"):doc.index("</head>")]
+        doc = new_page_html(
+            spec=spec, root=root, out_dir=out_dir, out_path=out_path, base_st=base_st,
+            ledger=led, old_doc=doc, emitted=emitted,
+            mode_html=mode_html.replace(THEME_BUTTON, ""), rerun_html=rerun_fail_html,
+            head=head + themed_styles(f"<style>{PAGE_CSS}</style>"),
+            scripts="\n".join((SERVER_JS, EDITOR_JS, RERUN_JS, TIP_JS, GENSEQ_JS, DGM_VIEWS_JS,
+                               XREF_JS, TRACE_JS, SEQLINK_JS, FOLDERS_JS, SEQFOLD_JS,
+                               SEQHEADS_JS, HSCROLL_JS, PAGE_JS, PAINT_RELEASE_JS)))
+        doc = open_links_in_new_tabs(doc)
     out_path.write_text(doc, encoding="utf-8")
     # After the page, so the manifest can never promise a verb for a build that failed to
     # write its own HTML — and every declaration is in by now, the register being filled

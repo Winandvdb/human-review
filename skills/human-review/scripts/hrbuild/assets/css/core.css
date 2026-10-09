@@ -5,8 +5,17 @@
      a white stripe across the middle of a dark card, which reads as a rendering fault
      rather than as a control. Form controls and the caret come along for free. */
   color-scheme: light dark;
-  --bg:#fbfbfd; --fg:#1c1c22; --muted:#6b6b78; --line:#e2e2ea; --card:#ffffff;
-  --accent:#8a1c1c; --accent-soft:#fdeaea; --code-bg:#f6f6fa; --link:#1a4fa0;
+  /* The lab900 palette (its design system's tokens: navy text, mint, orange). Links are
+     navy with an orange underline: orange text on white is 3.2:1, under the 4.5:1 a line
+     of text needs, so orange marks and never writes. --accent is the darkest orange that
+     still reads as one, for the few places that colour text with it. */
+  --brand-navy:#343c57; --brand-mint:#c0eae8; --brand-orange:#ff5126;
+  --brand-orange-soft:#fff0ed; --brand-teal:#03ada5; --brand-yellow:#fff3ab;
+  --band-hero:var(--brand-mint); --band-act:var(--brand-orange-soft);
+  --font-sans:Arial,Helvetica,sans-serif;
+  --bg:#ffffff; --fg:#343c57; --muted:#6a7089; --line:#d9dce5; --card:#ffffff;
+  --accent:#b8300e; --accent-soft:#fff0ed; --code-bg:#f5f6f9; --link:#343c57;
+  --link-line:var(--brand-orange);
   --drift:#b5730a; --drift-fg:#ffffff;
   /* PlantUML's own fixed palette, named — not reused from --bg/--fg/etc above, because
      those are tuned for prose and would visibly change every diagram's light-mode look.
@@ -60,9 +69,12 @@
   --on-fill:#ffffff;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg:#15151a; --fg:#e8e8ef; --muted:#9a9aa8; --line:#2c2c36; --card:#1d1d24;
-          --accent:#f08a8a; --accent-soft:#3a1f1f; --code-bg:#101015; --link:#8ab4f8;
-          --drift:#e0a33c; --drift-fg:#15151a;
+  /* lab900 has no dark theme: this one is made from its navy, with mint for what is
+     pressed and the lighter orange for marks. */
+  :root { --bg:#1e2335; --fg:#eef0f5; --muted:#a9aec2; --line:#3d4562; --card:#262c42;
+          --accent:#ff8a6b; --accent-soft:#3a2b2e; --code-bg:#1a2033; --link:#eef0f5;
+          --link-line:#ff704d; --band-hero:#2b3250; --band-act:#2f2a38;
+          --drift:#e0a33c; --drift-fg:#1e2335;
           /* PlantUML draws these as flat, fully-opaque shapes, so each is picked to read
              the way its light counterpart does on white — not lifted from --bg/--card,
              whose contrast ratios were tuned for text, not a diagram's fills and hairline
@@ -74,7 +86,7 @@
              comfortably and still read as green and red. Their two tints invert
              outright — a pale wash behind a near-white label is the box that swallows
              its own name — landing beside --accent-soft on the removal side. */
-          --dgm-bg:#1d1d24; --dgm-box:#26262e; --dgm-frame:#202028; --dgm-legend:#2c2c36;
+          --dgm-bg:#262c42; --dgm-box:#2d344d; --dgm-frame:#283049; --dgm-legend:#3d4562;
           --dgm-line:#8f8fa0; --dgm-fg:#e8e8ef; --dgm-activation:#2e2e42;
           --dgm-muted:#9a9aa8; --dgm-link:#8ab4f8;
           /* The blue-grey trio, kept blue-grey: the hue is what tells the
@@ -91,7 +103,7 @@
              wash that stayed pale is a box that reads as empty. The hue is kept amber
              and only the lightness flips, so the ladder still descends *towards*
              --dgm-box (#26262e) and the far field still looks like the far field. */
-          --dgm-ripple-1:#4a3a1e; --dgm-ripple-2:#3a3126; --dgm-ripple-3:#2e2b27;
+          --dgm-ripple-1:#5c4620; --dgm-ripple-2:#4d4029; --dgm-ripple-3:#3f3a33;
           /* --view-diff is not repeated: it is `var(--dgm-diff-del)`, so it follows the
              line above on its own. These two are lifted to the same footing as the
              page's dark link colour — #1a4fa0 and #1f7a45 are both under 3:1 on a
@@ -100,8 +112,12 @@
           /* Pressed Diff was white on #f08a8a (2.4:1), pressed New/Old white on #8ab4f8
              (2.1:1) — and those are the SELECTED states, the ones on screen by default.
              The page's own near-black reads at 7.5–9.5:1 on all three. */
-          --on-fill:#15151a; }
+          --on-fill:#1e2335; }
 }
+/* A theme the reader chose (`shared/theme.py`) tells the browser too, so scrollbars and
+   form controls follow it rather than the system. */
+:root[data-theme=light] { color-scheme:light; }
+:root[data-theme=dark] { color-scheme:dark; }
 * { box-sizing:border-box; }
 /* The masthead and the tab strip bleed edge to edge with `width:100vw`, and `vw` counts
    the vertical scrollbar: wherever scrollbars take room (a mouse plugged in, "always
@@ -110,7 +126,7 @@
    content scrolls in a box of its own — so the viewport clips sideways. `clip`, not
    `hidden`: it opens no scroll container, and the sticky masthead keeps sticking. */
 html { overflow-x:clip; }
-body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.6 var(--font-sans); }
 /* The masthead used to spend 276px before a word of the review: a 2.5rem gutter, a
    1.9rem headline, then three separated rows (subtitle, chips, strip) each holding a
    1.4-1.6rem cushion. Every one of those rows carries facts and stays; what goes is the
@@ -130,7 +146,8 @@ h3 { font-size:1.02rem; margin:1.8rem 0 .5rem; }
 h2.tabtitle { margin:.2rem 0 .15rem; padding-bottom:0; border-bottom:0; }
 .tabsub { margin:0 0 .9rem; color:var(--muted); font-size:.92rem; }
 p { margin:.6rem 0; }
-a { color:var(--link); }
+a { color:var(--link); text-decoration-color:var(--link-line);
+    text-decoration-thickness:2px; text-underline-offset:3px; }
 .sub { color:var(--muted); margin:0 0 .55rem; font-size:.93rem; }
 /* The one `.sub` that is not an aside. Every other subtitle on the page repeats or
    qualifies something the reader can already see, which is what earns them the muted
